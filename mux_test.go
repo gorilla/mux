@@ -10,40 +10,463 @@ import (
 	"testing"
 )
 
-// helper function to create a new request with a method and url
-func newRequest(method, url string) *http.Request {
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		panic(err)
-	}
-	return req
+type routeTest struct {
+	title       string            // title of the test
+	route       *Route            // the route being tested
+	request     *http.Request     // a request to test the route
+	vars        map[string]string // the expected vars of the match
+	host        string            // the expected host of the match
+	path        string            // the expected path of the match
+	shouldMatch bool              // whether the request is expected to match the route at all
 }
 
-// helper function to create a new request with a method, url, and host header
-func newRequestHost(method, url, host string) *http.Request {
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		panic(err)
+func TestHost(t *testing.T) {
+	// newRequestHost a new request with a method, url, and host header
+	newRequestHost := func(method, url, host string) *http.Request {
+		req, err := http.NewRequest(method, url, nil)
+		if err != nil {
+			panic(err)
+		}
+		req.Host = host
+		return req
 	}
-	req.Host = host
-	return req
+
+	tests := []routeTest{
+		{
+			title:       "Host route match",
+			route:       new(Route).Host("aaa.bbb.ccc"),
+			request:     newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
+			vars:        map[string]string{},
+			host:        "aaa.bbb.ccc",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Host route, wrong host in request URL",
+			route:       new(Route).Host("aaa.bbb.ccc"),
+			request:     newRequest("GET", "http://aaa.222.ccc/111/222/333"),
+			vars:        map[string]string{},
+			host:        "aaa.bbb.ccc",
+			path:        "",
+			shouldMatch: false,
+		},
+		{
+			title:       "Host route with port, match",
+			route:       new(Route).Host("aaa.bbb.ccc:1234"),
+			request:     newRequest("GET", "http://aaa.bbb.ccc:1234/111/222/333"),
+			vars:        map[string]string{},
+			host:        "aaa.bbb.ccc:1234",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Host route with port, wrong port in request URL",
+			route:       new(Route).Host("aaa.bbb.ccc:1234"),
+			request:     newRequest("GET", "http://aaa.bbb.ccc:9999/111/222/333"),
+			vars:        map[string]string{},
+			host:        "aaa.bbb.ccc:1234",
+			path:        "",
+			shouldMatch: false,
+		},
+		{
+			title:       "Host route, match with host in request header",
+			route:       new(Route).Host("aaa.bbb.ccc"),
+			request:     newRequestHost("GET", "/111/222/333", "aaa.bbb.ccc"),
+			vars:        map[string]string{},
+			host:        "aaa.bbb.ccc",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Host route, wrong host in request header",
+			route:       new(Route).Host("aaa.bbb.ccc"),
+			request:     newRequestHost("GET", "/111/222/333", "aaa.222.ccc"),
+			vars:        map[string]string{},
+			host:        "aaa.bbb.ccc",
+			path:        "",
+			shouldMatch: false,
+		},
+		// BUG {new(Route).Host("aaa.bbb.ccc:1234"), newRequestHost("GET", "/111/222/333", "aaa.bbb.ccc:1234"), map[string]string{}, "aaa.bbb.ccc:1234", "", true},
+		{
+			title:       "Host route with port, wrong host in request header",
+			route:       new(Route).Host("aaa.bbb.ccc:1234"),
+			request:     newRequestHost("GET", "/111/222/333", "aaa.bbb.ccc:9999"),
+			vars:        map[string]string{},
+			host:        "aaa.bbb.ccc:1234",
+			path:        "",
+			shouldMatch: false,
+		},
+		{
+			title:       "Host route with pattern, match",
+			route:       new(Route).Host("aaa.{v1:[a-z]{3}}.ccc"),
+			request:     newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
+			vars:        map[string]string{"v1": "bbb"},
+			host:        "aaa.bbb.ccc",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Host route with pattern, wrong host in request URL",
+			route:       new(Route).Host("aaa.{v1:[a-z]{3}}.ccc"),
+			request:     newRequest("GET", "http://aaa.222.ccc/111/222/333"),
+			vars:        map[string]string{"v1": "bbb"},
+			host:        "aaa.bbb.ccc",
+			path:        "",
+			shouldMatch: false,
+		},
+		{
+			title:       "Host route with multiple patterns, match",
+			route:       new(Route).Host("{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}"),
+			request:     newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
+			vars:        map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc"},
+			host:        "aaa.bbb.ccc",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Host route with multiple patterns, wrong host in request URL",
+			route:       new(Route).Host("{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}"),
+			request:     newRequest("GET", "http://aaa.222.ccc/111/222/333"),
+			vars:        map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc"},
+			host:        "aaa.bbb.ccc",
+			path:        "",
+			shouldMatch: false,
+		},
+	}
+	for _, test := range tests {
+		testRoute(t, test)
+	}
 }
 
-// helper function to create a new request with a method, url, and headers
-func newRequestHeaders(method, url string, headers map[string]string) *http.Request {
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		panic(err)
+func TestPath(t *testing.T) {
+	tests := []routeTest{
+		{
+			title:       "Path route, match",
+			route:       new(Route).Path("/111/222/333"),
+			request:     newRequest("GET", "http://localhost/111/222/333"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "/111/222/333",
+			shouldMatch: true,
+		},
+		{
+			title:       "Path route, wrong path in request in request URL",
+			route:       new(Route).Path("/111/222/333"),
+			request:     newRequest("GET", "http://localhost/1/2/3"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "/111/222/333",
+			shouldMatch: false,
+		},
+		{
+			title:       "Path route with pattern, match",
+			route:       new(Route).Path("/111/{v1:[0-9]{3}}/333"),
+			request:     newRequest("GET", "http://localhost/111/222/333"),
+			vars:        map[string]string{"v1": "222"},
+			host:        "",
+			path:        "/111/222/333",
+			shouldMatch: true,
+		},
+		{
+			title:       "Path route with pattern, URL in request does not match",
+			route:       new(Route).Path("/111/{v1:[0-9]{3}}/333"),
+			request:     newRequest("GET", "http://localhost/111/aaa/333"),
+			vars:        map[string]string{"v1": "222"},
+			host:        "",
+			path:        "/111/222/333",
+			shouldMatch: false,
+		},
+		{
+			title:       "Path route with multiple patterns, match",
+			route:       new(Route).Path("/{v1:[0-9]{3}}/{v2:[0-9]{3}}/{v3:[0-9]{3}}"),
+			request:     newRequest("GET", "http://localhost/111/222/333"),
+			vars:        map[string]string{"v1": "111", "v2": "222", "v3": "333"},
+			host:        "",
+			path:        "/111/222/333",
+			shouldMatch: true,
+		},
+		{
+			title:       "Path route with multiple patterns, URL in request does not match",
+			route:       new(Route).Path("/{v1:[0-9]{3}}/{v2:[0-9]{3}}/{v3:[0-9]{3}}"),
+			request:     newRequest("GET", "http://localhost/111/aaa/333"),
+			vars:        map[string]string{"v1": "111", "v2": "222", "v3": "333"},
+			host:        "",
+			path:        "/111/222/333",
+			shouldMatch: false,
+		},
 	}
-	for k, v := range headers {
-		req.Header.Add(k, v)
+
+	for _, test := range tests {
+		testRoute(t, test)
 	}
-	return req
 }
 
-// Tests for Route
-func TestRoute(t *testing.T) {
-	// match function for Custom tests
+func TestPathPrefix(t *testing.T) {
+	tests := []routeTest{
+		{
+			title:       "PathPrefix route, match",
+			route:       new(Route).PathPrefix("/111"),
+			request:     newRequest("GET", "http://localhost/111/222/333"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "/111",
+			shouldMatch: true,
+		},
+		{
+			title:       "PathPrefix route, URL prefix in request does not match",
+			route:       new(Route).PathPrefix("/111"),
+			request:     newRequest("GET", "http://localhost/1/2/3"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "/111",
+			shouldMatch: false,
+		},
+		{
+			title:       "PathPrefix route with pattern, match",
+			route:       new(Route).PathPrefix("/111/{v1:[0-9]{3}}"),
+			request:     newRequest("GET", "http://localhost/111/222/333"),
+			vars:        map[string]string{"v1": "222"},
+			host:        "",
+			path:        "/111/222",
+			shouldMatch: true,
+		},
+		{
+			title:       "PathPrefix route with pattern, URL prefix in request does not match",
+			route:       new(Route).PathPrefix("/111/{v1:[0-9]{3}}"),
+			request:     newRequest("GET", "http://localhost/111/aaa/333"),
+			vars:        map[string]string{"v1": "222"},
+			host:        "",
+			path:        "/111/222",
+			shouldMatch: false,
+		},
+		{
+			title:       "PathPrefix route with multiple patterns, match",
+			route:       new(Route).PathPrefix("/{v1:[0-9]{3}}/{v2:[0-9]{3}}"),
+			request:     newRequest("GET", "http://localhost/111/222/333"),
+			vars:        map[string]string{"v1": "111", "v2": "222"},
+			host:        "",
+			path:        "/111/222",
+			shouldMatch: true,
+		},
+		{
+			title:       "PathPrefix route with multiple patterns, URL prefix in request does not match",
+			route:       new(Route).PathPrefix("/{v1:[0-9]{3}}/{v2:[0-9]{3}}"),
+			request:     newRequest("GET", "http://localhost/111/aaa/333"),
+			vars:        map[string]string{"v1": "111", "v2": "222"},
+			host:        "",
+			path:        "/111/222",
+			shouldMatch: false,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+}
+
+func TestHostPath(t *testing.T) {
+	tests := []routeTest{
+		{
+			title:       "Host and Path route, match",
+			route:       new(Route).Host("aaa.bbb.ccc").Path("/111/222/333"),
+			request:     newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Host and Path route, wrong host in request URL",
+			route:       new(Route).Host("aaa.bbb.ccc").Path("/111/222/333"),
+			request:     newRequest("GET", "http://aaa.222.ccc/111/222/333"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
+		},
+		{
+			title:       "Host and Path route with pattern, match",
+			route:       new(Route).Host("aaa.{v1:[a-z]{3}}.ccc").Path("/111/{v2:[0-9]{3}}/333"),
+			request:     newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
+			vars:        map[string]string{"v1": "bbb", "v2": "222"},
+			host:        "aaa.bbb.ccc",
+			path:        "/111/222/333",
+			shouldMatch: true,
+		},
+		{
+			title:       "Host and Path route with pattern, URL in request does not match",
+			route:       new(Route).Host("aaa.{v1:[a-z]{3}}.ccc").Path("/111/{v2:[0-9]{3}}/333"),
+			request:     newRequest("GET", "http://aaa.222.ccc/111/222/333"),
+			vars:        map[string]string{"v1": "bbb", "v2": "222"},
+			host:        "aaa.bbb.ccc",
+			path:        "/111/222/333",
+			shouldMatch: false,
+		},
+		{
+			title:       "Host and Path route with multiple patterns, match",
+			route:       new(Route).Host("{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}").Path("/{v4:[0-9]{3}}/{v5:[0-9]{3}}/{v6:[0-9]{3}}"),
+			request:     newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
+			vars:        map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc", "v4": "111", "v5": "222", "v6": "333"},
+			host:        "aaa.bbb.ccc",
+			path:        "/111/222/333",
+			shouldMatch: true,
+		},
+		{
+			title:       "Host and Path route with multiple patterns, URL in request does not match",
+			route:       new(Route).Host("{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}").Path("/{v4:[0-9]{3}}/{v5:[0-9]{3}}/{v6:[0-9]{3}}"),
+			request:     newRequest("GET", "http://aaa.222.ccc/111/222/333"),
+			vars:        map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc", "v4": "111", "v5": "222", "v6": "333"},
+			host:        "aaa.bbb.ccc",
+			path:        "/111/222/333",
+			shouldMatch: false,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+}
+
+func TestHeaders(t *testing.T) {
+	// newRequestHeaders creates a new request with a method, url, and headers
+	newRequestHeaders := func(method, url string, headers map[string]string) *http.Request {
+		req, err := http.NewRequest(method, url, nil)
+		if err != nil {
+			panic(err)
+		}
+		for k, v := range headers {
+			req.Header.Add(k, v)
+		}
+		return req
+	}
+
+	tests := []routeTest{
+		{
+			title:       "Headers route, match",
+			route:       new(Route).Headers("foo", "bar", "baz", "ding"),
+			request:     newRequestHeaders("GET", "http://localhost", map[string]string{"foo": "bar", "baz": "ding"}),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Headers route, bad header values",
+			route:       new(Route).Headers("foo", "bar", "baz", "ding"),
+			request:     newRequestHeaders("GET", "http://localhost", map[string]string{"foo": "bar", "baz": "dong"}),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+
+}
+
+func TestMethods(t *testing.T) {
+	tests := []routeTest{
+		{
+			title:       "Methods route, match GET",
+			route:       new(Route).Methods("GET", "POST"),
+			request:     newRequest("GET", "http://localhost"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Methods route, match POST",
+			route:       new(Route).Methods("GET", "POST"),
+			request:     newRequest("POST", "http://localhost"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Methods route, bad method",
+			route:       new(Route).Methods("GET", "POST"),
+			request:     newRequest("PUT", "http://localhost"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+}
+
+func TestQueries(t *testing.T) {
+	tests := []routeTest{
+		{
+			title:       "Queries route, match",
+			route:       new(Route).Queries("foo", "bar", "baz", "ding"),
+			request:     newRequest("GET", "http://localhost?foo=bar&baz=ding"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Queries route, bad query",
+			route:       new(Route).Queries("foo", "bar", "baz", "ding"),
+			request:     newRequest("GET", "http://localhost?foo=bar&baz=dong"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+}
+
+func TestSchemes(t *testing.T) {
+	tests := []routeTest{
+		// Schemes
+		{
+			title:       "Schemes route, match https",
+			route:       new(Route).Schemes("https", "ftp"),
+			request:     newRequest("GET", "https://localhost"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Schemes route, match ftp",
+			route:       new(Route).Schemes("https", "ftp"),
+			request:     newRequest("GET", "ftp://localhost"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Schemes route, bad scheme",
+			route:       new(Route).Schemes("https", "ftp"),
+			request:     newRequest("GET", "http://localhost"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
+		},
+	}
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+}
+
+func TestMatcherFunc(t *testing.T) {
 	m := func(r *http.Request, m *RouteMatch) bool {
 		if r.URL.Host == "aaa.bbb.ccc" {
 			return true
@@ -51,451 +474,74 @@ func TestRoute(t *testing.T) {
 		return false
 	}
 
-	// the tests
-	tests := []struct {
-		title   string            // title of the test
-		route   *Route            // the route being tested
-		request *http.Request     // a request to test the route
-		vars    map[string]string // the expected vars of the match
-		host    string            // the expected host of the match
-		path    string            // the expected path of the match
-		match   bool              // whether the request is expected to match the route at all
-	}{
-		// Host
+	tests := []routeTest{
 		{
-			title:   "Host route match",
-			route:   new(Route).Host("aaa.bbb.ccc"),
-			request: newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
-			vars:    map[string]string{},
-			host:    "aaa.bbb.ccc",
-			path:    "",
-			match:   true,
+			title:       "MatchFunc route, match",
+			route:       new(Route).MatcherFunc(m),
+			request:     newRequest("GET", "http://aaa.bbb.ccc"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
 		},
 		{
-			title:   "Host route, wrong host in request URL",
-			route:   new(Route).Host("aaa.bbb.ccc"),
-			request: newRequest("GET", "http://aaa.222.ccc/111/222/333"),
-			vars:    map[string]string{},
-			host:    "aaa.bbb.ccc",
-			path:    "",
-			match:   false,
-		},
-		{
-			title:   "Host route with port, match",
-			route:   new(Route).Host("aaa.bbb.ccc:1234"),
-			request: newRequest("GET", "http://aaa.bbb.ccc:1234/111/222/333"),
-			vars:    map[string]string{},
-			host:    "aaa.bbb.ccc:1234",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "Host route with port, wrong port in request URL",
-			route:   new(Route).Host("aaa.bbb.ccc:1234"),
-			request: newRequest("GET", "http://aaa.bbb.ccc:9999/111/222/333"),
-			vars:    map[string]string{},
-			host:    "aaa.bbb.ccc:1234",
-			path:    "",
-			match:   false,
-		},
-		{
-			title:   "Host route, match with host in request header",
-			route:   new(Route).Host("aaa.bbb.ccc"),
-			request: newRequestHost("GET", "/111/222/333", "aaa.bbb.ccc"),
-			vars:    map[string]string{},
-			host:    "aaa.bbb.ccc",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "Host route, wrong host in request header",
-			route:   new(Route).Host("aaa.bbb.ccc"),
-			request: newRequestHost("GET", "/111/222/333", "aaa.222.ccc"),
-			vars:    map[string]string{},
-			host:    "aaa.bbb.ccc",
-			path:    "",
-			match:   false,
-		},
-		// BUG {new(Route).Host("aaa.bbb.ccc:1234"), newRequestHost("GET", "/111/222/333", "aaa.bbb.ccc:1234"), map[string]string{}, "aaa.bbb.ccc:1234", "", true},
-		{
-			title:   "Host route with port, wrong host in request header",
-			route:   new(Route).Host("aaa.bbb.ccc:1234"),
-			request: newRequestHost("GET", "/111/222/333", "aaa.bbb.ccc:9999"),
-			vars:    map[string]string{},
-			host:    "aaa.bbb.ccc:1234",
-			path:    "",
-			match:   false,
-		},
-		{
-			title:   "Host route with pattern, match",
-			route:   new(Route).Host("aaa.{v1:[a-z]{3}}.ccc"),
-			request: newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
-			vars:    map[string]string{"v1": "bbb"},
-			host:    "aaa.bbb.ccc",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "Host route with pattern, wrong host in request URL",
-			route:   new(Route).Host("aaa.{v1:[a-z]{3}}.ccc"),
-			request: newRequest("GET", "http://aaa.222.ccc/111/222/333"),
-			vars:    map[string]string{"v1": "bbb"},
-			host:    "aaa.bbb.ccc",
-			path:    "",
-			match:   false,
-		},
-		{
-			title:   "Host route with multiple patterns, match",
-			route:   new(Route).Host("{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}"),
-			request: newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
-			vars:    map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc"},
-			host:    "aaa.bbb.ccc",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "Host route with multiple patterns, wrong host in request URL",
-			route:   new(Route).Host("{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}"),
-			request: newRequest("GET", "http://aaa.222.ccc/111/222/333"),
-			vars:    map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc"},
-			host:    "aaa.bbb.ccc",
-			path:    "",
-			match:   false,
-		},
-
-		// Path
-		{
-			title:   "Path route, match",
-			route:   new(Route).Path("/111/222/333"),
-			request: newRequest("GET", "http://localhost/111/222/333"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "/111/222/333",
-			match:   true,
-		},
-		{
-			title:   "Path route, wrong path in request in request URL",
-			route:   new(Route).Path("/111/222/333"),
-			request: newRequest("GET", "http://localhost/1/2/3"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "/111/222/333",
-			match:   false,
-		},
-		{
-			title:   "Path route with pattern, match",
-			route:   new(Route).Path("/111/{v1:[0-9]{3}}/333"),
-			request: newRequest("GET", "http://localhost/111/222/333"),
-			vars:    map[string]string{"v1": "222"},
-			host:    "",
-			path:    "/111/222/333",
-			match:   true,
-		},
-		{
-			title:   "Path route with pattern, URL in request does not match",
-			route:   new(Route).Path("/111/{v1:[0-9]{3}}/333"),
-			request: newRequest("GET", "http://localhost/111/aaa/333"),
-			vars:    map[string]string{"v1": "222"},
-			host:    "",
-			path:    "/111/222/333",
-			match:   false,
-		},
-		{
-			title:   "Path route with multiple patterns, match",
-			route:   new(Route).Path("/{v1:[0-9]{3}}/{v2:[0-9]{3}}/{v3:[0-9]{3}}"),
-			request: newRequest("GET", "http://localhost/111/222/333"),
-			vars:    map[string]string{"v1": "111", "v2": "222", "v3": "333"},
-			host:    "",
-			path:    "/111/222/333",
-			match:   true,
-		},
-		{
-			title:   "Path route with multiple patterns, URL in request does not match",
-			route:   new(Route).Path("/{v1:[0-9]{3}}/{v2:[0-9]{3}}/{v3:[0-9]{3}}"),
-			request: newRequest("GET", "http://localhost/111/aaa/333"),
-			vars:    map[string]string{"v1": "111", "v2": "222", "v3": "333"},
-			host:    "",
-			path:    "/111/222/333",
-			match:   false,
-		},
-
-		// PathPrefix
-		{
-			title:   "PathPrefix route, match",
-			route:   new(Route).PathPrefix("/111"),
-			request: newRequest("GET", "http://localhost/111/222/333"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "/111",
-			match:   true,
-		},
-		{
-			title:   "PathPrefix route, URL prefix in request does not match",
-			route:   new(Route).PathPrefix("/111"),
-			request: newRequest("GET", "http://localhost/1/2/3"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "/111",
-			match:   false,
-		},
-		{
-			title:   "PathPrefix route with pattern, match",
-			route:   new(Route).PathPrefix("/111/{v1:[0-9]{3}}"),
-			request: newRequest("GET", "http://localhost/111/222/333"),
-			vars:    map[string]string{"v1": "222"},
-			host:    "",
-			path:    "/111/222",
-			match:   true,
-		},
-		{
-			title:   "PathPrefix route with pattern, URL prefix in request does not match",
-			route:   new(Route).PathPrefix("/111/{v1:[0-9]{3}}"),
-			request: newRequest("GET", "http://localhost/111/aaa/333"),
-			vars:    map[string]string{"v1": "222"},
-			host:    "",
-			path:    "/111/222",
-			match:   false,
-		},
-		{
-			title:   "PathPrefix route with multiple patterns, match",
-			route:   new(Route).PathPrefix("/{v1:[0-9]{3}}/{v2:[0-9]{3}}"),
-			request: newRequest("GET", "http://localhost/111/222/333"),
-			vars:    map[string]string{"v1": "111", "v2": "222"},
-			host:    "",
-			path:    "/111/222",
-			match:   true,
-		},
-		{
-			title:   "PathPrefix route with multiple patterns, URL prefix in request does not match",
-			route:   new(Route).PathPrefix("/{v1:[0-9]{3}}/{v2:[0-9]{3}}"),
-			request: newRequest("GET", "http://localhost/111/aaa/333"),
-			vars:    map[string]string{"v1": "111", "v2": "222"},
-			host:    "",
-			path:    "/111/222",
-			match:   false,
-		},
-
-		// Host + Path
-		{
-			title:   "Host and Path route, match",
-			route:   new(Route).Host("aaa.bbb.ccc").Path("/111/222/333"),
-			request: newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "Host and Path route, wrong host in request URL",
-			route:   new(Route).Host("aaa.bbb.ccc").Path("/111/222/333"),
-			request: newRequest("GET", "http://aaa.222.ccc/111/222/333"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   false,
-		},
-		{
-			title:   "Host and Path route with pattern, match",
-			route:   new(Route).Host("aaa.{v1:[a-z]{3}}.ccc").Path("/111/{v2:[0-9]{3}}/333"),
-			request: newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
-			vars:    map[string]string{"v1": "bbb", "v2": "222"},
-			host:    "aaa.bbb.ccc",
-			path:    "/111/222/333",
-			match:   true,
-		},
-		{
-			title:   "Host and Path route with pattern, URL in request does not match",
-			route:   new(Route).Host("aaa.{v1:[a-z]{3}}.ccc").Path("/111/{v2:[0-9]{3}}/333"),
-			request: newRequest("GET", "http://aaa.222.ccc/111/222/333"),
-			vars:    map[string]string{"v1": "bbb", "v2": "222"},
-			host:    "aaa.bbb.ccc",
-			path:    "/111/222/333",
-			match:   false,
-		},
-		{
-			title:   "Host and Path route with multiple patterns, match",
-			route:   new(Route).Host("{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}").Path("/{v4:[0-9]{3}}/{v5:[0-9]{3}}/{v6:[0-9]{3}}"),
-			request: newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
-			vars:    map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc", "v4": "111", "v5": "222", "v6": "333"},
-			host:    "aaa.bbb.ccc",
-			path:    "/111/222/333",
-			match:   true,
-		},
-		{
-			title:   "Host and Path route with multiple patterns, URL in request does not match",
-			route:   new(Route).Host("{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}").Path("/{v4:[0-9]{3}}/{v5:[0-9]{3}}/{v6:[0-9]{3}}"),
-			request: newRequest("GET", "http://aaa.222.ccc/111/222/333"),
-			vars:    map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc", "v4": "111", "v5": "222", "v6": "333"},
-			host:    "aaa.bbb.ccc",
-			path:    "/111/222/333",
-			match:   false,
-		},
-
-		// Headers
-		{
-			title:   "Headers route, match",
-			route:   new(Route).Headers("foo", "bar", "baz", "ding"),
-			request: newRequestHeaders("GET", "http://localhost", map[string]string{"foo": "bar", "baz": "ding"}),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "Headers route, bad header values",
-			route:   new(Route).Headers("foo", "bar", "baz", "ding"),
-			request: newRequestHeaders("GET", "http://localhost", map[string]string{"foo": "bar", "baz": "dong"}),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   false,
-		},
-
-		// Methods
-		{
-			title:   "Methods route, match GET",
-			route:   new(Route).Methods("GET", "POST"),
-			request: newRequest("GET", "http://localhost"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "Methods route, match POST",
-			route:   new(Route).Methods("GET", "POST"),
-			request: newRequest("POST", "http://localhost"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "Methods route, bad method",
-			route:   new(Route).Methods("GET", "POST"),
-			request: newRequest("PUT", "http://localhost"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   false,
-		},
-
-		// Queries
-		{
-			title:   "Queries route, match",
-			route:   new(Route).Queries("foo", "bar", "baz", "ding"),
-			request: newRequest("GET", "http://localhost?foo=bar&baz=ding"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "Queries route, bad query",
-			route:   new(Route).Queries("foo", "bar", "baz", "ding"),
-			request: newRequest("GET", "http://localhost?foo=bar&baz=dong"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   false,
-		},
-
-		// Schemes
-		{
-			title:   "Schemes route, match https",
-			route:   new(Route).Schemes("https", "ftp"),
-			request: newRequest("GET", "https://localhost"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "Schemes route, match ftp",
-			route:   new(Route).Schemes("https", "ftp"),
-			request: newRequest("GET", "ftp://localhost"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "Schemes route, bad scheme",
-			route:   new(Route).Schemes("https", "ftp"),
-			request: newRequest("GET", "http://localhost"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   false,
-		},
-
-		// Custom
-		{
-			title:   "MatchFunc route, match",
-			route:   new(Route).MatcherFunc(m),
-			request: newRequest("GET", "http://aaa.bbb.ccc"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   true,
-		},
-		{
-			title:   "MatchFunc route, non-match",
-			route:   new(Route).MatcherFunc(m),
-			request: newRequest("GET", "http://aaa.222.ccc"),
-			vars:    map[string]string{},
-			host:    "",
-			path:    "",
-			match:   false,
+			title:       "MatchFunc route, non-match",
+			route:       new(Route).MatcherFunc(m),
+			request:     newRequest("GET", "http://aaa.222.ccc"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
 		},
 	}
 
-	for i, test := range tests {
-		testRoute(t, fmt.Sprintf("%v: %s", i, test.title), test.match, test.route, test.request, test.vars, test.host, test.path, test.host+test.path)
+	for _, test := range tests {
+		testRoute(t, test)
 	}
 }
 
 func TestSubRouter(t *testing.T) {
-	var route *Route
-	var request *http.Request
-	var vars map[string]string
-	var host, path, url string
+	subrouter1 := new(Route).Host("{v1:[a-z]+}.google.com").Subrouter()
+	subrouter2 := new(Route).PathPrefix("/foo/{v1}").Subrouter()
 
-	subrouter := new(Route).Host("{v1:[a-z]+}.google.com").Subrouter()
-
-	// Setup an id so we can see which test failed. :)
-	var idValue int
-	id := func() int {
-		idValue++
-		return idValue
+	tests := []routeTest{
+		{
+			route:       subrouter1.Path("/{v2:[a-z]+}"),
+			request:     newRequest("GET", "http://aaa.google.com/bbb"),
+			vars:        map[string]string{"v1": "aaa", "v2": "bbb"},
+			host:        "aaa.google.com",
+			path:        "/bbb",
+			shouldMatch: true,
+		},
+		{
+			route:       subrouter1.Path("/{v2:[a-z]+}"),
+			request:     newRequest("GET", "http://111.google.com/111"),
+			vars:        map[string]string{"v1": "aaa", "v2": "bbb"},
+			host:        "aaa.google.com",
+			path:        "/bbb",
+			shouldMatch: false,
+		},
+		{
+			route:       subrouter2.Path("/baz/{v2}"),
+			request:     newRequest("GET", "http://localhost/foo/bar/baz/ding"),
+			vars:        map[string]string{"v1": "bar", "v2": "ding"},
+			host:        "",
+			path:        "/foo/bar/baz/ding",
+			shouldMatch: true,
+		},
+		{
+			route:       subrouter2.Path("/baz/{v2}"),
+			request:     newRequest("GET", "http://localhost/foo/bar"),
+			vars:        map[string]string{"v1": "bar", "v2": "ding"},
+			host:        "",
+			path:        "/foo/bar/baz/ding",
+			shouldMatch: false,
+		},
 	}
 
-	// ------------------------------------------------------------------------
-
-	route = subrouter.Path("/{v2:[a-z]+}")
-	request, _ = http.NewRequest("GET", "http://aaa.google.com/bbb", nil)
-	vars = map[string]string{"v1": "aaa", "v2": "bbb"}
-	host = "aaa.google.com"
-	path = "/bbb"
-	url = host + path
-	testRoute(t, string(id()), true, route, request, vars, host, path, url)
-	// Non-match for the same config.
-	request, _ = http.NewRequest("GET", "http://111.google.com/111", nil)
-	testRoute(t, string(id()), false, route, request, vars, host, path, url)
-
-	// ------------------------------------------------------------------------
-
-	subrouter = new(Route).PathPrefix("/foo/{v1}").Subrouter()
-	route = subrouter.Path("/baz/{v2}")
-	request, _ = http.NewRequest("GET", "http://localhost/foo/bar/baz/ding", nil)
-	vars = map[string]string{"v1": "bar", "v2": "ding"}
-	host = ""
-	path = "/foo/bar/baz/ding"
-	url = host + path
-	testRoute(t, string(id()), true, route, request, vars, host, path, url)
-	// Non-match for the same config.
-	request, _ = http.NewRequest("GET", "http://localhost/foo/bar", nil)
-	testRoute(t, string(id()), false, route, request, vars, host, path, url)
+	for _, test := range tests {
+		testRoute(t, test)
+	}
 }
 
 func TestNamedRoutes(t *testing.T) {
@@ -518,64 +564,6 @@ func TestNamedRoutes(t *testing.T) {
 		t.Errorf("Expected 9 named routes, got %v", r1.namedRoutes)
 	} else if r1.Get("i") == nil {
 		t.Errorf("Subroute name not registered")
-	}
-}
-
-// ----------------------------------------------------------------------------
-// Helpers
-// ----------------------------------------------------------------------------
-
-func getRouteTemplate(route *Route) string {
-	host, path := "none", "none"
-	if route.regexp != nil {
-		if route.regexp.host != nil {
-			host = route.regexp.host.template
-		}
-		if route.regexp.path != nil {
-			path = route.regexp.path.template
-		}
-	}
-	return fmt.Sprintf("Host: %v, Path: %v", host, path)
-}
-
-func testRoute(t *testing.T, id string, shouldMatch bool, route *Route,
-	request *http.Request, vars map[string]string, host, path, url string) {
-	var match RouteMatch
-	ok := route.Match(request, &match)
-	if ok != shouldMatch {
-		msg := "Should match"
-		if !shouldMatch {
-			msg = "Should not match"
-		}
-		t.Errorf("(%v) %v:\nRoute: %#v\nRequest: %#v\nVars: %v\n", id, msg, route, request, vars)
-		return
-	}
-	if shouldMatch {
-		if vars != nil && !stringMapEqual(vars, match.Vars) {
-			t.Errorf("(%v) Vars not equal: expected %v, got %v", id, vars, match.Vars)
-			return
-		}
-		if host != "" {
-			u, _ := route.URLHost(mapToPairs(match.Vars)...)
-			if host != u.Host {
-				t.Errorf("(%v) URLHost not equal: expected %v, got %v -- %v", id, host, u.Host, getRouteTemplate(route))
-				return
-			}
-		}
-		if path != "" {
-			u, _ := route.URLPath(mapToPairs(match.Vars)...)
-			if path != u.Path {
-				t.Errorf("(%v) URLPath not equal: expected %v, got %v -- %v", id, path, u.Path, getRouteTemplate(route))
-				return
-			}
-		}
-		if url != "" {
-			u, _ := route.URL(mapToPairs(match.Vars)...)
-			if url != u.Host+u.Path {
-				t.Errorf("(%v) URL not equal: expected %v, got %v -- %v", id, url, u.Host+u.Path, getRouteTemplate(route))
-				return
-			}
-		}
 	}
 }
 
@@ -603,6 +591,72 @@ func TestStrictSlash(t *testing.T) {
 	}
 }
 
+// ----------------------------------------------------------------------------
+// Helpers
+// ----------------------------------------------------------------------------
+
+func getRouteTemplate(route *Route) string {
+	host, path := "none", "none"
+	if route.regexp != nil {
+		if route.regexp.host != nil {
+			host = route.regexp.host.template
+		}
+		if route.regexp.path != nil {
+			path = route.regexp.path.template
+		}
+	}
+	return fmt.Sprintf("Host: %v, Path: %v", host, path)
+}
+
+func testRoute(t *testing.T, test routeTest) {
+	request := test.request
+	route := test.route
+	vars := test.vars
+	shouldMatch := test.shouldMatch
+	host := test.host
+	path := test.path
+	url := test.host + test.path
+
+	var match RouteMatch
+	ok := route.Match(request, &match)
+	if ok != shouldMatch {
+		msg := "Should match"
+		if !shouldMatch {
+			msg = "Should not match"
+		}
+		t.Errorf("(%v) %v:\nRoute: %#v\nRequest: %#v\nVars: %v\n", test.title, msg, route, request, vars)
+		return
+	}
+	if shouldMatch {
+		if test.vars != nil && !stringMapEqual(test.vars, match.Vars) {
+			t.Errorf("(%v) Vars not equal: expected %v, got %v", test.title, vars, match.Vars)
+			return
+		}
+		if host != "" {
+			u, _ := test.route.URLHost(mapToPairs(match.Vars)...)
+			if host != u.Host {
+				t.Errorf("(%v) URLHost not equal: expected %v, got %v -- %v", test.title, host, u.Host, getRouteTemplate(route))
+				return
+			}
+		}
+		if path != "" {
+			u, _ := route.URLPath(mapToPairs(match.Vars)...)
+			if path != u.Path {
+				t.Errorf("(%v) URLPath not equal: expected %v, got %v -- %v", test.title, path, u.Path, getRouteTemplate(route))
+				return
+			}
+		}
+		if url != "" {
+			u, _ := route.URL(mapToPairs(match.Vars)...)
+			if url != u.Host+u.Path {
+				t.Errorf("(%v) URL not equal: expected %v, got %v -- %v", test.title, url, u.Host+u.Path, getRouteTemplate(route))
+				return
+			}
+		}
+	}
+}
+
+// mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int
 	p := make([]string, len(m)*2)
@@ -614,6 +668,7 @@ func mapToPairs(m map[string]string) []string {
 	return p
 }
 
+// stringMapEqual checks the equality of two string maps
 func stringMapEqual(m1, m2 map[string]string) bool {
 	nil1 := m1 == nil
 	nil2 := m2 == nil
@@ -626,4 +681,13 @@ func stringMapEqual(m1, m2 map[string]string) bool {
 		}
 	}
 	return true
+}
+
+// newRequest is a helper function to create a new request with a method and url
+func newRequest(method, url string) *http.Request {
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		panic(err)
+	}
+	return req
 }
