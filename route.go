@@ -352,6 +352,9 @@ func (r *Route) Schemes(schemes ...string) *Route {
 // doesn't match.
 func (r *Route) Subrouter() *Router {
 	router := &Router{parent: r, strictSlash: r.strictSlash}
+	if parentRouter, ok := r.parent.(*Router); ok && parentRouter != nil {
+		router.KeepContext = parentRouter.KeepContext
+	}
 	r.addMatcher(router)
 	return router
 }
