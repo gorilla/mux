@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+var ip6, _ = regexp.Compile(`\[(([0-9a-fA-F]+)?::?)+[0-9a-fA-F]+\](:[0-9]+)?`)
+
 // newRouteRegexp parses a route template and returns a routeRegexp,
 // used to match a host or path.
 //
@@ -239,11 +241,7 @@ func getHost(r *http.Request) string {
 		host := r.Host
 		// ipv6 adresses in the form "[a:b::c]:port"
 		if host[0] == '[' {
-			ip6, _ := regexp.Compile(`\[(([0-9a-fA-F]+)?::?)+[0-9a-fA-F]+\](:[0-9]+)?`)
-			if ip6.MatchString(host) {
-				j := strings.Index(host[1:], "]")+1
-				host = host[1:j]
-			}
+			host = ip6.FindString(host)
 		} else if i := strings.Index(host, ":"); i != -1 {
 			// Slice off any port information.
 			host = host[:i]
