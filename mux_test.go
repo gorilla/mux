@@ -33,6 +33,42 @@ func TestHost(t *testing.T) {
 
 	tests := []routeTest{
 		{
+			title:       "Host route match with ipv4 address",
+			route:       new(Route).Host("2.3.55.254"),
+			request:     newRequest("GET", "http://2.3.55.254/111/222/333"),
+			vars:        map[string]string{},
+			host:        "2.3.55.254",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Host route match with ipv4 address and port",
+			route:       new(Route).Host("2.3.55.254:8080"),
+			request:     newRequest("GET", "http://2.3.55.254:8080/111/222/333"),
+			vars:        map[string]string{},
+			host:        "2.3.55.254:8080",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Host route match with ipv6 address",
+			route:       new(Route).Host("[abc::e]"),
+			request:     newRequest("GET", "http://[abc::e]/111/222/333"),
+			vars:        map[string]string{},
+			host:        "[abc::e]",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Host route match with ipv6 address and port",
+			route:       new(Route).Host("[abc::e]:8080"),
+			request:     newRequest("GET", "http://[abc::e]:8080/111/222/333"),
+			vars:        map[string]string{},
+			host:        "[abc::e]:8080",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
 			title:       "Host route match",
 			route:       new(Route).Host("aaa.bbb.ccc"),
 			request:     newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
