@@ -38,6 +38,9 @@ func NewRouter() *Router {
 type Router struct {
 	// Configurable Handler to be used when no route matches.
 	NotFoundHandler http.Handler
+	// If true, the request's context will not be wiped once
+	// the router is done
+	KeepContext bool
 	// Parent route, if this is a subrouter.
 	parent parentRoute
 	// Routes to be matched, in order.
@@ -82,7 +85,9 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		handler = r.NotFoundHandler
 	}
-	defer context.Clear(req)
+	if !r.KeepContext {
+		defer context.Clear(req)
+	}
 	handler.ServeHTTP(w, req)
 }
 
