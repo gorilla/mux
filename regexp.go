@@ -237,8 +237,13 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 func getHost(r *http.Request) string {
 	if !r.URL.IsAbs() {
 		host := r.Host
-		// Slice off any port information.
-		if i := strings.Index(host, ":"); i != -1 {
+		// ipv6 adresses in the form "[a:b::c]:port"
+		if host[0] == '[' && host[len(host)-1] != ']' {
+			if i := strings.LastIndex(host, ";"); i != -1 {
+				host = host[:i]
+			}
+		} else if i := strings.Index(host, ":"); i != -1 {
+			// Slice off any port information.
 			host = host[:i]
 		}
 		return host
