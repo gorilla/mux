@@ -194,6 +194,15 @@ func TestPath(t *testing.T) {
 			path:        "/111/222/333",
 			shouldMatch: false,
 		},
+		{
+			title:       "Path route with multiple complex patterns, URL in request does match",
+			route:       new(Route).Path("/{v1:\\d+(-\\d+)?(:\\d+(-\\d+)?)*}/{v2:\\d+(-\\d+)?(:\\d+(-\\d+)?)*}"),
+			request:     newRequest("GET", "http://localhost/1-3:5/8-10:23"),
+			vars:        map[string]string{"v1": "1-3:5", "v2": "8-10:23"},
+			host:        "",
+			path:        "/1-3:5/8-10:23",
+			shouldMatch: true,
+		},
 	}
 
 	for _, test := range tests {
