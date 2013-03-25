@@ -89,7 +89,7 @@ There are several other matchers that can be added. To match path prefixes:
 
 	r.MatcherFunc(func(r *http.Request, rm *RouteMatch) bool {
 		return r.ProtoMajor == 0
-        })
+    })
 
 ...and finally, it is possible to combine several matchers in a single route:
 
