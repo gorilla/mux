@@ -51,7 +51,7 @@ type Router struct {
 // Match matches registered routes against the request.
 func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 	for _, route := range r.routes {
-		if route.Match(req, match) {
+		if matched := route.Match(req, match); matched {
 			return true
 		}
 	}
@@ -71,7 +71,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	var match RouteMatch
 	var handler http.Handler
-	if r.Match(req, &match) {
+	if matched := r.Match(req, &match); matched {
 		handler = match.Handler
 		setVars(req, match.Vars)
 		setCurrentRoute(req, match.Route)
