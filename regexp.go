@@ -222,7 +222,12 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 		pathVars := v.path.regexp.FindStringSubmatch(uri)
 		if pathVars != nil {
 			for i, n := range v.path.varsN {
-				m.Vars[n] = pathVars[v.path.varsI[i]]
+				varN := pathVars[v.path.varsI[i]]
+				var err error
+				m.Vars[n], err = url.QueryUnescape(varN)
+				if err != nil {
+					m.Vars[n] = varN
+				}
 			}
 			// Check if we should redirect.
 			if r.strictSlash {
