@@ -8,13 +8,19 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+    "strings"
 
 	"github.com/gorilla/context"
 )
 
+var (
+    MatchErrMsgKey string = "matchErrMsgKey"
+    MatchErrCodeKey = "matchErrCodeKey"
+)
+
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
-	return &Router{namedRoutes: make(map[string]*Route)}
+    return &Router{namedRoutes: make(map[string]*Route)}
 }
 
 // Router registers routes to be matched and dispatches a handler.
@@ -78,11 +84,11 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if handler == nil {
 		if r.NotFoundHandler == nil {
-			r.NotFoundHandler = http.NotFoundHandler()
+			r.NotFoundHandler = http.HandlerFunc(NotFound)
 		}
 		handler = r.NotFoundHandler
 	}
-	defer context.Clear(req)
+    defer context.Clear(req)
 	handler.ServeHTTP(w, req)
 }
 
@@ -332,4 +338,53 @@ func matchMap(toCheck map[string]string, toMatch map[string][]string,
 		}
 	}
 	return true
+}
+
+// Pretty-Prints map[string]string to a pretty formatted string
+func mapToString(m map[string]string) string {
+    output := []string{}
+    for key, val := range m {
+        entry := key
+        if val != "" {
+            entry += "=" + val
+        }
+        output = append(output, entry)
+    }
+    return strings.Join(output, ", ")
+}
+
+// Pretty-Prints map[string][]string to a pretty formatted string
+func mapListToString(m map[string][]string) string {
+    output := []string{}
+    for key, val := range m {
+        entry := key
+        if val != nil {
+            entry += "=" + strings.Join(val, "|")
+        }
+        output = append(output, entry)
+    }
+    return strings.Join(output, ", ")
+}
+
+// Default handler for when a URL was not matched
+func NotFound(w http.ResponseWriter, r *http.Request) {
+    if matchErr, ok := context.Get(r, MatchErrMsgKey).(string); ok {
+        var code int
+        var err error
+        if code, ok = context.Get(r, MatchErrCodeKey).(int); ok {
+            if err != nil {
+                code = 500
+                // Should only happen if matcher has a bug
+                matchErr = fmt.Sprintf(
+                    "Error getting code for error %s.  Reason: %s", matchErr, err)
+            }
+        } else {
+            code = 500
+        }
+
+        http.Error(w, matchErr, code)
+
+    } else {
+        http.NotFound(w, r)
+    }
 }

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+
+	"github.com/gorilla/context"
 )
 
 type routeTest struct {
@@ -653,6 +655,152 @@ func testRoute(t *testing.T, test routeTest) {
 				return
 			}
 		}
+	}
+}
+
+func TestNoMatchHeaderErrors(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	s := r.Headers(
+        "SomeSpecialHeader", "", "SomeSpecialHeader1", "a").Subrouter()
+	s.HandleFunc("/", func1).Name("func1")
+
+	req, _ := http.NewRequest("GET", "http://localhost/", nil)
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+
+    if matched {
+        t.Error("Should not have matched route for headers")
+    }
+
+    if _, ok := context.GetOk(req, MatchErrMsgKey); !ok {
+        t.Error("No proper error msg returned for missing header")
+    }
+    if code, ok := context.Get(req, MatchErrCodeKey).(int); !ok {
+        t.Error("No proper error code returned for missing header")
+    } else if code != 412 {
+        t.Error("Improper error code for header match")
+    }
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 412 {
+		t.Errorf("Expecting code %s", 412)
+	}
+}
+
+func TestNoMatchMethodErrors(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+    r := NewRouter()
+    s := r.Methods("GET", "POST").Subrouter()
+	s.HandleFunc("/", func1).Name("func1")
+
+    req, _ := http.NewRequest("PUT", "http://localhost/", nil)
+    match := new(RouteMatch)
+    matched := r.Match(req, match)
+
+    if matched {
+        t.Error("Should not have matched route for methods")
+    }
+
+    if _, ok := context.GetOk(req, MatchErrMsgKey); !ok {
+        t.Error("No proper error msg returned for incorrect method")
+    }
+    if code, ok := context.Get(req, MatchErrCodeKey).(int); !ok {
+        t.Error("No proper error code returned for incorrect method")
+    } else if code != 405 {
+        t.Error("Improper error code for method match")
+    }
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 405 {
+		t.Errorf("Expecting code %s", 405)
+	}
+}
+
+func TestNoMatchQueryErrors(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+    r := NewRouter()
+    s := r.Queries("x", "").Subrouter()
+	s.HandleFunc("/", func1).Name("func1")
+
+    req, _ := http.NewRequest("GET", "http://localhost/", nil)
+    match := new(RouteMatch)
+    matched := r.Match(req, match)
+
+    if matched {
+        t.Error("Should not have matched route for queries")
+    }
+
+    if _, ok := context.GetOk(req, MatchErrMsgKey); !ok {
+        t.Error("No proper error msg returned for missing queries")
+    }
+    if code, ok := context.Get(req, MatchErrCodeKey).(int); !ok {
+        t.Error("No proper error code returned for missing queries")
+    } else if code != 412 {
+        t.Error("Improper error code for query match")
+    }
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 412 {
+		t.Errorf("Expecting code %s", 412)
+	}
+}
+
+func TestNoMatchSchemeErrors(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+    r := NewRouter()
+    s := r.Schemes("https").Subrouter()
+	s.HandleFunc("/", func1).Name("func1")
+
+    req, _ := http.NewRequest("GET", "http://localhost/", nil)
+    match := new(RouteMatch)
+    matched := r.Match(req, match)
+
+    if matched {
+        t.Error("Should not have matched route for scheme")
+    }
+
+    if _, ok := context.GetOk(req, MatchErrMsgKey); !ok {
+        t.Error("No proper error msg returned for incorrect scheme")
+    }
+    if code, ok := context.Get(req, MatchErrCodeKey).(int); !ok {
+        t.Error("No proper error code returned for incorrect scheme")
+    } else if code != 403 {
+        t.Error("Improper error code for scheme match")
+    }
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 403 {
+		t.Errorf("Expecting code %s", 403)
+	}
+}
+
+func TestNoMatchPathErrors(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+    r := NewRouter()
+	r.HandleFunc("/foo", func1).Name("func1")
+
+    req, _ := http.NewRequest("GET", "http://localhost/", nil)
+    match := new(RouteMatch)
+    matched := r.Match(req, match)
+
+    if matched {
+        t.Error("Should not have matched route for scheme")
+    }
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 404 {
+		t.Errorf("Expecting code %s", 404)
 	}
 }
 

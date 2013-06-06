@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/gorilla/context"
 )
 
 // Route stores information to match a request and build URLs.
@@ -177,7 +179,15 @@ func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix bool) error 
 type headerMatcher map[string]string
 
 func (m headerMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchMap(m, r.Header, true)
+    isMatch := matchMap(m, r.Header, true)
+    if !isMatch {
+        msg := fmt.Sprint(
+                "Required Headers Missing.\nRecieved: ", mapListToString(r.Header), 
+                "\nMandatory Headers: ", mapToString(map[string]string(m)))
+        context.Set(r, MatchErrMsgKey, msg)
+        context.Set(r, MatchErrCodeKey, 412)
+    }
+    return isMatch
 }
 
 // Headers adds a matcher for request header values.
@@ -243,7 +253,14 @@ func (r *Route) MatcherFunc(f MatcherFunc) *Route {
 type methodMatcher []string
 
 func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchInArray(m, r.Method)
+    isMatch := matchInArray(m, r.Method)
+    if !isMatch {
+        context.Set(
+            r, MatchErrMsgKey, fmt.Sprint(
+                "Method", r.Method, "not allowed.  \nAllowed Methods:", m))
+        context.Set(r, MatchErrCodeKey, 405)
+    }
+    return isMatch
 }
 
 // Methods adds a matcher for HTTP methods.
@@ -296,7 +313,15 @@ func (r *Route) PathPrefix(tpl string) *Route {
 type queryMatcher map[string]string
 
 func (m queryMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchMap(m, r.URL.Query(), false)
+    isMatch := matchMap(m, r.URL.Query(), false)
+    if !isMatch {
+        context.Set(
+            r, MatchErrMsgKey, fmt.Sprint(
+                "Required Query Parameters Missing. \nReceived:", r.URL.Query(), 
+                "\nMandatory Parameters:", m))
+        context.Set(r, MatchErrCodeKey, 412)
+    }
+    return isMatch
 }
 
 // Queries adds a matcher for URL query values.
@@ -324,7 +349,14 @@ func (r *Route) Queries(pairs ...string) *Route {
 type schemeMatcher []string
 
 func (m schemeMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchInArray(m, r.URL.Scheme)
+    isMatch := matchInArray(m, r.URL.Scheme)
+    if !isMatch {
+        context.Set(
+            r, MatchErrMsgKey, fmt.Sprint(
+                "Incorrect Protocol. \nReceived:", r.URL.Scheme, "\nExpected:", m))
+        context.Set(r, MatchErrCodeKey, 403)
+    }
+    return isMatch
 }
 
 // Schemes adds a matcher for URL schemes.
