@@ -46,6 +46,8 @@ type Router struct {
 	namedRoutes map[string]*Route
 	// See Router.StrictSlash(). This defines the flag for new routes.
 	strictSlash bool
+	// Middlware handlers hit on everyroute
+	middleware []http.HandlerFunc
 }
 
 // Match matches registered routes against the request.
@@ -83,6 +85,9 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		handler = r.NotFoundHandler
 	}
 	defer context.Clear(req)
+	for _, middleware := range r.middleware {
+		middleware(w, req)
+	}
 	handler.ServeHTTP(w, req)
 }
 
@@ -204,6 +209,17 @@ func (r *Router) Queries(pairs ...string) *Route {
 // See Route.Schemes().
 func (r *Router) Schemes(schemes ...string) *Route {
 	return r.NewRoute().Schemes(schemes...)
+}
+
+// ----------------------------------------------------------------------------
+// Middleware & Utility
+// ----------------------------------------------------------------------------
+
+// Middleware registers a new handler function that's to be hit on
+// each request, regardless of the route's path
+func (r *Router) Middleware(handler http.HandlerFunc) *Router {
+	r.middleware = append(r.middleware, handler)
+	return r
 }
 
 // ----------------------------------------------------------------------------

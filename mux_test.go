@@ -591,6 +591,22 @@ func TestStrictSlash(t *testing.T) {
 	}
 }
 
+func TestMiddleware(t *testing.T) {
+	var r *Router
+	var flag = true
+	r = NewRouter()
+	r.Middleware(func(w http.ResponseWriter, req *http.Request) {
+		flag = !flag
+	})
+	r.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {})
+	http.Handle("/", r)
+	go http.ListenAndServe(":3000", nil)
+	_, _ = http.Get("http://localhost:3000/")
+	if flag {
+		t.Errorf("Middleware was not visited in route.")
+	}
+}
+
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
