@@ -14,7 +14,7 @@ import (
 
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
-    return &Router{namedRoutes: make(map[string]*Route), KeepContext: true,}
+    return &Router{namedRoutes: make(map[string]*Route), KeepContext: false,}
 }
 
 // Router registers routes to be matched and dispatches a handler.

@@ -664,7 +664,6 @@ func TestKeepContext(t *testing.T) {
 	func1 := func(w http.ResponseWriter, r *http.Request) {}
 
 	r := NewRouter()
-    r.KeepContext = false
 	r.HandleFunc("/", func1).Name("func1")
 
 	req, _ := http.NewRequest("GET", "http://localhost/", nil)
