@@ -660,10 +660,11 @@ func testRoute(t *testing.T, test routeTest) {
 
 // Tests that the context is cleared or not cleared properly depending on
 // the configuration of the router
-func TestContextClear(t *testing.T) {
+func TestKeepContext(t *testing.T) {
 	func1 := func(w http.ResponseWriter, r *http.Request) {}
 
 	r := NewRouter()
+    r.KeepContext = false
 	r.HandleFunc("/", func1).Name("func1")
 
 	req, _ := http.NewRequest("GET", "http://localhost/", nil)
@@ -676,7 +677,7 @@ func TestContextClear(t *testing.T) {
         t.Error("Context should have been cleared at end of request")
     }
 
-    r.ContextClear = false
+    r.KeepContext = true
 
 	req, _ = http.NewRequest("GET", "http://localhost/", nil)
     context.Set(req, "t", 1)
