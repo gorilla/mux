@@ -667,24 +667,24 @@ func TestKeepContext(t *testing.T) {
 	r.HandleFunc("/", func1).Name("func1")
 
 	req, _ := http.NewRequest("GET", "http://localhost/", nil)
-    context.Set(req, "t", 1)
-    
-    res := new(http.ResponseWriter)
-    r.ServeHTTP(*res, req)
+	context.Set(req, "t", 1)
 
-    if _, ok := context.GetOk(req, "t"); ok {
-        t.Error("Context should have been cleared at end of request")
-    }
+	res := new(http.ResponseWriter)
+	r.ServeHTTP(*res, req)
 
-    r.KeepContext = true
+	if _, ok := context.GetOk(req, "t"); ok {
+		t.Error("Context should have been cleared at end of request")
+	}
+
+	r.KeepContext = true
 
 	req, _ = http.NewRequest("GET", "http://localhost/", nil)
-    context.Set(req, "t", 1)
+	context.Set(req, "t", 1)
 
-    r.ServeHTTP(*res, req)
-    if _, ok := context.GetOk(req, "t"); !ok {
-        t.Error("Context should NOT have been cleared at end of request")
-    }
+	r.ServeHTTP(*res, req)
+	if _, ok := context.GetOk(req, "t"); !ok {
+		t.Error("Context should NOT have been cleared at end of request")
+	}
 
 }
 
