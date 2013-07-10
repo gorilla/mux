@@ -47,11 +47,13 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, strictSlash bool) (*rout
 		endSlash = true
 	}
 	varsN := make([]string, len(idxs)/2)
+	varsI := make([]int, len(idxs)/2)
 	varsR := make([]*regexp.Regexp, len(idxs)/2)
 	pattern := bytes.NewBufferString("^")
 	reverse := bytes.NewBufferString("")
 	var end int
 	var err error
+	subExpIndex := 1
 	for i := 0; i < len(idxs); i += 2 {
 		// Set all values we are interested in.
 		raw := tpl[end:idxs[i]]
@@ -74,6 +76,8 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, strictSlash bool) (*rout
 		// Append variable name and compiled pattern.
 		varsN[i/2] = name
 		varsR[i/2], err = regexp.Compile(fmt.Sprintf("^%s$", patt))
+		varsI[i/2] = subExpIndex
+		subExpIndex += varsR[i/2].NumSubexp() + 1
 		if err != nil {
 			return nil, err
 		}
@@ -104,6 +108,7 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, strictSlash bool) (*rout
 		reverse:   reverse.String(),
 		varsN:     varsN,
 		varsR:     varsR,
+		varsI:     varsI,
 	}, nil
 }
 
@@ -120,14 +125,17 @@ type routeRegexp struct {
 	reverse string
 	// Variable names.
 	varsN []string
+	// Subexpression indexes
+	varsI []int
 	// Variable regexps (validators).
 	varsR []*regexp.Regexp
 }
 
 // Match matches the regexp against the URL host or path.
 func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
+	uri := strings.Split(req.RequestURI, "?")[0]
 	if !r.matchHost {
-		return r.regexp.MatchString(req.URL.Path)
+		return r.regexp.MatchString(uri)
 	}
 	return r.regexp.MatchString(getHost(req))
 }
@@ -199,6 +207,7 @@ type routeRegexpGroup struct {
 
 // setMatch extracts the variables from the URL once a route matches.
 func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
+	uri := strings.Split(req.RequestURI, "?")[0]
 	// Store host variables.
 	if v.host != nil {
 		hostVars := v.host.regexp.FindStringSubmatch(getHost(req))
@@ -210,14 +219,19 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 	}
 	// Store path variables.
 	if v.path != nil {
-		pathVars := v.path.regexp.FindStringSubmatch(req.URL.Path)
+		pathVars := v.path.regexp.FindStringSubmatch(uri)
 		if pathVars != nil {
-			for k, v := range v.path.varsN {
-				m.Vars[v] = pathVars[k+1]
+			for i, n := range v.path.varsN {
+				varN := pathVars[v.path.varsI[i]]
+				var err error
+				m.Vars[n], err = url.QueryUnescape(varN)
+				if err != nil {
+					m.Vars[n] = varN
+				}
 			}
 			// Check if we should redirect.
 			if r.strictSlash {
-				p1 := strings.HasSuffix(req.URL.Path, "/")
+				p1 := strings.HasSuffix(uri, "/")
 				p2 := strings.HasSuffix(v.path.template, "/")
 				if p1 != p2 {
 					u, _ := url.Parse(req.URL.String())
