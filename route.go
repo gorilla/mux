@@ -179,19 +179,19 @@ func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix bool) error 
 type headerMatcher map[string]string
 
 func (m headerMatcher) Match(r *http.Request, match *RouteMatch) bool {
-    isMatch := matchMap(m, r.Header, true)
-    if !isMatch {
-        received := mapListToString(r.Header)
-        if received == "" {
-            received = "(NONE)"
-        }
-        msg := fmt.Sprint(
-                "Required Headers Missing.\nReceived: ", received, 
-                "\nMandatory Headers: ", mapToString(map[string]string(m)))
-        context.Set(r, MatchErrMsgKey, msg)
-        context.Set(r, MatchErrCodeKey, 412)
-    }
-    return isMatch
+	isMatch := matchMap(m, r.Header, true)
+	if !isMatch {
+		received := mapListToString(r.Header)
+		if received == "" {
+			received = "(NONE)"
+		}
+		body := fmt.Sprint(
+			"Required Headers Missing.\nReceived: ", received,
+			"\nMandatory Headers: ", mapToString(map[string]string(m)))
+
+		context.Set(r, MuxMatchErrorContextKey, MatchError{Code: 412, Body: body})
+	}
+	return isMatch
 }
 
 // Headers adds a matcher for request header values.
@@ -257,14 +257,12 @@ func (r *Route) MatcherFunc(f MatcherFunc) *Route {
 type methodMatcher []string
 
 func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
-    isMatch := matchInArray(m, r.Method)
-    if !isMatch {
-        msg := fmt.Sprint(
-            "Method ", r.Method, " not allowed.  \nAllowed Methods: ", strings.Join(m, ", "))
-        context.Set(r, MatchErrMsgKey, msg)
-        context.Set(r, MatchErrCodeKey, 405)
-    }
-    return isMatch
+	isMatch := matchInArray(m, r.Method)
+	if !isMatch {
+		context.Set(r, MuxMatchErrorContextKey,
+			MatchError{Code: 405, Headers: http.Header{"Allow": m}})
+	}
+	return isMatch
 }
 
 // Methods adds a matcher for HTTP methods.
@@ -317,19 +315,18 @@ func (r *Route) PathPrefix(tpl string) *Route {
 type queryMatcher map[string]string
 
 func (m queryMatcher) Match(r *http.Request, match *RouteMatch) bool {
-    isMatch := matchMap(m, r.URL.Query(), false)
-    if !isMatch {
-        received := mapListToString(r.URL.Query())
-        if received == "" {
-            received = "(NONE)"
-        }
-        msg := fmt.Sprint(
-            "Required Query Parameters Missing. \nReceived: ", received, 
-            "\nMandatory Parameters: ", mapToString(m))
-        context.Set(r, MatchErrMsgKey, msg)
-        context.Set(r, MatchErrCodeKey, 412)
-    }
-    return isMatch
+	isMatch := matchMap(m, r.URL.Query(), false)
+	if !isMatch {
+		received := mapListToString(r.URL.Query())
+		if received == "" {
+			received = "(NONE)"
+		}
+		body := fmt.Sprint(
+			"Required Query Parameters Missing. \nReceived: ", received,
+			"\nMandatory Parameters: ", mapToString(m))
+		context.Set(r, MuxMatchErrorContextKey, MatchError{Code: 412, Body: body})
+	}
+	return isMatch
 }
 
 // Queries adds a matcher for URL query values.
@@ -357,15 +354,14 @@ func (r *Route) Queries(pairs ...string) *Route {
 type schemeMatcher []string
 
 func (m schemeMatcher) Match(r *http.Request, match *RouteMatch) bool {
-    isMatch := matchInArray(m, r.URL.Scheme)
-    if !isMatch {
-        msg := fmt.Sprint(
-            "Incorrect Protocol. \nReceived: ", r.URL.Scheme, 
-            "\nExpected: ", strings.Join(m, ", "))
-        context.Set(r, MatchErrMsgKey, msg)
-        context.Set(r, MatchErrCodeKey, 403)
-    }
-    return isMatch
+	isMatch := matchInArray(m, r.URL.Scheme)
+	if !isMatch {
+		body := fmt.Sprint(
+			"Incorrect Protocol. \nReceived: ", r.URL.Scheme,
+			"\nExpected: ", strings.Join(m, ", "))
+		context.Set(r, MuxMatchErrorContextKey, MatchError{Code: 403, Body: body})
+	}
+	return isMatch
 }
 
 // Schemes adds a matcher for URL schemes.

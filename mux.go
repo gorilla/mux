@@ -8,19 +8,18 @@ import (
 	"fmt"
 	"net/http"
 	"path"
-    "strings"
+	"strings"
 
 	"github.com/gorilla/context"
 )
 
 var (
-    MatchErrMsgKey string = "matchErrMsgKey"
-    MatchErrCodeKey = "matchErrCodeKey"
+	MuxMatchErrorContextKey string = "MuxMatchErrorContextKey"
 )
 
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
-    return &Router{namedRoutes: make(map[string]*Route)}
+	return &Router{namedRoutes: make(map[string]*Route)}
 }
 
 // Router registers routes to be matched and dispatches a handler.
@@ -88,7 +87,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		handler = r.NotFoundHandler
 	}
-    defer context.Clear(req)
+	defer context.Clear(req)
 	handler.ServeHTTP(w, req)
 }
 
@@ -342,49 +341,66 @@ func matchMap(toCheck map[string]string, toMatch map[string][]string,
 
 // Pretty-Prints map[string]string to a pretty formatted string
 func mapToString(m map[string]string) string {
-    output := []string{}
-    for key, val := range m {
-        entry := key
-        if val != "" {
-            entry += "=" + val
-        }
-        output = append(output, entry)
-    }
-    return strings.Join(output, ", ")
+	output := []string{}
+	for key, val := range m {
+		entry := key
+		if val != "" {
+			entry += "=" + val
+		}
+		output = append(output, entry)
+	}
+	return strings.Join(output, ", ")
 }
 
 // Pretty-Prints map[string][]string to a pretty formatted string
 func mapListToString(m map[string][]string) string {
-    output := []string{}
-    for key, val := range m {
-        entry := key
-        if val != nil {
-            entry += "=" + strings.Join(val, "|")
-        }
-        output = append(output, entry)
-    }
-    return strings.Join(output, ", ")
+	output := []string{}
+	for key, val := range m {
+		entry := key
+		if val != nil {
+			entry += "=" + strings.Join(val, "|")
+		}
+		output = append(output, entry)
+	}
+	return strings.Join(output, ", ")
+}
+
+// This structure captures error information in the case where a route
+// isn't matched. By default, an unmatched route would just return a 404,
+// however, in some cases we need to give other error information. By creating
+// a context variable containing the MuxMatchErrorContextKey as the key and a
+// struct of this type as the value, a customized error response can be returned.
+type MatchError struct {
+	// Response code for error
+	Code int
+	// Response body on error
+	Body string
+	// Headers to set on error
+	Headers http.Header
 }
 
 // Default handler for when a URL was not matched
 func NotFound(w http.ResponseWriter, r *http.Request) {
-    if matchErr, ok := context.Get(r, MatchErrMsgKey).(string); ok {
-        var code int
-        var err error
-        if code, ok = context.Get(r, MatchErrCodeKey).(int); ok {
-            if err != nil {
-                code = 500
-                // Should only happen if matcher has a bug
-                matchErr = fmt.Sprintf(
-                    "Error getting code for error %s.  Reason: %s", matchErr, err)
-            }
-        } else {
-            code = 500
-        }
+	if matchStruct, ok := context.Get(r, MuxMatchErrorContextKey).(MatchError); ok {
 
-        http.Error(w, matchErr, code)
+		if matchStruct.Code == 0 {
+			// Default to a not found response if the code is not set.
+			matchStruct.Code = 404
+		}
 
-    } else {
-        http.NotFound(w, r)
-    }
+		if len(matchStruct.Headers) > 0 {
+			// If we have headers associated to this match struct, we will merge them
+			// to the current headers in the response Header dictionary
+			for header, values := range matchStruct.Headers {
+				for idx := range values {
+					w.Header().Add(header, values[idx])
+				}
+			}
+		}
+
+		http.Error(w, matchStruct.Body, matchStruct.Code)
+
+	} else {
+		http.NotFound(w, r)
+	}
 }
