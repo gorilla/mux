@@ -546,6 +546,50 @@ func TestSubRouter(t *testing.T) {
 	}
 }
 
+func TestAlternation(t *testing.T) {
+	contypeJson := new(Route).Headers("Content-Type", "application/json").
+		Or(new(Route).Headers("Content-Type", "text/json"))
+
+	appJsonReq := newRequest("GET", "www.google.com")
+	appJsonReq.Header.Add("Content-Type", "application/json")
+
+	txtJsonReq := newRequest("GET", "www.google.com")
+	txtJsonReq.Header.Add("Content-Type", "text/json")
+
+	plainReq := newRequest("GET", "www.google.com")
+
+	tests := []routeTest{
+		{
+			route:       contypeJson,
+			request:     appJsonReq,
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			route:       contypeJson,
+			request:     txtJsonReq,
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			route:       contypeJson,
+			request:     plainReq,
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+}
+
 func TestNamedRoutes(t *testing.T) {
 	r1 := NewRouter()
 	r1.NewRoute().Name("a")
