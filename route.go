@@ -328,7 +328,7 @@ func (m schemeMatcher) Match(r *http.Request, match *RouteMatch) bool {
 }
 
 // Schemes adds a matcher for URL schemes.
-// It accepts a sequence schemes to be matched, e.g.: "http", "https".
+// It accepts a sequence of schemes to be matched, e.g.: "http", "https".
 func (r *Route) Schemes(schemes ...string) *Route {
 	for k, v := range schemes {
 		schemes[k] = strings.ToLower(v)
