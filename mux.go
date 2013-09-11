@@ -46,7 +46,7 @@ type Router struct {
 	namedRoutes map[string]*Route
 	// See Router.StrictSlash(). This defines the flag for new routes.
 	strictSlash bool
-	// If true, do not clear the the request context after handling the request
+	// If true, do not clear the request context after handling the request
 	KeepContext bool
 }
 
