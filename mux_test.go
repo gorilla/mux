@@ -718,6 +718,39 @@ func TestSubrouterHeader(t *testing.T) {
 	}
 }
 
+func TestUse(t *testing.T) {
+	expected := "foobarbaz"
+
+	mw1 := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			fmt.Fprintf(w, "foo")
+			next.ServeHTTP(w, req)
+		})
+	}
+
+	mw2 := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			fmt.Fprintf(w, "bar")
+			next.ServeHTTP(w, req)
+		})
+	}
+
+	handler := func(w http.ResponseWriter, req *http.Request) {
+		fmt.Fprintf(w, "baz")
+	}
+
+	r := NewRouter().Use(mw1, mw2)
+	r.HandleFunc("/", handler)
+
+	req, _ := http.NewRequest("GET", "http://localhost/", nil)
+	resp := NewRecorder()
+
+	r.ServeHTTP(resp, req)
+	if resp.Body.String() != expected {
+		t.Errorf("Expecting %q got %q", expected, resp.Body.String())
+	}
+}
+
 // mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int
