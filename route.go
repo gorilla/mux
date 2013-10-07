@@ -185,11 +185,8 @@ func (m headerMatcher) Match(r *http.Request, match *RouteMatch) bool {
 		if received == "" {
 			received = "(NONE)"
 		}
-		body := fmt.Sprint(
-			"Required Headers Missing.\nReceived: ", received,
-			"\nMandatory Headers: ", mapToString(map[string]string(m)))
 
-		context.Set(r, MuxMatchErrorContextKey, MatchError{Code: 412, Body: body})
+		context.Set(r, MuxMatchErrorContextKey, MatchError{Code: 412})
 	}
 	return isMatch
 }
@@ -321,10 +318,7 @@ func (m queryMatcher) Match(r *http.Request, match *RouteMatch) bool {
 		if received == "" {
 			received = "(NONE)"
 		}
-		body := fmt.Sprint(
-			"Required Query Parameters Missing. \nReceived: ", received,
-			"\nMandatory Parameters: ", mapToString(m))
-		context.Set(r, MuxMatchErrorContextKey, MatchError{Code: 412, Body: body})
+		context.Set(r, MuxMatchErrorContextKey, MatchError{Code: 412})
 	}
 	return isMatch
 }
@@ -356,10 +350,7 @@ type schemeMatcher []string
 func (m schemeMatcher) Match(r *http.Request, match *RouteMatch) bool {
 	isMatch := matchInArray(m, r.URL.Scheme)
 	if !isMatch {
-		body := fmt.Sprint(
-			"Incorrect Protocol. \nReceived: ", r.URL.Scheme,
-			"\nExpected: ", strings.Join(m, ", "))
-		context.Set(r, MuxMatchErrorContextKey, MatchError{Code: 403, Body: body})
+		context.Set(r, MuxMatchErrorContextKey, MatchError{Code: 403})
 	}
 	return isMatch
 }
