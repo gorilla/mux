@@ -48,6 +48,8 @@ type Router struct {
 	strictSlash bool
 	// If true, do not clear the request context after handling the request
 	KeepContext bool
+	// Middleware layers to be wrapped around matched handler
+	layers []Middleware
 }
 
 // Match matches registered routes against the request.
@@ -87,6 +89,12 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.KeepContext {
 		defer context.Clear(req)
 	}
+
+	for i := len(r.layers) - 1; i >= 0; i-- {
+		layer := r.layers[i]
+		handler = layer(handler)
+	}
+
 	handler.ServeHTTP(w, req)
 }
 
@@ -111,6 +119,21 @@ func (r *Router) GetRoute(name string) *Route {
 // can't be determined for prefixes.
 func (r *Router) StrictSlash(value bool) *Router {
 	r.strictSlash = value
+	return r
+}
+
+// ----------------------------------------------------------------------------
+// Middleware
+// ----------------------------------------------------------------------------
+
+// Middleware wraps an http.Handler to provide additional functionality
+type Middleware func(http.Handler) http.Handler
+
+// Use registers middleware layers to be used
+func (r *Router) Use(layers ...Middleware) *Router {
+	for _, layer := range layers {
+		r.layers = append(r.layers, layer)
+	}
 	return r
 }
 
