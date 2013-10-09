@@ -33,6 +33,11 @@ type Route struct {
 	err error
 }
 
+// AltRoute creates a new unregistered route -- needed for alternation to work
+func AltRoute(r *Router) *Route {
+	return &Route{parent: r, strictSlash: r.strictSlash}
+}
+
 // Match matches the route against the request.
 func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	if r.buildOnly || r.err != nil {
@@ -132,6 +137,15 @@ func (r *Route) addMatcher(m matcher) *Route {
 		r.matchers = append(r.matchers, m)
 	}
 	return r
+}
+
+// replaceMatcher replaces the matchers of the route
+func (r *Route) replaceMatchers(ms ...matcher) (*Route, error) {
+	if r.err == nil {
+		r.matchers = make([]matcher, len(ms), len(ms)+2)
+		copy(r.matchers, ms)
+	}
+	return r, nil
 }
 
 // addRegexpMatcher adds a host or path matcher and builder to a route.
@@ -334,6 +348,58 @@ func (r *Route) Schemes(schemes ...string) *Route {
 		schemes[k] = strings.ToLower(v)
 	}
 	return r.addMatcher(schemeMatcher(schemes))
+}
+
+// Alternation
+
+// alternativeMatcher matches if any matchers match
+type alternativeMatcher []matcher
+
+func (a alternativeMatcher) Match(r *http.Request, match *RouteMatch) bool {
+	for _, m := range a {
+		if m.Match(r, match) {
+			return true
+		}
+	}
+	return false
+}
+
+// Or adds a matcher for when at least one of the Routes matches
+// It accepts a sequence of Routes that could trigger a match
+// For Example:
+//
+//     r := mux.NewRouter()
+//     r.Headers("Content-Type", "application/json").
+//       Or(AltRoute(r).Headers("Content-Type", "text/x-json"))
+//
+// The above route will match if the Content Type is either "application/json"
+// or "text/x-json".
+// This is most useful for Content Type and Queries where the parameters must
+// all match, and there's no way to indicate that any can match
+func (r *Route) Or(routes ...*Route) *Route {
+	if r.err == nil {
+		// Make a copy of the Target Route so we don't infinitely recurse
+		rCopy := &Route{
+			parent:      r.parent,
+			matchers:    make([]matcher, len(r.matchers)),
+			strictSlash: r.strictSlash,
+		}
+		copy(rCopy.matchers, r.matchers)
+		am := make(alternativeMatcher, len(routes)+1)
+		am[0] = rCopy
+		for i := 1; i < len(am); i++ {
+			if routes[i-1].err != nil {
+				if r.err == nil {
+					r.err = errors.New("Alternatives had errors:\n" + routes[i-1].err.Error())
+				} else {
+					r.err = errors.New(r.err.Error() + "\n" + routes[i-1].err.Error())
+				}
+			}
+			am[i] = routes[i-1]
+		}
+		r.replaceMatchers(am)
+	}
+	return r
 }
 
 // Subrouter ------------------------------------------------------------------
