@@ -706,7 +706,7 @@ func TestNoMatchMethodErrors(t *testing.T) {
 		t.Error("No proper error context returned for missing header")
 	} else if matchErr.Code != 405 {
 		t.Error("Improper error code for header match")
-	} else if len(matchErr.Headers) == 0 {
+	} else if len(matchErr.Header) == 0 {
 		t.Error("Allow header not properly set when methods don't match")
 	}
 

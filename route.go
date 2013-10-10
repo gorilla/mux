@@ -181,11 +181,6 @@ type headerMatcher map[string]string
 func (m headerMatcher) Match(r *http.Request, match *RouteMatch) bool {
 	isMatch := matchMap(m, r.Header, true)
 	if !isMatch {
-		received := mapListToString(r.Header)
-		if received == "" {
-			received = "(NONE)"
-		}
-
 		context.Set(r, MuxMatchErrorContextKey, MatchError{Code: 412})
 	}
 	return isMatch
@@ -257,7 +252,7 @@ func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
 	isMatch := matchInArray(m, r.Method)
 	if !isMatch {
 		context.Set(r, MuxMatchErrorContextKey,
-			MatchError{Code: 405, Headers: http.Header{"Allow": m}})
+			MatchError{Code: 405, Header: http.Header{"Allow": m}})
 	}
 	return isMatch
 }
@@ -314,10 +309,6 @@ type queryMatcher map[string]string
 func (m queryMatcher) Match(r *http.Request, match *RouteMatch) bool {
 	isMatch := matchMap(m, r.URL.Query(), false)
 	if !isMatch {
-		received := mapListToString(r.URL.Query())
-		if received == "" {
-			received = "(NONE)"
-		}
 		context.Set(r, MuxMatchErrorContextKey, MatchError{Code: 412})
 	}
 	return isMatch

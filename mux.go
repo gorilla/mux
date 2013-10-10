@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"path"
-	"strings"
 
 	"github.com/gorilla/context"
 )
@@ -339,32 +338,6 @@ func matchMap(toCheck map[string]string, toMatch map[string][]string,
 	return true
 }
 
-// Pretty-Prints map[string]string to a pretty formatted string
-func mapToString(m map[string]string) string {
-	output := []string{}
-	for key, val := range m {
-		entry := key
-		if val != "" {
-			entry += "=" + val
-		}
-		output = append(output, entry)
-	}
-	return strings.Join(output, ", ")
-}
-
-// Pretty-Prints map[string][]string to a pretty formatted string
-func mapListToString(m map[string][]string) string {
-	output := []string{}
-	for key, val := range m {
-		entry := key
-		if val != nil {
-			entry += "=" + strings.Join(val, "|")
-		}
-		output = append(output, entry)
-	}
-	return strings.Join(output, ", ")
-}
-
 // This structure captures error information in the case where a route
 // isn't matched. By default, an unmatched route would just return a 404,
 // however, in some cases we need to give other error information. By creating
@@ -376,7 +349,7 @@ type MatchError struct {
 	// Response body on error
 	Body string
 	// Headers to set on error
-	Headers http.Header
+	Header http.Header
 }
 
 // Default handler for when a URL was not matched
@@ -388,10 +361,10 @@ func NotFound(w http.ResponseWriter, r *http.Request) {
 			matchStruct.Code = 404
 		}
 
-		if len(matchStruct.Headers) > 0 {
+		if len(matchStruct.Header) > 0 {
 			// If we have headers associated to this match struct, we will merge them
 			// to the current headers in the response Header dictionary
-			for header, values := range matchStruct.Headers {
+			for header, values := range matchStruct.Header {
 				for idx := range values {
 					w.Header().Add(header, values[idx])
 				}
