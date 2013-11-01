@@ -40,6 +40,8 @@ type Router struct {
 	NotFoundHandler http.Handler
 	// Parent route, if this is a subrouter.
 	parent parentRoute
+	// Filters to be called in order.
+	filters []http.HandlerFunc
 	// Routes to be matched, in order.
 	routes []*Route
 	// Routes by name for URL building.
@@ -60,6 +62,11 @@ func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 	return false
 }
 
+// Filter adds the middleware filter.
+func (r *Router) Filter(filter http.HandlerFunc) {
+	r.filters = append(r.filters, filter)
+}
+
 // ServeHTTP dispatches the handler registered in the matched route.
 //
 // When there is a match, the route variables can be retrieved calling
@@ -71,6 +78,12 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusMovedPermanently)
 		return
 	}
+	
+	// Call each filter
+	for _, filter := range r.filters {
+		filter.ServeHTTP(w, req)
+	}
+
 	var match RouteMatch
 	var handler http.Handler
 	if r.Match(req, &match) {

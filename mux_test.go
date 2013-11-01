@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-
 	"github.com/gorilla/context"
 )
 
@@ -715,6 +714,31 @@ func TestSubrouterHeader(t *testing.T) {
 	match.Handler.ServeHTTP(resp, req)
 	if resp.Body.String() != expected {
 		t.Errorf("Expecting %q", expected)
+	}
+}
+
+// Test middleware before-filter
+func TestMiddlewareFilter(t *testing.T) {
+	var printMe string
+	expected := "filtered!"
+	filterFunc := func(w http.ResponseWriter, r *http.Request) {
+		printMe = expected
+	}
+	handleFunc := func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, printMe)
+	}
+
+	r := NewRouter()
+	r.Filter(filterFunc)
+	r.HandleFunc("/", handleFunc).Name("func2")
+
+	req, _ := http.NewRequest("GET", "http://localhost/", nil)
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+
+	if resp.Body.String() != expected {
+		t.Errorf("Expecting %v", expected)
 	}
 }
 
