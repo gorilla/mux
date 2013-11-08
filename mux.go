@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"path"
-
 	"github.com/gorilla/context"
 )
 
@@ -40,6 +39,8 @@ type Router struct {
 	NotFoundHandler http.Handler
 	// Parent route, if this is a subrouter.
 	parent parentRoute
+	// Parent router (router or subrouter)
+	Router *Router
 	// Filters to be called in order.
 	filters []http.HandlerFunc
 	// Routes to be matched, in order.
@@ -78,11 +79,6 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusMovedPermanently)
 		return
 	}
-	
-	// Call each filter
-	for _, filter := range r.filters {
-		filter.ServeHTTP(w, req)
-	}
 
 	var match RouteMatch
 	var handler http.Handler
@@ -100,6 +96,15 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.KeepContext {
 		defer context.Clear(req)
 	}
+	// Call each filter pertaining to the route
+	router := match.Route.Router
+	for router != nil {
+		for _, filter := range router.filters {
+			filter.ServeHTTP(w, req)
+		}
+		router = router.Router
+	}
+
 	handler.ServeHTTP(w, req)
 }
 
@@ -159,6 +164,7 @@ func (r *Router) getRegexpGroup() *routeRegexpGroup {
 func (r *Router) NewRoute() *Route {
 	route := &Route{parent: r, strictSlash: r.strictSlash}
 	r.routes = append(r.routes, route)
+	route.Router = r
 	return route
 }
 

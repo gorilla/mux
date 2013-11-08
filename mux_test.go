@@ -727,10 +727,16 @@ func TestMiddlewareFilter(t *testing.T) {
 	handleFunc := func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, printMe)
 	}
+	subfilterFunc := func(w http.ResponseWriter, r *http.Request) {
+		printMe = printMe + expected
+	}
 
 	r := NewRouter()
 	r.Filter(filterFunc)
 	r.HandleFunc("/", handleFunc).Name("func2")
+	subr := r.PathPrefix("/foo").Subrouter()
+	subr.Filter(subfilterFunc)
+	subr.HandleFunc("/bar", handleFunc).Name("subfunc")
 
 	req, _ := http.NewRequest("GET", "http://localhost/", nil)
 
@@ -738,6 +744,15 @@ func TestMiddlewareFilter(t *testing.T) {
 	r.ServeHTTP(resp, req)
 
 	if resp.Body.String() != expected {
+		t.Errorf("Expecting %v", expected)
+	}
+
+	req, _ = http.NewRequest("GET", "http://localhost/foo/bar", nil)
+
+	resp = NewRecorder()
+	r.ServeHTTP(resp, req)
+
+	if resp.Body.String() != (expected+expected) {
 		t.Errorf("Expecting %v", expected)
 	}
 }

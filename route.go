@@ -16,6 +16,10 @@ import (
 type Route struct {
 	// Parent where the route was registered (a Router).
 	parent parentRoute
+	// Parent router (router or subrouter)
+	Router *Router
+	// Request before-filters for the route.
+	filters []http.HandlerFunc
 	// Request handler for the route.
 	handler http.Handler
 	// List of matchers.
