@@ -17,7 +17,7 @@ type Route struct {
 	// Parent where the route was registered (a Router).
 	parent parentRoute
 	// Request before-filters for the route.
-	filters []Filter
+	filters []FilterFunc
 	// Request handler for the route.
 	handler http.Handler
 	// List of matchers.
@@ -468,7 +468,7 @@ func (r *Route) URLPath(pairs ...string) (*url.URL, error) {
 type parentRoute interface {
 	getNamedRoutes() map[string]*Route
 	getRegexpGroup() *routeRegexpGroup
-	getFilters() []Filter
+	getFilters() []FilterFunc
 	getParent() parentRoute
 }
 
@@ -503,7 +503,7 @@ func (r *Route) getRegexpGroup() *routeRegexpGroup {
 }
 
 // getFilters returns the filters for all the route's subroutes
-func (r *Route) getFilters() []Filter {
+func (r *Route) getFilters() []FilterFunc {
 	return r.filters
 }
 
