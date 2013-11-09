@@ -40,7 +40,7 @@ type Router struct {
 	// Parent route, if this is a subrouter.
 	parent parentRoute
 	// Filters to be called in order.
-	filters []http.HandlerFunc
+	filters []Filter
 	// Routes to be matched, in order.
 	routes []*Route
 	// Routes by name for URL building.
@@ -61,8 +61,11 @@ func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 	return false
 }
 
+type Filter func(http.ResponseWriter, *http.Request) error
+
 // Filter adds the middleware filter.
-func (r *Router) Filter(filter http.HandlerFunc) {
+// NOTE: to stop the filter chain, the filter MUST return an error
+func (r *Router) Filter(filter Filter) {
 	r.filters = append(r.filters, filter)
 }
 
@@ -94,11 +97,15 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.KeepContext {
 		defer context.Clear(req)
 	}
-	// Call each filter pertaining to the route
+	// Combine all filters from router tree into one wrapper for `handler`
 	router := match.Route.parent
 	for router != nil {
 		for _, filter := range router.getFilters() {
-			filter.ServeHTTP(w, req)
+			err := filter(w, req)
+			// Stop handler chain on error
+			if err != nil {
+				return
+			}
 		}
 		router = router.getParent()
 	}
@@ -155,7 +162,7 @@ func (r *Router) getRegexpGroup() *routeRegexpGroup {
 }
 
 // getFilters returns the filters for all the router's routes and subroutes
-func (r *Router) getFilters() []http.HandlerFunc {
+func (r *Router) getFilters() []Filter {
 	return r.filters
 }
 
