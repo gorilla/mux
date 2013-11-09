@@ -720,15 +720,17 @@ func TestSubrouterHeader(t *testing.T) {
 // Test middleware before-filter
 func TestMiddlewareFilter(t *testing.T) {
 	var printMe string
+	var secondPrint string
 	expected := "filtered!"
 	filterFunc := func(w http.ResponseWriter, r *http.Request) {
 		printMe = expected
 	}
 	handleFunc := func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, printMe)
+		fmt.Fprint(w, secondPrint)
 	}
 	subfilterFunc := func(w http.ResponseWriter, r *http.Request) {
-		printMe = printMe + expected
+		secondPrint = expected + "2"
 	}
 
 	r := NewRouter()
@@ -747,13 +749,15 @@ func TestMiddlewareFilter(t *testing.T) {
 		t.Errorf("Expecting %v", expected)
 	}
 
+	printMe = ""
+
 	req, _ = http.NewRequest("GET", "http://localhost/foo/bar", nil)
 
 	resp = NewRecorder()
 	r.ServeHTTP(resp, req)
 
-	if resp.Body.String() != (expected+expected) {
-		t.Errorf("Expecting %v", expected)
+	if resp.Body.String() != (expected+expected+"2") {
+		t.Errorf("Expecting %v", expected+expected+"2")
 	}
 }
 

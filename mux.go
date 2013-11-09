@@ -39,8 +39,6 @@ type Router struct {
 	NotFoundHandler http.Handler
 	// Parent route, if this is a subrouter.
 	parent parentRoute
-	// Parent router (router or subrouter)
-	Router *Router
 	// Filters to be called in order.
 	filters []http.HandlerFunc
 	// Routes to be matched, in order.
@@ -97,12 +95,12 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		defer context.Clear(req)
 	}
 	// Call each filter pertaining to the route
-	router := match.Route.Router
+	router := match.Route.parent
 	for router != nil {
-		for _, filter := range router.filters {
+		for _, filter := range router.getFilters() {
 			filter.ServeHTTP(w, req)
 		}
-		router = router.Router
+		router = router.getParent()
 	}
 
 	handler.ServeHTTP(w, req)
@@ -156,6 +154,16 @@ func (r *Router) getRegexpGroup() *routeRegexpGroup {
 	return nil
 }
 
+// getFilters returns the filters for all the router's routes and subroutes
+func (r *Router) getFilters() []http.HandlerFunc {
+	return r.filters
+}
+
+// getParent returns the router's parent (or nil if none)
+func (r *Router) getParent() parentRoute {
+	return r.parent
+}
+
 // ----------------------------------------------------------------------------
 // Route factories
 // ----------------------------------------------------------------------------
@@ -164,7 +172,6 @@ func (r *Router) getRegexpGroup() *routeRegexpGroup {
 func (r *Router) NewRoute() *Route {
 	route := &Route{parent: r, strictSlash: r.strictSlash}
 	r.routes = append(r.routes, route)
-	route.Router = r
 	return route
 }
 
