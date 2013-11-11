@@ -83,8 +83,10 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	var match RouteMatch
 	var handler http.Handler
+	var parent parentRoute
 	if r.Match(req, &match) {
 		handler = match.Handler
+		parent = match.Route.getParent()
 		setVars(req, match.Vars)
 		setCurrentRoute(req, match.Route)
 	}
@@ -97,17 +99,16 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.KeepContext {
 		defer context.Clear(req)
 	}
-	// Combine all filters from router tree into one wrapper for `handler`
-	router := match.Route.parent
-	for router != nil {
-		for _, filter := range router.getFilters() {
+	// Combine all filters from route tree into one wrapper for `handler`
+	for parent != nil {
+		for _, filter := range parent.getFilters() {
 			err := filter(w, req)
 			// Stop handler chain on error
 			if err != nil {
 				return
 			}
 		}
-		router = router.getParent()
+		parent = parent.getParent()
 	}
 
 	handler.ServeHTTP(w, req)
