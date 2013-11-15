@@ -65,8 +65,9 @@ type FilterFunc func(http.ResponseWriter, *http.Request) error
 
 // Filter adds the middleware filter.
 // NOTE: to stop the filter chain, the filter MUST return an error
-func (r *Router) Filter(filter FilterFunc) {
+func (r *Router) Filter(filter FilterFunc) *Router {
 	r.filters = append(r.filters, filter)
+	return r
 }
 
 // ServeHTTP dispatches the handler registered in the matched route.
