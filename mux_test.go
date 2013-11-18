@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-//	"encoding/json"				// Philip Schlump
 
 	"github.com/gorilla/context"
 )
@@ -22,17 +21,6 @@ type routeTest struct {
 	path        string            // the expected path of the match
 	shouldMatch bool              // whether the request is expected to match the route at all
 }
-
-// Philip Schlump - added to understand the results from tests.
-//func dumpVar ( v interface{} ) {
-//	// s, err := json.Marshal ( v )
-//	s, err := json.MarshalIndent ( v, "", "\t" )
-//	if ( err != nil ) {
-//		fmt.Printf ( "Error: %s\n", err )
-//	} else {
-//		fmt.Printf ( "%s\n", s )
-//	}
-//}
 
 
 func TestHost(t *testing.T) {
@@ -430,7 +418,7 @@ func TestQueries(t *testing.T) {
 			shouldMatch: true,
 		},
 		{
-			title:       "Queries route, match (ToDo - with redirect 301) (Philip Schlump added)",
+			title:       "Queries route, match with a query string",
 			route:       new(Route).Host("www.2cwhy.com").Path("/api").Queries("foo", "bar", "baz", "ding"),
 			request:     newRequest("GET", "http://www.2cwhy.com/api?foo=bar&baz=ding"),
 			vars:        map[string]string{},
@@ -677,8 +665,6 @@ func testRoute(t *testing.T, test routeTest) {
 				return
 			}
 		}
-		// Philip Schlump - Added to understand what match is returning.
-		// dumpVar ( match )
 	}
 }
 
@@ -719,17 +705,14 @@ type TestA301ResponseWriter struct {
 }
 
 func (ho TestA301ResponseWriter) Header() http.Header {
-	// fmt.Printf ( "Header() called\n" );
 	return http.Header(ho.hh)
 }
 
 func (ho TestA301ResponseWriter) Write( b []byte) (int, error) {
-	// fmt.Printf ( "Write called %v\n", b );
 	return 0, nil
 }
 
 func (ho TestA301ResponseWriter) WriteHeader( code int ) {
-	// fmt.Printf ( "WriteHeader called code=%d\n", code );
 	ho.status = code
 }
 
@@ -751,20 +734,11 @@ func Test301Redirect(t *testing.T) {
 		}
 	r.ServeHTTP(&res, req)
 
-	//fmt.Printf ( "This one %v\n", res );
-	//fmt.Printf ( "res[\"Location\"] = ///%v///\n", res.hh["Location"] );
-	//fmt.Printf ( "res[\"Location\"][0] = ///%v///\n", res.hh["Location"][0] );
 	if "http://localhost/api/?abc=def" != res.hh["Location"][0] {
 		t.Errorf("Should have complete URL with query string")
 	}
-	// OK - I don't understand why this check on "status is not working.
-	// (p.s. the real answer is I am still learning go)
-	//if 301 != res.status {
-	//	t.Errorf("Should have status of 301, got %d", res.status )
-	//}
-	//fmt.Printf ( "Done\n" );
-
 }
+
 // https://plus.google.com/101022900381697718949/posts/eWy6DjFJ6uW
 func TestSubrouterHeader(t *testing.T) {
 	expected := "func1 response"
