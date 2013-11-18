@@ -419,8 +419,8 @@ func TestQueries(t *testing.T) {
 		},
 		{
 			title:       "Queries route, match with a query string",
-			route:       new(Route).Host("www.2cwhy.com").Path("/api").Queries("foo", "bar", "baz", "ding"),
-			request:     newRequest("GET", "http://www.2cwhy.com/api?foo=bar&baz=ding"),
+			route:       new(Route).Host("www.example.com").Path("/api").Queries("foo", "bar", "baz", "ding"),
+			request:     newRequest("GET", "http://www.example.com/api?foo=bar&baz=ding"),
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
