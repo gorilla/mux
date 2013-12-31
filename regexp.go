@@ -47,11 +47,13 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, strictSlash bool) (*rout
 		endSlash = true
 	}
 	varsN := make([]string, len(idxs)/2)
+	varsI := make([]int, len(idxs)/2)
 	varsR := make([]*regexp.Regexp, len(idxs)/2)
 	pattern := bytes.NewBufferString("^")
 	reverse := bytes.NewBufferString("")
 	var end int
 	var err error
+	subExpIndex := 1
 	for i := 0; i < len(idxs); i += 2 {
 		// Set all values we are interested in.
 		raw := tpl[end:idxs[i]]
@@ -74,6 +76,8 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, strictSlash bool) (*rout
 		// Append variable name and compiled pattern.
 		varsN[i/2] = name
 		varsR[i/2], err = regexp.Compile(fmt.Sprintf("^%s$", patt))
+		varsI[i/2] = subExpIndex
+		subExpIndex += varsR[i/2].NumSubexp() + 1
 		if err != nil {
 			return nil, err
 		}
@@ -104,6 +108,7 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, strictSlash bool) (*rout
 		reverse:   reverse.String(),
 		varsN:     varsN,
 		varsR:     varsR,
+		varsI:     varsI,
 	}, nil
 }
 
@@ -120,6 +125,8 @@ type routeRegexp struct {
 	reverse string
 	// Variable names.
 	varsN []string
+	// Subexpression indexes
+	varsI []int
 	// Variable regexps (validators).
 	varsR []*regexp.Regexp
 }
@@ -212,8 +219,8 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 	if v.path != nil {
 		pathVars := v.path.regexp.FindStringSubmatch(req.URL.Path)
 		if pathVars != nil {
-			for k, v := range v.path.varsN {
-				m.Vars[v] = pathVars[k+1]
+			for i, n := range v.path.varsN {
+				m.Vars[n] = pathVars[v.path.varsI[i]]
 			}
 			// Check if we should redirect.
 			if r.strictSlash {
