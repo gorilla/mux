@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"path"
-
 	"github.com/gorilla/context"
 )
 
@@ -40,6 +39,8 @@ type Router struct {
 	NotFoundHandler http.Handler
 	// Parent route, if this is a subrouter.
 	parent parentRoute
+	// Filters to be called in order.
+	filters []FilterFunc
 	// Routes to be matched, in order.
 	routes []*Route
 	// Routes by name for URL building.
@@ -58,6 +59,15 @@ func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 		}
 	}
 	return false
+}
+
+type FilterFunc func(http.ResponseWriter, *http.Request) error
+
+// Filter adds the middleware filter.
+// NOTE: to stop the filter chain, the filter MUST return an error
+func (r *Router) Filter(filter FilterFunc) *Router {
+	r.filters = append(r.filters, filter)
+	return r
 }
 
 // ServeHTTP dispatches the handler registered in the matched route.
@@ -79,10 +89,13 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusMovedPermanently)
 		return
 	}
+
 	var match RouteMatch
 	var handler http.Handler
+	var parent parentRoute
 	if r.Match(req, &match) {
 		handler = match.Handler
+		parent = match.Route.getParent()
 		setVars(req, match.Vars)
 		setCurrentRoute(req, match.Route)
 	}
@@ -95,6 +108,18 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.KeepContext {
 		defer context.Clear(req)
 	}
+	// Combine all filters from route tree into one wrapper for `handler`
+	for parent != nil {
+		for _, filter := range parent.getFilters() {
+			err := filter(w, req)
+			// Stop handler chain on error
+			if err != nil {
+				return
+			}
+		}
+		parent = parent.getParent()
+	}
+
 	handler.ServeHTTP(w, req)
 }
 
@@ -144,6 +169,16 @@ func (r *Router) getRegexpGroup() *routeRegexpGroup {
 		return r.parent.getRegexpGroup()
 	}
 	return nil
+}
+
+// getFilters returns the filters for all the router's routes and subroutes
+func (r *Router) getFilters() []FilterFunc {
+	return r.filters
+}
+
+// getParent returns the router's parent (or nil if none)
+func (r *Router) getParent() parentRoute {
+	return r.parent
 }
 
 // ----------------------------------------------------------------------------

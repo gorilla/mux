@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-
+	"errors"
 	"github.com/gorilla/context"
 )
 
@@ -766,6 +766,98 @@ func TestSubrouterHeader(t *testing.T) {
 	match.Handler.ServeHTTP(resp, req)
 	if resp.Body.String() != expected {
 		t.Errorf("Expecting %q", expected)
+	}
+}
+
+// Test middleware before-filter
+func TestMiddlewareFilter(t *testing.T) {
+	printMe := ""
+	secondPrint := ""
+	expected := "filtered!"
+	filterFunc := func(w http.ResponseWriter, r *http.Request) error {
+		printMe = expected
+		return nil
+	}
+	handleFunc := func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(printMe))
+		w.Write([]byte(secondPrint))
+	}
+	subfilterFunc := func(w http.ResponseWriter, r *http.Request) error {
+		secondPrint = expected + "2"
+		return nil
+	}
+
+	r := NewRouter()
+	r.Filter(filterFunc)
+	r.HandleFunc("/", handleFunc).Name("func2")
+	subr := r.PathPrefix("/foo").Subrouter()
+	subr.Filter(subfilterFunc)
+	subr.HandleFunc("/bar", handleFunc).Name("subfunc")
+
+	req, _ := http.NewRequest("GET", "http://localhost/", nil)
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+
+	if resp.Body.String() != expected {
+		t.Errorf("Expecting %v", expected)
+	}
+
+	printMe = ""
+
+	req, _ = http.NewRequest("GET", "http://localhost/foo/bar", nil)
+
+	resp = NewRecorder()
+	r.ServeHTTP(resp, req)
+
+	if resp.Body.String() != (expected+expected+"2") {
+		t.Errorf("Expecting %v", expected+expected+"2")
+	}
+}
+
+// Test middleware before-filter chain interrupted
+func TestMiddlewareFilterInterrupted(t *testing.T) {
+	printMe := ""
+	secondPrint := ""
+	expected := "filtered!"
+	filterFunc := func(w http.ResponseWriter, r *http.Request) error {
+		printMe = expected
+		return nil
+	}
+	handleFunc := func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(printMe))
+	}
+	subfilterFunc := func(w http.ResponseWriter, r *http.Request) error {
+		secondPrint = expected + "2"
+		w.Write([]byte(secondPrint))
+		return errors.New("Error")
+	}
+
+	r := NewRouter()
+	r.Filter(filterFunc)
+	r.HandleFunc("/", handleFunc).Name("func2")
+	subr := r.PathPrefix("/foo").Subrouter()
+	subr.Filter(subfilterFunc)
+	subr.HandleFunc("/bar", handleFunc).Name("subfunc")
+
+	req, _ := http.NewRequest("GET", "http://localhost/", nil)
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+
+	if resp.Body.String() != expected {
+		t.Errorf("Expecting %v", expected)
+	}
+
+	printMe = ""
+
+	req, _ = http.NewRequest("GET", "http://localhost/foo/bar", nil)
+
+	resp = NewRecorder()
+	r.ServeHTTP(resp, req)
+
+	if resp.Body.String() != expected+"2" {
+		t.Errorf("Expecting %v, got %v", expected+"2", resp.Body.String())
 	}
 }
 
