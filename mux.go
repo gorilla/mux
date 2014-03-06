@@ -6,6 +6,7 @@ package mux
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"path"
 
@@ -95,6 +96,8 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.KeepContext {
 		defer context.Clear(req)
 	}
+
+	log.Println("   ", req.Method, req.RequestURI)
 	handler.ServeHTTP(w, req)
 }
 
