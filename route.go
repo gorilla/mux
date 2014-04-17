@@ -413,7 +413,7 @@ func (r *Route) URL(pairs ...string) (*url.URL, error) {
 	if r.regexp == nil {
 		return nil, errors.New("mux: route doesn't have a host or path")
 	}
-	values, err := r.buildVars(pairs...)
+	values, err := r.prepareVars(pairs...)
 	if err != nil {
 		return nil, err
 	}
@@ -447,7 +447,7 @@ func (r *Route) URLHost(pairs ...string) (*url.URL, error) {
 	if r.regexp == nil || r.regexp.host == nil {
 		return nil, errors.New("mux: route doesn't have a host")
 	}
-	values, err := r.buildVars(pairs...)
+	values, err := r.prepareVars(pairs...)
 	if err != nil {
 		return nil, err
 	}
@@ -471,7 +471,7 @@ func (r *Route) URLPath(pairs ...string) (*url.URL, error) {
 	if r.regexp == nil || r.regexp.path == nil {
 		return nil, errors.New("mux: route doesn't have a path")
 	}
-	values, err := r.buildVars(pairs...)
+	values, err := r.prepareVars(pairs...)
 	if err != nil {
 		return nil, err
 	}
@@ -484,17 +484,24 @@ func (r *Route) URLPath(pairs ...string) (*url.URL, error) {
 	}, nil
 }
 
-// buildVars converts the route variable pairs into a map. If the route has a
+// prepareVars converts the route variable pairs into a map. If the route has a
 // BuildVarsFunc, it is invoked.
-func (r *Route) buildVars(pairs ...string) (map[string]string, error) {
+func (r *Route) prepareVars(pairs ...string) (map[string]string, error) {
 	m, err := mapFromPairs(pairs...)
 	if err != nil {
 		return nil, err
 	}
+	return r.buildVars(m), nil
+}
+
+func (r *Route) buildVars(m map[string]string) map[string]string {
+	if r.parent != nil {
+		m = r.parent.buildVars(m)
+	}
 	if r.buildVarsFunc != nil {
 		m = r.buildVarsFunc(m)
 	}
-	return m, nil
+	return m
 }
 
 // ----------------------------------------------------------------------------
@@ -505,6 +512,7 @@ func (r *Route) buildVars(pairs ...string) (map[string]string, error) {
 type parentRoute interface {
 	getNamedRoutes() map[string]*Route
 	getRegexpGroup() *routeRegexpGroup
+	buildVars(map[string]string) map[string]string
 }
 
 // getNamedRoutes returns the map where named routes are registered.

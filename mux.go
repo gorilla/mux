@@ -146,6 +146,13 @@ func (r *Router) getRegexpGroup() *routeRegexpGroup {
 	return nil
 }
 
+func (r *Router) buildVars(m map[string]string) map[string]string {
+	if r.parent != nil {
+		m = r.parent.buildVars(m)
+	}
+	return m
+}
+
 // ----------------------------------------------------------------------------
 // Route factories
 // ----------------------------------------------------------------------------
