@@ -188,6 +188,12 @@ func (r *Router) MatcherFunc(f MatcherFunc) *Route {
 	return r.NewRoute().MatcherFunc(f)
 }
 
+// PostMatchFunc registers a new route with a custom post-match function. See
+// Route.PostMatchFunc().
+func (r *Router) PostMatchFunc(f PostMatchFunc) *Route {
+	return r.NewRoute().PostMatchFunc(f)
+}
+
 // Methods registers a new route with a matcher for HTTP methods.
 // See Route.Methods().
 func (r *Router) Methods(methods ...string) *Route {
