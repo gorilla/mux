@@ -218,6 +218,12 @@ func (r *Router) Schemes(schemes ...string) *Route {
 	return r.NewRoute().Schemes(schemes...)
 }
 
+// BuildVars registers a new route with a custom function for modifying
+// route variables before building a URL.
+func (r *Router) BuildVarsFunc(f BuildVarsFunc) *Route {
+	return r.NewRoute().BuildVarsFunc(f)
+}
+
 // ----------------------------------------------------------------------------
 // Context
 // ----------------------------------------------------------------------------
