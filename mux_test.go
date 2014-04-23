@@ -13,13 +13,14 @@ import (
 )
 
 type routeTest struct {
-	title       string            // title of the test
-	route       *Route            // the route being tested
-	request     *http.Request     // a request to test the route
-	vars        map[string]string // the expected vars of the match
-	host        string            // the expected host of the match
-	path        string            // the expected path of the match
-	shouldMatch bool              // whether the request is expected to match the route at all
+	title          string            // title of the test
+	route          *Route            // the route being tested
+	request        *http.Request     // a request to test the route
+	vars           map[string]string // the expected vars of the match
+	host           string            // the expected host of the match
+	path           string            // the expected path of the match
+	shouldMatch    bool              // whether the request is expected to match the route at all
+	shouldRedirect bool              // whether the request should result in a redirect
 }
 
 func TestHost(t *testing.T) {
@@ -615,26 +616,23 @@ func TestNamedRoutes(t *testing.T) {
 }
 
 func TestStrictSlash(t *testing.T) {
-	var r *Router
-	var req *http.Request
-	var route *Route
-	var match *RouteMatch
-	var matched bool
-
-	// StrictSlash should be ignored for path prefix.
-	// So we register a route ending in slash but it doesn't attempt to add
-	// the slash for a path not ending in slash.
-	r = NewRouter()
+	r := NewRouter()
 	r.StrictSlash(true)
-	route = r.NewRoute().PathPrefix("/static/")
-	req, _ = http.NewRequest("GET", "http://localhost/static/logo.png", nil)
-	match = new(RouteMatch)
-	matched = r.Match(req, match)
-	if !matched {
-		t.Errorf("Should match request %q -- %v", req.URL.Path, getRouteTemplate(route))
+
+	tests := []routeTest{
+		{
+			title:          "Ignore StrictSlash for path prefix",
+			route:          r.NewRoute().PathPrefix("/static/"),
+			request:        newRequest("GET", "http://localhost/static/logo.png"),
+			vars:           map[string]string{},
+			path:           "/static/",
+			shouldMatch:    true,
+			shouldRedirect: false,
+		},
 	}
-	if match.Handler != nil {
-		t.Errorf("Should not redirect")
+
+	for _, test := range tests {
+		testRoute(t, test)
 	}
 }
 
@@ -663,6 +661,7 @@ func testRoute(t *testing.T, test routeTest) {
 	host := test.host
 	path := test.path
 	url := test.host + test.path
+	shouldRedirect := test.shouldRedirect
 
 	var match RouteMatch
 	ok := route.Match(request, &match)
@@ -699,6 +698,14 @@ func testRoute(t *testing.T, test routeTest) {
 				t.Errorf("(%v) URL not equal: expected %v, got %v -- %v", test.title, url, u.Host+u.Path, getRouteTemplate(route))
 				return
 			}
+		}
+		if shouldRedirect && match.Handler == nil {
+			t.Errorf("(%v) Did not redirect", test.title)
+			return
+		}
+		if !shouldRedirect && match.Handler != nil {
+			t.Errorf("(%v) Unexpected redirect", test.title)
+			return
 		}
 	}
 }
