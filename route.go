@@ -259,7 +259,8 @@ func (r *Route) Methods(methods ...string) *Route {
 // Path -----------------------------------------------------------------------
 
 // Path adds a matcher for the URL path.
-// It accepts a template with zero or more URL variables enclosed by {}.
+// It accepts a template with zero or more URL variables enclosed by {}. The
+// template must start with a "/".
 // Variables can define an optional regexp pattern to me matched:
 //
 // - {name} matches anything until the next slash.
@@ -283,7 +284,10 @@ func (r *Route) Path(tpl string) *Route {
 
 // PathPrefix -----------------------------------------------------------------
 
-// PathPrefix adds a matcher for the URL path prefix.
+// PathPrefix adds a matcher for the URL path prefix. Note that it does not
+// treat slashes specially ("/foobar/" will be matched by the prefix "/foo") so
+// in most cases you'll want to use a trailing slash here. See Route.Path() for
+// details on the tpl argument.
 func (r *Route) PathPrefix(tpl string) *Route {
 	r.strictSlash = false
 	r.err = r.addRegexpMatcher(tpl, false, true)

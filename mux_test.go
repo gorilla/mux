@@ -215,6 +215,15 @@ func TestPathPrefix(t *testing.T) {
 			shouldMatch: true,
 		},
 		{
+			title:       "PathPrefix route, match substring",
+			route:       new(Route).PathPrefix("/1"),
+			request:     newRequest("GET", "http://localhost/111/222/333"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "/1",
+			shouldMatch: true,
+		},
+		{
 			title:       "PathPrefix route, URL prefix in request does not match",
 			route:       new(Route).PathPrefix("/111"),
 			request:     newRequest("GET", "http://localhost/1/2/3"),
