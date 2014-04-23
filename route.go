@@ -284,10 +284,15 @@ func (r *Route) Path(tpl string) *Route {
 
 // PathPrefix -----------------------------------------------------------------
 
-// PathPrefix adds a matcher for the URL path prefix. Note that it does not
-// treat slashes specially ("/foobar/" will be matched by the prefix "/foo") so
-// in most cases you'll want to use a trailing slash here. See Route.Path() for
-// details on the tpl argument.
+// PathPrefix adds a matcher for the URL path prefix. This matches if the given
+// template is a prefix of the full URL path. See Route.Path() for details on
+// the tpl argument.
+//
+// Note that it does not treat slashes specially ("/foobar/" will be matched by
+// the prefix "/foo") so you may want to use a trailing slash here.
+//
+// Also note that the setting of Router.StrictSlash() has no effect on routes
+// with a PathPrefix matcher.
 func (r *Route) PathPrefix(tpl string) *Route {
 	r.strictSlash = false
 	r.err = r.addRegexpMatcher(tpl, false, true)
