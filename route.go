@@ -294,7 +294,6 @@ func (r *Route) Path(tpl string) *Route {
 // Also note that the setting of Router.StrictSlash() has no effect on routes
 // with a PathPrefix matcher.
 func (r *Route) PathPrefix(tpl string) *Route {
-	r.strictSlash = false
 	r.err = r.addRegexpMatcher(tpl, false, true)
 	return r
 }

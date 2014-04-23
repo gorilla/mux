@@ -661,6 +661,16 @@ func TestStrictSlash(t *testing.T) {
 			shouldRedirect: false,
 		},
 		{
+			title:          "Propagate StrictSlash to subrouters",
+			route:          r.NewRoute().PathPrefix("/static/").Subrouter().Path("/images/"),
+			request:        newRequest("GET", "http://localhost/static/images"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/static/images/",
+			shouldMatch:    true,
+			shouldRedirect: true,
+		},
+		{
 			title:          "Ignore StrictSlash for path prefix",
 			route:          r.NewRoute().PathPrefix("/static/"),
 			request:        newRequest("GET", "http://localhost/static/logo.png"),

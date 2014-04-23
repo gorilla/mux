@@ -119,9 +119,10 @@ func (r *Router) GetRoute(name string) *Route {
 // When false, if the route path is "/path", accessing "/path/" will not match
 // this route and vice versa.
 //
-// Special case: when a route sets a path prefix, strict slash is
-// automatically set to false for that route because the redirect behavior
-// can't be determined for prefixes.
+// Special case: when a route sets a path prefix using the PathPrefix() method,
+// strict slash is ignored for that route because the redirect behavior can't
+// be determined from a prefix alone. However, any subrouters created from that
+// route inherit the original StrictSlash setting.
 func (r *Router) StrictSlash(value bool) *Router {
 	r.strictSlash = value
 	return r
