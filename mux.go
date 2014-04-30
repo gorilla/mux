@@ -117,6 +117,8 @@ func (r *Router) GetRoute(name string) *Route {
 // Special case: when a route sets a path prefix, strict slash is
 // automatically set to false for that route because the redirect behavior
 // can't be determined for prefixes.
+//
+// StrictSlash must be invoked before the target route definition
 func (r *Router) StrictSlash(value bool) *Router {
 	r.strictSlash = value
 	return r
