@@ -831,6 +831,142 @@ func Test301Redirect(t *testing.T) {
 	}
 }
 
+func TestNoMatchHeaderErrors(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	s := r.Headers(
+		"SomeSpecialHeader", "", "SomeSpecialHeader1", "a").Subrouter()
+	s.HandleFunc("/", func1).Name("func1")
+
+	req, _ := http.NewRequest("GET", "http://localhost/", nil)
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+
+	if matched {
+		t.Error("Should not have matched route for headers")
+	}
+
+	if matchErr, ok := context.Get(req, MuxMatchErrorContextKey).(MatchError); !ok {
+		t.Error("No proper error context returned for missing header")
+	} else if matchErr.Code != 412 {
+		t.Error("Improper error code for header match")
+	}
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 412 {
+		t.Errorf("Expecting code %s", 412)
+	}
+}
+
+func TestNoMatchMethodErrors(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	s := r.Methods("GET", "POST").Subrouter()
+	s.HandleFunc("/", func1).Name("func1")
+
+	req, _ := http.NewRequest("PUT", "http://localhost/", nil)
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+
+	if matched {
+		t.Error("Should not have matched route for methods")
+	}
+
+	if matchErr, ok := context.Get(req, MuxMatchErrorContextKey).(MatchError); !ok {
+		t.Error("No proper error context returned for missing header")
+	} else if matchErr.Code != 405 {
+		t.Error("Improper error code for header match")
+	} else if len(matchErr.Header) == 0 {
+		t.Error("Allow header not properly set when methods don't match")
+	}
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 405 {
+		t.Errorf("Expecting code %s", 405)
+	}
+}
+
+func TestNoMatchQueryErrors(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	s := r.Queries("x", "").Subrouter()
+	s.HandleFunc("/", func1).Name("func1")
+
+	req, _ := http.NewRequest("GET", "http://localhost/", nil)
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+
+	if matched {
+		t.Error("Should not have matched route for queries")
+	}
+
+	if matchErr, ok := context.Get(req, MuxMatchErrorContextKey).(MatchError); !ok {
+		t.Error("No proper error context returned for missing header")
+	} else if matchErr.Code != 412 {
+		t.Error("Improper error code for header match")
+	}
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 412 {
+		t.Errorf("Expecting code %s", 412)
+	}
+}
+
+func TestNoMatchSchemeErrors(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	s := r.Schemes("https").Subrouter()
+	s.HandleFunc("/", func1).Name("func1")
+
+	req, _ := http.NewRequest("GET", "http://localhost/", nil)
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+
+	if matched {
+		t.Error("Should not have matched route for scheme")
+	}
+
+	if matchErr, ok := context.Get(req, MuxMatchErrorContextKey).(MatchError); !ok {
+		t.Error("No proper error context returned for missing header")
+	} else if matchErr.Code != 403 {
+		t.Error("Improper error code for header match")
+	}
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 403 {
+		t.Errorf("Expecting code %s", 403)
+	}
+}
+
+func TestNoMatchPathErrors(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	r.HandleFunc("/foo", func1).Name("func1")
+
+	req, _ := http.NewRequest("GET", "http://localhost/", nil)
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+
+	if matched {
+		t.Error("Should not have matched route for scheme")
+	}
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 404 {
+		t.Errorf("Expecting code %s", 404)
+	}
+}
+
 // https://plus.google.com/101022900381697718949/posts/eWy6DjFJ6uW
 func TestSubrouterHeader(t *testing.T) {
 	expected := "func1 response"

@@ -12,6 +12,10 @@ import (
 	"github.com/gorilla/context"
 )
 
+var (
+	MuxMatchErrorContextKey string = "MuxMatchErrorContextKey"
+)
+
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
 	return &Router{namedRoutes: make(map[string]*Route), KeepContext: false}
@@ -88,7 +92,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if handler == nil {
 		if r.NotFoundHandler == nil {
-			r.NotFoundHandler = http.NotFoundHandler()
+			r.NotFoundHandler = http.HandlerFunc(NotFound)
 		}
 		handler = r.NotFoundHandler
 	}
@@ -350,4 +354,44 @@ func matchMap(toCheck map[string]string, toMatch map[string][]string,
 		}
 	}
 	return true
+}
+
+// This structure captures error information in the case where a route
+// isn't matched. By default, an unmatched route would just return a 404,
+// however, in some cases we need to give other error information. By creating
+// a context variable containing the MuxMatchErrorContextKey as the key and a
+// struct of this type as the value, a customized error response can be returned.
+type MatchError struct {
+	// Response code for error
+	Code int
+	// Response body on error
+	Body string
+	// Headers to set on error
+	Header http.Header
+}
+
+// Default handler for when a URL was not matched
+func NotFound(w http.ResponseWriter, r *http.Request) {
+	if matchStruct, ok := context.Get(r, MuxMatchErrorContextKey).(MatchError); ok {
+
+		if matchStruct.Code == 0 {
+			// Default to a not found response if the code is not set.
+			matchStruct.Code = 404
+		}
+
+		if len(matchStruct.Header) > 0 {
+			// If we have headers associated to this match struct, we will merge them
+			// to the current headers in the response Header dictionary
+			for header, values := range matchStruct.Header {
+				for idx := range values {
+					w.Header().Add(header, values[idx])
+				}
+			}
+		}
+
+		http.Error(w, matchStruct.Body, matchStruct.Code)
+
+	} else {
+		http.NotFound(w, r)
+	}
 }
