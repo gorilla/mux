@@ -5,6 +5,7 @@
 package mux
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
@@ -135,12 +136,12 @@ func (r *Route) addMatcher(m matcher) *Route {
 }
 
 // addRegexpMatcher adds a host or path matcher and builder to a route.
-func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix bool) error {
+func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix, matchQuery bool) error {
 	if r.err != nil {
 		return r.err
 	}
 	r.regexp = r.getRegexpGroup()
-	if !matchHost {
+	if !matchHost && !matchQuery {
 		if len(tpl) == 0 || tpl[0] != '/' {
 			return fmt.Errorf("mux: path must start with a slash, got %q", tpl)
 		}
@@ -148,13 +149,18 @@ func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix bool) error 
 			tpl = strings.TrimRight(r.regexp.path.template, "/") + tpl
 		}
 	}
-	rr, err := newRouteRegexp(tpl, matchHost, matchPrefix, r.strictSlash)
+	rr, err := newRouteRegexp(tpl, matchHost, matchPrefix, matchQuery, r.strictSlash)
 	if err != nil {
 		return err
 	}
 	if matchHost {
 		if r.regexp.path != nil {
 			if err = uniqueVars(rr.varsN, r.regexp.path.varsN); err != nil {
+				return err
+			}
+		}
+		if r.regexp.query != nil {
+			if err = uniqueVars(rr.varsN, r.regexp.query.varsN); err != nil {
 				return err
 			}
 		}
@@ -165,7 +171,21 @@ func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix bool) error 
 				return err
 			}
 		}
-		r.regexp.path = rr
+		if matchQuery {
+			if r.regexp.path != nil {
+				if err = uniqueVars(rr.varsN, r.regexp.path.varsN); err != nil {
+					return err
+				}
+			}
+			r.regexp.query = rr
+		} else {
+			if r.regexp.query != nil {
+				if err = uniqueVars(rr.varsN, r.regexp.query.varsN); err != nil {
+					return err
+				}
+			}
+			r.regexp.path = rr
+		}
 	}
 	r.addMatcher(rr)
 	return nil
@@ -219,7 +239,7 @@ func (r *Route) Headers(pairs ...string) *Route {
 // Variable names must be unique in a given route. They can be retrieved
 // calling mux.Vars(request).
 func (r *Route) Host(tpl string) *Route {
-	r.err = r.addRegexpMatcher(tpl, true, false)
+	r.err = r.addRegexpMatcher(tpl, true, false, false)
 	return r
 }
 
@@ -278,7 +298,7 @@ func (r *Route) Methods(methods ...string) *Route {
 // Variable names must be unique in a given route. They can be retrieved
 // calling mux.Vars(request).
 func (r *Route) Path(tpl string) *Route {
-	r.err = r.addRegexpMatcher(tpl, false, false)
+	r.err = r.addRegexpMatcher(tpl, false, false, false)
 	return r
 }
 
@@ -294,35 +314,40 @@ func (r *Route) Path(tpl string) *Route {
 // Also note that the setting of Router.StrictSlash() has no effect on routes
 // with a PathPrefix matcher.
 func (r *Route) PathPrefix(tpl string) *Route {
-	r.err = r.addRegexpMatcher(tpl, false, true)
+	r.err = r.addRegexpMatcher(tpl, false, true, false)
 	return r
 }
 
 // Query ----------------------------------------------------------------------
 
-// queryMatcher matches the request against URL queries.
-type queryMatcher map[string]string
-
-func (m queryMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchMap(m, r.URL.Query(), false)
-}
-
 // Queries adds a matcher for URL query values.
-// It accepts a sequence of key/value pairs. For example:
+// It accepts a sequence of key/value pairs. Values may define variables.
+// For example:
 //
 //     r := mux.NewRouter()
-//     r.Queries("foo", "bar", "baz", "ding")
+//     r.Queries("foo", "bar", "id", "{id:[0-9]+}")
 //
 // The above route will only match if the URL contains the defined queries
-// values, e.g.: ?foo=bar&baz=ding.
+// values, e.g.: ?foo=bar&id=42.
 //
 // It the value is an empty string, it will match any value if the key is set.
+//
+// Variables can define an optional regexp pattern to me matched:
+//
+// - {name} matches anything until the next slash.
+//
+// - {name:pattern} matches the given regexp pattern.
+
 func (r *Route) Queries(pairs ...string) *Route {
-	if r.err == nil {
-		var queries map[string]string
-		queries, r.err = mapFromPairs(pairs...)
-		return r.addMatcher(queryMatcher(queries))
+	var buf bytes.Buffer
+	var queries map[string]string
+	buf.WriteString("")
+	queries, r.err = mapFromPairs(pairs...)
+	for k, v := range queries {
+		buf.WriteString(fmt.Sprintf("%s=%s&", k, v))
 	}
+	tpl := strings.TrimRight(buf.String(), "&")
+	r.err = r.addRegexpMatcher(tpl, false, true, true)
 	return r
 }
 
@@ -498,8 +523,9 @@ func (r *Route) getRegexpGroup() *routeRegexpGroup {
 		} else {
 			// Copy.
 			r.regexp = &routeRegexpGroup{
-				host: regexp.host,
-				path: regexp.path,
+				host:  regexp.host,
+				path:  regexp.path,
+				query: regexp.query,
 			}
 		}
 	}
