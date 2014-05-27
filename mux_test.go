@@ -398,15 +398,15 @@ func TestHeaders(t *testing.T) {
 			path:        "",
 			shouldMatch: false,
 		},
-    {
-      title:          "Accept X-HTTP-METHOD-OVERRIDE value as method",
-      route:          new(Route).Path("/867").Methods("PATCH"),
-      request:        newRequestHeaders("POST", "http://localhost/867", map[string]string{"X-HTTP-METHOD-OVERRIDE": "PATCH"}),
-      vars:           map[string]string{},
-      host:           "",
-      path:           "/867",
-      shouldMatch:    true,
-    },
+		{
+			title:       "Accept X-HTTP-METHOD-OVERRIDE value as method",
+			route:       new(Route).Path("/867").Methods("PATCH"),
+			request:     newRequestHeaders("POST", "http://localhost/867", map[string]string{"X-HTTP-METHOD-OVERRIDE": "PATCH"}),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "/867",
+			shouldMatch: true,
+		},
 	}
 
 	for _, test := range tests {
