@@ -339,15 +339,19 @@ func (r *Route) PathPrefix(tpl string) *Route {
 // - {name:pattern} matches the given regexp pattern.
 
 func (r *Route) Queries(pairs ...string) *Route {
+	length := len(pairs)
+	if length%2 != 0 {
+		r.err = fmt.Errorf(
+			"mux: number of parameters must be multiple of 2, got %v", pairs)
+		return nil
+	}
 	var buf bytes.Buffer
-	var queries map[string]string
-	buf.WriteString("")
-	queries, r.err = mapFromPairs(pairs...)
-	for k, v := range queries {
-		buf.WriteString(fmt.Sprintf("%s=%s&", k, v))
+	for i := 0; i < length; i += 2 {
+		buf.WriteString(fmt.Sprintf("%s=%s&", pairs[i], pairs[i+1]))
 	}
 	tpl := strings.TrimRight(buf.String(), "&")
 	r.err = r.addRegexpMatcher(tpl, false, true, true)
+
 	return r
 }
 
