@@ -14,7 +14,7 @@ import (
 )
 
 // newRouteRegexp parses a route template and returns a routeRegexp,
-// used to match a host or path.
+// used to match a host, a path or a query string.
 //
 // It will extract named variables, assemble a regexp to be matched, create
 // a "reverse" template to build URLs and compile regexps to validate variable
@@ -23,7 +23,7 @@ import (
 // Previously we accepted only Python-like identifiers for variable
 // names ([a-zA-Z_][a-zA-Z0-9_]*), but currently the only restriction is that
 // name and pattern can't be empty, and names can't contain a colon.
-func newRouteRegexp(tpl string, matchHost, matchPrefix, strictSlash bool) (*routeRegexp, error) {
+func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash bool) (*routeRegexp, error) {
 	// Check if it is well-formed.
 	idxs, errBraces := braceIndices(tpl)
 	if errBraces != nil {
@@ -33,7 +33,10 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, strictSlash bool) (*rout
 	template := tpl
 	// Now let's parse it.
 	defaultPattern := "[^/]+"
-	if matchHost {
+	if matchQuery {
+		defaultPattern = "[^?]+"
+		matchPrefix, strictSlash = true, false
+	} else if matchHost {
 		defaultPattern = "[^.]+"
 		matchPrefix, strictSlash = false, false
 	}
@@ -49,6 +52,9 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, strictSlash bool) (*rout
 	varsN := make([]string, len(idxs)/2)
 	varsR := make([]*regexp.Regexp, len(idxs)/2)
 	pattern := bytes.NewBufferString("^")
+	if matchQuery {
+		pattern = bytes.NewBufferString("")
+	}
 	reverse := bytes.NewBufferString("")
 	var end int
 	var err error
@@ -100,6 +106,7 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, strictSlash bool) (*rout
 	return &routeRegexp{
 		template:    template,
 		matchHost:   matchHost,
+		matchQuery:  matchQuery,
 		strictSlash: strictSlash,
 		regexp:      reg,
 		reverse:     reverse.String(),
@@ -113,8 +120,10 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, strictSlash bool) (*rout
 type routeRegexp struct {
 	// The unmodified template.
 	template string
-	// True for host match, false for path match.
+	// True for host match, false for path or query string match.
 	matchHost bool
+	// True for query string match, false for path and host match.
+	matchQuery bool
 	// The strictSlash value defined on the route, but disabled if PathPrefix was used.
 	strictSlash bool
 	// Expanded regexp.
@@ -130,7 +139,11 @@ type routeRegexp struct {
 // Match matches the regexp against the URL host or path.
 func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
 	if !r.matchHost {
-		return r.regexp.MatchString(req.URL.Path)
+		if r.matchQuery {
+			return r.regexp.MatchString(req.URL.RawQuery)
+		} else {
+			return r.regexp.MatchString(req.URL.Path)
+		}
 	}
 	return r.regexp.MatchString(getHost(req))
 }
@@ -196,8 +209,9 @@ func braceIndices(s string) ([]int, error) {
 
 // routeRegexpGroup groups the route matchers that carry variables.
 type routeRegexpGroup struct {
-	host *routeRegexp
-	path *routeRegexp
+	host  *routeRegexp
+	path  *routeRegexp
+	query *routeRegexp
 }
 
 // setMatch extracts the variables from the URL once a route matches.
@@ -231,6 +245,15 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 					}
 					m.Handler = http.RedirectHandler(u.String(), 301)
 				}
+			}
+		}
+	}
+	// Store query string variables.
+	if v.query != nil {
+		queryVars := v.query.regexp.FindStringSubmatch(req.URL.RawQuery)
+		if queryVars != nil {
+			for k, v := range v.query.varsN {
+				m.Vars[v] = queryVars[k+1]
 			}
 		}
 	}
