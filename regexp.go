@@ -34,7 +34,7 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 	// Now let's parse it.
 	defaultPattern := "[^/]+"
 	if matchQuery {
-		defaultPattern = "[^?]+"
+		defaultPattern = "[^?&]+"
 		matchPrefix, strictSlash = true, false
 	} else if matchHost {
 		defaultPattern = "[^.]+"
@@ -51,9 +51,9 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 	}
 	varsN := make([]string, len(idxs)/2)
 	varsR := make([]*regexp.Regexp, len(idxs)/2)
-	pattern := bytes.NewBufferString("^")
-	if matchQuery {
-		pattern = bytes.NewBufferString("")
+	pattern := bytes.NewBufferString("")
+	if !matchQuery {
+		pattern.WriteByte('^')
 	}
 	reverse := bytes.NewBufferString("")
 	var end int
@@ -209,9 +209,9 @@ func braceIndices(s string) ([]int, error) {
 
 // routeRegexpGroup groups the route matchers that carry variables.
 type routeRegexpGroup struct {
-	host  *routeRegexp
-	path  *routeRegexp
-	query *routeRegexp
+	host    *routeRegexp
+	path    *routeRegexp
+	queries []*routeRegexp
 }
 
 // setMatch extracts the variables from the URL once a route matches.
@@ -249,11 +249,14 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 		}
 	}
 	// Store query string variables.
-	if v.query != nil {
-		queryVars := v.query.regexp.FindStringSubmatch(req.URL.RawQuery)
-		if queryVars != nil {
-			for k, v := range v.query.varsN {
-				m.Vars[v] = queryVars[k+1]
+	if v.queries != nil && len(v.queries) > 0 {
+		rawQuery := req.URL.RawQuery
+		for _, q := range v.queries {
+			queryVars := q.regexp.FindStringSubmatch(rawQuery)
+			if queryVars != nil {
+				for k, v := range q.varsN {
+					m.Vars[v] = queryVars[k+1]
+				}
 			}
 		}
 	}
