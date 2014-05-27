@@ -463,6 +463,15 @@ func TestQueries(t *testing.T) {
 			shouldMatch: true,
 		},
 		{
+			title:       "Queries route, match with a query string out of order",
+			route:       new(Route).Host("www.example.com").Path("/api").Queries("foo", "bar", "baz", "ding"),
+			request:     newRequest("GET", "http://www.example.com/api?baz=ding&foo=bar"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
 			title:       "Queries route, bad query",
 			route:       new(Route).Queries("foo", "bar", "baz", "ding"),
 			request:     newRequest("GET", "http://localhost?foo=bar&baz=dong"),

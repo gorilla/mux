@@ -5,7 +5,6 @@
 package mux
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
@@ -153,14 +152,14 @@ func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix, matchQuery 
 	if err != nil {
 		return err
 	}
+	for _, q := range r.regexp.queries {
+		if err = uniqueVars(rr.varsN, q.varsN); err != nil {
+			return err
+		}
+	}
 	if matchHost {
 		if r.regexp.path != nil {
 			if err = uniqueVars(rr.varsN, r.regexp.path.varsN); err != nil {
-				return err
-			}
-		}
-		if r.regexp.query != nil {
-			if err = uniqueVars(rr.varsN, r.regexp.query.varsN); err != nil {
 				return err
 			}
 		}
@@ -172,18 +171,8 @@ func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix, matchQuery 
 			}
 		}
 		if matchQuery {
-			if r.regexp.path != nil {
-				if err = uniqueVars(rr.varsN, r.regexp.path.varsN); err != nil {
-					return err
-				}
-			}
-			r.regexp.query = rr
+			r.regexp.queries = append(r.regexp.queries, rr)
 		} else {
-			if r.regexp.query != nil {
-				if err = uniqueVars(rr.varsN, r.regexp.query.varsN); err != nil {
-					return err
-				}
-			}
 			r.regexp.path = rr
 		}
 	}
@@ -345,12 +334,11 @@ func (r *Route) Queries(pairs ...string) *Route {
 			"mux: number of parameters must be multiple of 2, got %v", pairs)
 		return nil
 	}
-	var buf bytes.Buffer
 	for i := 0; i < length; i += 2 {
-		buf.WriteString(fmt.Sprintf("%s=%s&", pairs[i], pairs[i+1]))
+		if r.err = r.addRegexpMatcher(pairs[i]+"="+pairs[i+1], false, true, true); r.err != nil {
+			return r
+		}
 	}
-	tpl := strings.TrimRight(buf.String(), "&")
-	r.err = r.addRegexpMatcher(tpl, false, true, true)
 
 	return r
 }
@@ -527,9 +515,9 @@ func (r *Route) getRegexpGroup() *routeRegexpGroup {
 		} else {
 			// Copy.
 			r.regexp = &routeRegexpGroup{
-				host:  regexp.host,
-				path:  regexp.path,
-				query: regexp.query,
+				host:    regexp.host,
+				path:    regexp.path,
+				queries: regexp.queries,
 			}
 		}
 	}
