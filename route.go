@@ -263,6 +263,10 @@ func (r *Route) MatcherFunc(f MatcherFunc) *Route {
 type methodMatcher []string
 
 func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
+	override := r.Header["X-Http-Method-Override"]
+	if len(override) != 0 {
+		return matchInArray(m, strings.Join(override, ""))
+	}
 	return matchInArray(m, r.Method)
 }
 
