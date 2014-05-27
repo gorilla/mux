@@ -173,12 +173,7 @@ func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix, matchQuery 
 			}
 		}
 		if matchQuery {
-			if r.regexp.queries == nil {
-				r.regexp.queries = make([]*routeRegexp, 1)
-				r.regexp.queries[0] = rr
-			} else {
-				r.regexp.queries = append(r.regexp.queries, rr)
-			}
+			r.regexp.queries = append(r.regexp.queries, rr)
 		} else {
 			r.regexp.path = rr
 		}
@@ -342,7 +337,7 @@ func (r *Route) Queries(pairs ...string) *Route {
 		return nil
 	}
 	for i := 0; i < length; i += 2 {
-		if r.err = r.addRegexpMatcher(fmt.Sprintf("%s=%s", pairs[i], pairs[i+1]), false, true, true); r.err != nil {
+		if r.err = r.addRegexpMatcher(pairs[i]+"="+pairs[i+1], false, true, true); r.err != nil {
 			return r
 		}
 	}
