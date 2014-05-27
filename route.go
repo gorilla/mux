@@ -152,11 +152,9 @@ func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix, matchQuery 
 	if err != nil {
 		return err
 	}
-	if r.regexp.queries != nil {
-		for _, q := range r.regexp.queries {
-			if err = uniqueVars(rr.varsN, q.varsN); err != nil {
-				return err
-			}
+	for _, q := range r.regexp.queries {
+		if err = uniqueVars(rr.varsN, q.varsN); err != nil {
+			return err
 		}
 	}
 	if matchHost {

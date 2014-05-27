@@ -249,14 +249,12 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 		}
 	}
 	// Store query string variables.
-	if v.queries != nil && len(v.queries) > 0 {
-		rawQuery := req.URL.RawQuery
-		for _, q := range v.queries {
-			queryVars := q.regexp.FindStringSubmatch(rawQuery)
-			if queryVars != nil {
-				for k, v := range q.varsN {
-					m.Vars[v] = queryVars[k+1]
-				}
+	rawQuery := req.URL.RawQuery
+	for _, q := range v.queries {
+		queryVars := q.regexp.FindStringSubmatch(rawQuery)
+		if queryVars != nil {
+			for k, v := range q.varsN {
+				m.Vars[v] = queryVars[k+1]
 			}
 		}
 	}
