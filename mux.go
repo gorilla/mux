@@ -38,6 +38,8 @@ func NewRouter() *Router {
 type Router struct {
 	// Configurable Handler to be used when no route matches.
 	NotFoundHandler http.Handler
+	// Configurable Handler to be used for panic handling.
+	PanicHandler http.Handler
 	// Parent route, if this is a subrouter.
 	parent parentRoute
 	// Routes to be matched, in order.
@@ -94,6 +96,9 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if !r.KeepContext {
 		defer context.Clear(req)
+	}
+	if r.PanicHandler != nil {
+		defer r.PanicHandler.ServeHTTP(w, req)
 	}
 	handler.ServeHTTP(w, req)
 }
