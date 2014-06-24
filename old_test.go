@@ -490,7 +490,6 @@ func TestPathMatcher(t *testing.T) {
 	}
 }
 
-
 func TestSchemeMatcher(t *testing.T) {
 	for _, v := range schemeMatcherTests {
 		request, _ := http.NewRequest("GET", v.url, nil)
