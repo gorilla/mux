@@ -326,7 +326,6 @@ func (r *Route) PathPrefix(tpl string) *Route {
 // - {name} matches anything until the next slash.
 //
 // - {name:pattern} matches the given regexp pattern.
-
 func (r *Route) Queries(pairs ...string) *Route {
 	length := len(pairs)
 	if length%2 != 0 {
