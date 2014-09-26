@@ -262,13 +262,14 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 
 // getHost tries its best to return the request host.
 func getHost(r *http.Request) string {
-	if !r.URL.IsAbs() {
-		host := r.Host
-		// Slice off any port information.
-		if i := strings.Index(host, ":"); i != -1 {
-			host = host[:i]
-		}
-		return host
+	if r.URL.IsAbs() {
+		return r.URL.Host
 	}
-	return r.URL.Host
+	host := r.Host
+	// Slice off any port information.
+	if i := strings.Index(host, ":"); i != -1 {
+		host = host[:i]
+	}
+	return host
+
 }
