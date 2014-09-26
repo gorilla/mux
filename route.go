@@ -31,6 +31,8 @@ type Route struct {
 	name string
 	// Error resulted from building a route.
 	err error
+
+	postMatchFunc PostMatchFunc
 }
 
 // Match matches the route against the request.
@@ -57,6 +59,9 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	// Set variables.
 	if r.regexp != nil {
 		r.regexp.setMatch(req, match, r)
+	}
+	if r.postMatchFunc != nil {
+		r.postMatchFunc(req, match, r)
 	}
 	return true
 }
@@ -244,6 +249,18 @@ func (m MatcherFunc) Match(r *http.Request, match *RouteMatch) bool {
 // MatcherFunc adds a custom function to be used as request matcher.
 func (r *Route) MatcherFunc(f MatcherFunc) *Route {
 	return r.addMatcher(f)
+}
+
+// PostMatchFunc --------------------------------------------------------------------
+
+// PostMatchFunc is the function signature used by custom var funcs.
+type PostMatchFunc func(req *http.Request, m *RouteMatch, r *Route)
+
+// PostMatchFunc sets a PostMatchFunc that will be called on a matched route to configure
+// the RouteMatch.
+func (r *Route) PostMatchFunc(f PostMatchFunc) *Route {
+	r.postMatchFunc = f
+	return r
 }
 
 // Methods --------------------------------------------------------------------

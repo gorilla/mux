@@ -593,6 +593,24 @@ func TestMatcherFunc(t *testing.T) {
 	}
 }
 
+func TestPostMatchFunc(t *testing.T) {
+	tests := []routeTest{
+		{
+			route: new(Route).Path("/111/{v1:222}").PostMatchFunc(func(req *http.Request, match *RouteMatch, r *Route) {
+				match.Vars["v1p"] = "333"
+				delete(match.Vars, "v1")
+			}),
+			request:     newRequest("GET", "http://localhost/111/222"),
+			vars:        map[string]string{"v1p": "333"},
+			shouldMatch: true,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+}
+
 func TestSubRouter(t *testing.T) {
 	subrouter1 := new(Route).Host("{v1:[a-z]+}.google.com").Subrouter()
 	subrouter2 := new(Route).PathPrefix("/foo/{v1}").Subrouter()
