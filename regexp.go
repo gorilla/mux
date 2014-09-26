@@ -35,12 +35,13 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 	defaultPattern := "[^/]+"
 	if matchQuery {
 		defaultPattern = "[^?&]+"
-		matchPrefix, strictSlash = true, false
+		matchPrefix = true
 	} else if matchHost {
 		defaultPattern = "[^.]+"
-		matchPrefix, strictSlash = false, false
+		matchPrefix = false
 	}
-	if matchPrefix {
+	// Only match strict slash if not matching
+	if matchPrefix || matchHost || matchQuery {
 		strictSlash = false
 	}
 	// Set a flag for strictSlash.
@@ -262,13 +263,14 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 
 // getHost tries its best to return the request host.
 func getHost(r *http.Request) string {
-	if !r.URL.IsAbs() {
-		host := r.Host
-		// Slice off any port information.
-		if i := strings.Index(host, ":"); i != -1 {
-			host = host[:i]
-		}
-		return host
+	if r.URL.IsAbs() {
+		return r.URL.Host
 	}
-	return r.URL.Host
+	host := r.Host
+	// Slice off any port information.
+	if i := strings.Index(host, ":"); i != -1 {
+		host = host[:i]
+	}
+	return host
+
 }
