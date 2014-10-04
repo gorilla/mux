@@ -46,6 +46,8 @@ type Router struct {
 	namedRoutes map[string]*Route
 	// See Router.StrictSlash(). This defines the flag for new routes.
 	strictSlash bool
+	// See Router.HTTPMethodOverride(). This defines the flag for new routes.
+	httpMethodOverride bool
 	// If true, do not clear the request context after handling the request
 	KeepContext bool
 }
@@ -128,6 +130,25 @@ func (r *Router) StrictSlash(value bool) *Router {
 	return r
 }
 
+// HTTPMethodOverride defines the HTTP Method overriding behaviour for new
+// routes. The initial value is false.
+//
+// When true, if the request contains the Header "X-HTTP-Method-Override", or
+// the form key "_method", then request.Method will be updated with its value.
+// Form key "_method" takes precedence over Header "X-HTTP-Method-Override".
+//
+// When false, no checks against the header or form keys will be performed, and
+// no method overridding will occur.
+//
+// This is especially useful for http clients that don't support many http
+// verbs. It isn't secure to override e.g a GET to a POST, so only POST
+// requests are considered. Likewise, the override method can only be a "write"
+// method: PUT, PATCH or DELETE.
+func (r *Router) HTTPMethodOverride(value bool) *Router {
+	r.httpMethodOverride = value
+	return r
+}
+
 // ----------------------------------------------------------------------------
 // parentRoute
 // ----------------------------------------------------------------------------
@@ -158,7 +179,7 @@ func (r *Router) getRegexpGroup() *routeRegexpGroup {
 
 // NewRoute registers an empty route.
 func (r *Router) NewRoute() *Route {
-	route := &Route{parent: r, strictSlash: r.strictSlash}
+	route := &Route{parent: r, strictSlash: r.strictSlash, httpMethodOverride: r.httpMethodOverride}
 	r.routes = append(r.routes, route)
 	return route
 }

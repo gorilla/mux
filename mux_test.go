@@ -7,6 +7,8 @@ package mux
 import (
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/context"
@@ -723,6 +725,94 @@ func TestStrictSlash(t *testing.T) {
 			host:           "",
 			path:           "/static/",
 			shouldMatch:    true,
+			shouldRedirect: false,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+}
+
+func TestHTTPMethodOverride(t *testing.T) {
+	r := NewRouter()
+	r.HTTPMethodOverride(true)
+
+	// newRequestHeaders creates a new request with a method, url, and headers
+	newRequestHeaders := func(method, url string, headers map[string]string) *http.Request {
+		req, err := http.NewRequest(method, url, nil)
+		if err != nil {
+			panic(err)
+		}
+		for k, v := range headers {
+			req.Header.Add(k, v)
+		}
+		return req
+	}
+
+	// newRequestForm creates a new POST request with a url (reqUrl) and form values
+	newPostRequestForm := func(reqUrl string, formValues map[string]string) *http.Request {
+		form := url.Values{}
+		for k, v := range formValues {
+			form.Add(k, v)
+		}
+		req, err := http.NewRequest("POST", reqUrl, strings.NewReader(form.Encode()))
+		req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		if err != nil {
+			panic(err)
+		}
+		return req
+	}
+
+	tests := []routeTest{
+		{
+			title:          "Ignore HTTPMethodOverride for GET when X-HTTP-Method-Override header",
+			route:          r.NewRoute().Methods("PUT"),
+			request:        newRequestHeaders("GET", "http://localhost", map[string]string{"X-HTTP-Method-Override": "PUT"}),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "",
+			shouldMatch:    false,
+			shouldRedirect: false,
+		},
+		{
+			title:          "Override POST with PUT when X-HTTP-Method-Override header",
+			route:          r.NewRoute().Methods("PUT"),
+			request:        newRequestHeaders("POST", "http://localhost", map[string]string{"X-HTTP-Method-Override": "PUT"}),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "",
+			shouldMatch:    true,
+			shouldRedirect: false,
+		},
+		{
+			title:          "Ignore HTTPMethodOverride for POST with JUNK when X-HTTP-Method-Override header",
+			route:          r.NewRoute().Methods("PUT"),
+			request:        newRequestHeaders("POST", "http://localhost", map[string]string{"X-HTTP-Method-Override": "JUNK"}),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "",
+			shouldMatch:    false,
+			shouldRedirect: false,
+		},
+		{
+			title:          "Override POST with DELETE when _method form value",
+			route:          r.NewRoute().Methods("DELETE"),
+			request:        newPostRequestForm("http://localhost", map[string]string{"_method": "DELETE"}),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "",
+			shouldMatch:    true,
+			shouldRedirect: false,
+		},
+		{
+			title:          "Ignore HTTPMethodOverride for POST with JUNK when _method form value",
+			route:          r.NewRoute().Methods("JUNK"),
+			request:        newPostRequestForm("http://localhost", map[string]string{"_method": "JUNK"}),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "",
+			shouldMatch:    false,
 			shouldRedirect: false,
 		},
 	}

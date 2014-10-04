@@ -25,6 +25,9 @@ type Route struct {
 	// If true, when the path pattern is "/path/", accessing "/path" will
 	// redirect to the former and vice versa.
 	strictSlash bool
+	// If true, HTTP POST method will be overridden if request contains
+	// HTTPMethodOverrideHeader or HTTPMethodOverrideFormKey
+	httpMethodOverride bool
 	// If true, this route never matches: it is only used to build URLs.
 	buildOnly bool
 	// The name used to build URLs.
@@ -249,10 +252,31 @@ func (r *Route) MatcherFunc(f MatcherFunc) *Route {
 // Methods --------------------------------------------------------------------
 
 // methodMatcher matches the request against HTTP methods.
-type methodMatcher []string
+type methodMatcher struct {
+	methods            []string
+	httpMethodOverride bool
+}
+
+const (
+	// HTTPMethodOverrideHeader is a commonly used
+	// http header to override a request method.
+	HTTPMethodOverrideHeader = "X-HTTP-Method-Override"
+	// HTTPMethodOverrideFormKey is a commonly used
+	// HTML form key to override a request method.
+	HTTPMethodOverrideFormKey = "_method"
+)
 
 func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchInArray(m, r.Method)
+	if m.httpMethodOverride && r.Method == "POST" {
+		om := r.FormValue(HTTPMethodOverrideFormKey)
+		if om == "" {
+			om = r.Header.Get(HTTPMethodOverrideHeader)
+		}
+		if om == "PUT" || om == "PATCH" || om == "DELETE" {
+			r.Method = om
+		}
+	}
+	return matchInArray(m.methods, r.Method)
 }
 
 // Methods adds a matcher for HTTP methods.
@@ -262,7 +286,7 @@ func (r *Route) Methods(methods ...string) *Route {
 	for k, v := range methods {
 		methods[k] = strings.ToUpper(v)
 	}
-	return r.addMatcher(methodMatcher(methods))
+	return r.addMatcher(&methodMatcher{methods, r.httpMethodOverride})
 }
 
 // Path -----------------------------------------------------------------------
