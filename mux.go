@@ -6,10 +6,10 @@ package mux
 
 import (
 	"fmt"
+	"github.com/gorilla/context"
+	"github.com/justinas/alice"
 	"net/http"
 	"path"
-
-	"github.com/gorilla/context"
 )
 
 // NewRouter returns a new router instance.
@@ -48,6 +48,8 @@ type Router struct {
 	strictSlash bool
 	// If true, do not clear the request context after handling the request
 	KeepContext bool
+	// A router wide middleware chain
+	Chain alice.Chain
 }
 
 // Match matches registered routes against the request.
@@ -95,7 +97,9 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.KeepContext {
 		defer context.Clear(req)
 	}
-	handler.ServeHTTP(w, req)
+
+	// Serve the route with our global chain
+	r.Chain.Then(handler).ServeHTTP(w, req)
 }
 
 // Get returns a route registered with the given name.
