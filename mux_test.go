@@ -593,6 +593,39 @@ func TestMatcherFunc(t *testing.T) {
 	}
 }
 
+func TestBuildVarsFunc(t *testing.T) {
+	tests := []routeTest{
+		{
+			title: "BuildVarsFunc set on route",
+			route: new(Route).Path(`/111/{v1:\d}{v2:.*}`).BuildVarsFunc(func(vars map[string]string) map[string]string {
+				vars["v1"] = "3"
+				vars["v2"] = "a"
+				return vars
+			}),
+			request:     newRequest("GET", "http://localhost/111/2"),
+			path:        "/111/3a",
+			shouldMatch: true,
+		},
+		{
+			title: "BuildVarsFunc set on route and parent route",
+			route: new(Route).PathPrefix(`/{v1:\d}`).BuildVarsFunc(func(vars map[string]string) map[string]string {
+				vars["v1"] = "2"
+				return vars
+			}).Subrouter().Path(`/{v2:\w}`).BuildVarsFunc(func(vars map[string]string) map[string]string {
+				vars["v2"] = "b"
+				return vars
+			}),
+			request:     newRequest("GET", "http://localhost/1/a"),
+			path:        "/2/b",
+			shouldMatch: true,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+}
+
 func TestSubRouter(t *testing.T) {
 	subrouter1 := new(Route).Host("{v1:[a-z]+}.google.com").Subrouter()
 	subrouter2 := new(Route).PathPrefix("/foo/{v1}").Subrouter()
