@@ -162,6 +162,15 @@ func TestHost(t *testing.T) {
 			path:        "/a/product_name/1",
 			shouldMatch: true,
 		},
+		{
+			title:       "Path route with multiple patterns with pipe, match",
+			route:       new(Route).Path("/{category:a|b/c}/{product}/{id:[0-9]+}"),
+			request:     newRequest("GET", "http://localhost/b/c/product_name/1"),
+			vars:        map[string]string{"category": "b/c", "product": "product_name", "id": "1"},
+			host:        "",
+			path:        "/b/c/product_name/1",
+			shouldMatch: true,
+		},
 	}
 	for _, test := range tests {
 		testRoute(t, test)
