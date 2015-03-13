@@ -5,6 +5,7 @@
 package mux
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"testing"
@@ -792,6 +793,74 @@ func TestStrictSlash(t *testing.T) {
 	}
 }
 
+func TestBasicAuthorization(t *testing.T) {
+	r := NewRouter()
+	tests := []routeTest{
+		{
+			title:          "Match without credentials",
+			route:          r.NewRoute().BasicAuthorization("test-username", "test-password").Path("/secret"),
+			request:        newRequest("GET", "http://localhost/secret"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/secret",
+			shouldMatch:    false,
+			shouldRedirect: false,
+		},
+		{
+			title:          "Match with wrong password",
+			route:          r.NewRoute().BasicAuthorization("test-username", "test-password").Path("/secret"),
+			request:        newRequestWithCredentials("GET", "http://localhost/secret", "test-username", "abc"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/secret",
+			shouldMatch:    false,
+			shouldRedirect: false,
+		},
+		{
+			title:          "Match with wrong username",
+			route:          r.NewRoute().BasicAuthorization("test-username", "test-password").Path("/secret"),
+			request:        newRequestWithCredentials("GET", "http://localhost/secret", "abc", "test-password"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/secret",
+			shouldMatch:    false,
+			shouldRedirect: false,
+		},
+		{
+			title:          "Match without username",
+			route:          r.NewRoute().BasicAuthorization("test-username", "test-password").Path("/secret"),
+			request:        newRequestWithCredentials("GET", "http://localhost/secret", "", "test-password"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/secret",
+			shouldMatch:    false,
+			shouldRedirect: false,
+		},
+		{
+			title:          "Match without password",
+			route:          r.NewRoute().BasicAuthorization("test-username", "test-password").Path("/secret"),
+			request:        newRequestWithCredentials("GET", "http://localhost/secret", "test-username", ""),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/secret",
+			shouldMatch:    false,
+			shouldRedirect: false,
+		},
+		{
+			title:          "Match with proper credentials",
+			route:          r.NewRoute().BasicAuthorization("test-username", "test-password").Path("/secret"),
+			request:        newRequestWithCredentials("GET", "http://localhost/secret", "test-username", "test-password"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/secret",
+			shouldMatch:    true,
+			shouldRedirect: false,
+		}}
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
@@ -999,5 +1068,28 @@ func newRequest(method, url string) *http.Request {
 	if err != nil {
 		panic(err)
 	}
+	return req
+}
+
+// newRequest is a helper function to create a new request with a method, url, username and password
+func newRequestWithCredentials(method, url, username, password string) *http.Request {
+	auth := ""
+	if username != "" && password != "" {
+		auth = username + ":" + password
+	} else if username == "" && password != "" {
+		auth = password
+	} else if username != "" && password == "" {
+		auth = username
+	}
+	encoded := "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
+
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header = http.Header{
+		"Authorization": {encoded},
+	}
+
 	return req
 }
