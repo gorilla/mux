@@ -5,6 +5,7 @@
 package mux
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -568,4 +569,39 @@ func (r *Route) getRegexpGroup() *routeRegexpGroup {
 		}
 	}
 	return r.regexp
+}
+
+type authorizationMatcher struct {
+	username string
+	password string
+}
+
+func (m *authorizationMatcher) Match(req *http.Request, match *RouteMatch) bool {
+	if _, ok := req.Header["Authorization"]; !ok {
+		return false
+	}
+	parts := strings.Fields(req.Header.Get("Authorization"))
+	if len(parts) != 2 || parts[0] != "Basic" {
+		return false
+	}
+	challenge, err := base64.StdEncoding.DecodeString(parts[1])
+	if err != nil {
+		return false
+	}
+	tokens := strings.SplitN(string(challenge), ":", 2)
+	if len(tokens) != 2 {
+		return false
+	}
+	if tokens[0] != m.username {
+		return false
+	}
+	if tokens[1] != m.password {
+		return false
+	}
+	return true
+}
+
+// BasicAuthorization adds a matcher for basic authorization using username and password.
+func (r *Route) BasicAuthorization(username, password string) *Route {
+	return r.addMatcher(&authorizationMatcher{username: username, password: password})
 }
