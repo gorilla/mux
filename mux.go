@@ -237,6 +237,12 @@ func (r *Router) BuildVarsFunc(f BuildVarsFunc) *Route {
 	return r.NewRoute().BuildVarsFunc(f)
 }
 
+// BasicAuthorization registers a new route with a basic username&password based authorization matcher.
+// See Route.BasicAuthorization().
+func (r *Router) BasicAuthorization(username, password string) *Route {
+	return r.NewRoute().BasicAuthorization(username, password)
+}
+
 // ----------------------------------------------------------------------------
 // Context
 // ----------------------------------------------------------------------------
