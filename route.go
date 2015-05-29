@@ -214,7 +214,7 @@ func (r *Route) Headers(pairs ...string) *Route {
 
 // Host adds a matcher for the URL host.
 // It accepts a template with zero or more URL variables enclosed by {}.
-// Variables can define an optional regexp pattern to me matched:
+// Variables can define an optional regexp pattern to be matched:
 //
 // - {name} matches anything until the next dot.
 //
@@ -272,7 +272,7 @@ func (r *Route) Methods(methods ...string) *Route {
 // Path adds a matcher for the URL path.
 // It accepts a template with zero or more URL variables enclosed by {}. The
 // template must start with a "/".
-// Variables can define an optional regexp pattern to me matched:
+// Variables can define an optional regexp pattern to be matched:
 //
 // - {name} matches anything until the next slash.
 //
@@ -323,7 +323,7 @@ func (r *Route) PathPrefix(tpl string) *Route {
 //
 // It the value is an empty string, it will match any value if the key is set.
 //
-// Variables can define an optional regexp pattern to me matched:
+// Variables can define an optional regexp pattern to be matched:
 //
 // - {name} matches anything until the next slash.
 //
