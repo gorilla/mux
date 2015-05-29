@@ -172,6 +172,13 @@ conform to the corresponding patterns. These requirements guarantee that a
 generated URL will always match a registered route -- the only exception is
 for explicitly defined "build-only" routes which never match.
 
+Regex support also exists for matching Headers within a route. For example, we could do:
+
+	r.HeadersRegexp("Content-Type", "application/(text|json)")
+
+...and the route will match both requests with a Content-Type of `application/json` as well as
+`application/text`
+
 There's also a way to build only the URL host or path for a route:
 use the methods URLHost() or URLPath() instead. For the previous route,
 we would do:
