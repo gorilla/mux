@@ -336,7 +336,7 @@ func (r *Route) Queries(pairs ...string) *Route {
 		return nil
 	}
 	for i := 0; i < length; i += 2 {
-		if r.err = r.addRegexpMatcher(pairs[i]+"="+pairs[i+1], false, true, true); r.err != nil {
+		if r.err = r.addRegexpMatcher(pairs[i]+"="+pairs[i+1], false, false, true); r.err != nil {
 			return r
 		}
 	}

@@ -552,6 +552,24 @@ func TestQueries(t *testing.T) {
 			path:        "",
 			shouldMatch: false,
 		},
+		{
+			title:       "Queries route with regexp pattern with quantifier, match",
+			route:       new(Route).Queries("foo", "{v1:[0-9]{1}}"),
+			request:     newRequest("GET", "http://localhost?foo=1"),
+			vars:        map[string]string{"v1": "1"},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Queries route with regexp pattern with quantifier, regexp does not match",
+			route:       new(Route).Queries("foo", "{v1:[0-9]{1}}"),
+			request:     newRequest("GET", "http://localhost?foo=12"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
+		},
 	}
 
 	for _, test := range tests {
