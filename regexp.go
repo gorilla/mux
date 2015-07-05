@@ -139,7 +139,7 @@ type routeRegexp struct {
 func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
 	if !r.matchHost {
 		if r.matchQuery {
-			return r.regexp.MatchString(r.getUrlQuery(req))
+			return r.matchQueryString(req)
 		} else {
 			return r.regexp.MatchString(req.URL.Path)
 		}
@@ -177,12 +177,16 @@ func (r *routeRegexp) url(values map[string]string) (string, error) {
 // For a URL with foo=bar&baz=ding, we return only the relevant key
 // value pair for the routeRegexp.
 func (r *routeRegexp) getUrlQuery(req *http.Request) string {
-	keyVal := strings.Split(r.template, "=")
-	if len(keyVal) == 0 {
+	if !r.matchQuery {
 		return ""
 	}
-	re := regexp.MustCompile(keyVal[0] + "[^&]*")
-	return re.FindString(req.URL.RawQuery)
+	key := strings.Split(r.template, "=")[0]
+	val := req.URL.Query().Get(key)
+	return key + "=" + val
+}
+
+func (r *routeRegexp) matchQueryString(req *http.Request) bool {
+	return r.regexp.MatchString(r.getUrlQuery(req))
 }
 
 // braceIndices returns the first level curly brace indices from a string.
