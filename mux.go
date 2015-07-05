@@ -359,9 +359,7 @@ func matchInArray(arr []string, value string) bool {
 	return false
 }
 
-type equals func(interface{}, interface{}) bool
-
-// matchMap returns true if the given key/value pairs exist in a given map.
+// matchMapWithString returns true if the given key/value pairs exist in a given map.
 func matchMapWithString(toCheck map[string]string, toMatch map[string][]string, canonicalKey bool) bool {
 	for k, v := range toCheck {
 		// Check if key exists.
@@ -388,7 +386,8 @@ func matchMapWithString(toCheck map[string]string, toMatch map[string][]string, 
 	return true
 }
 
-// matchMap returns true if the given key/value pairs exist in a given map.
+// matchMapWithRegex returns true if the given key/value pairs exist in a given map compiled against
+// the given regex
 func matchMapWithRegex(toCheck map[string]*regexp.Regexp, toMatch map[string][]string, canonicalKey bool) bool {
 	for k, v := range toCheck {
 		// Check if key exists.
