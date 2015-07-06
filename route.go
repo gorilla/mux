@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	ErrorNoHotOrPath = errors.New("mux: route doesn't have a host or path")
-	ErrorNoHost      = errors.New("mux: route doesn't have a host")
-	ErrorNoPath      = errors.New("mux: route doesn't have a path")
+	ErrorNoHostOrPath = errors.New("mux: route doesn't have a host or path")
+	ErrorNoHost       = errors.New("mux: route doesn't have a host")
+	ErrorNoPath       = errors.New("mux: route doesn't have a path")
 )
 
 // Route stores information to match a request and build URLs.
