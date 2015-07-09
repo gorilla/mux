@@ -1046,3 +1046,44 @@ func newRequest(method, url string) *http.Request {
 	}
 	return req
 }
+
+func TestNamedMatch(t *testing.T) {
+    for _, test := range named_match_tests {
+    	result := NamedMatch(test.name, test.match)
+    	if result != test.expected {
+    		t.Errorf("Expecting %s, got %s", test.expected, result)
+    	}
+    }
+}
+
+var named_match_tests = []struct {
+    name string
+    match string
+    expected string
+} {
+    {"item1", "[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}", "{item1:[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}}"},
+    {"item2", "[a-z0-9-_~.]+", "{item2:[a-z0-9-_~.]+}"},
+}
+
+func TestCreatePath(t *testing.T) {
+    for _, test := range create_path_tests {
+    	result := CreatePath(test.parts...)
+    	if result != test.expected {
+    		t.Errorf("Expecting %s, got %s", test.expected, result)
+    	}
+    }
+}
+
+var create_path_tests = []struct {
+    parts []string
+    expected string
+} {
+    {
+    	[]string{"g", "o", "r", "i", "l", "l", "a"},
+    	"/g/o/r/i/l/l/a",
+    },
+    {
+    	[]string{"section", NamedMatch("id", "[0-9]+")},
+    	"/section/{id:[0-9]+}",
+    },
+}

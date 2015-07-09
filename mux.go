@@ -283,6 +283,16 @@ func setCurrentRoute(r *http.Request, val interface{}) {
 // Helpers
 // ----------------------------------------------------------------------------
 
+func NamedMatch(name string, match string) string {
+    return fmt.Sprintf("{%s:%s}", name, match)
+}
+
+func CreatePath(parts ...string) string {
+    url := path.Join(parts...)
+    url = cleanPath("/" + url)
+    return url
+}
+
 // cleanPath returns the canonical path for p, eliminating . and .. elements.
 // Borrowed from the net/http package.
 func cleanPath(p string) string {
