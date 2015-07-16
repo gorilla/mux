@@ -89,8 +89,11 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 	if strictSlash {
 		pattern.WriteString("[/]?")
 	}
-	if matchQuery && len(idxs) == 0 {
-		pattern.WriteString(defaultPattern)
+	if matchQuery {
+		// Add the default pattern if the query value is empty
+		if queryVal := strings.SplitN(template, "=", 2)[1]; queryVal == "" {
+			pattern.WriteString(defaultPattern)
+		}
 	}
 	if !matchPrefix {
 		pattern.WriteByte('$')

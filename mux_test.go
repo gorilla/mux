@@ -597,6 +597,15 @@ func TestQueries(t *testing.T) {
 			path:        "",
 			shouldMatch: true,
 		},
+		{
+			title:       "Queries route with overlapping value, should not match",
+			route:       new(Route).Queries("foo", "bar"),
+			request:     newRequest("GET", "http://localhost?foo=barfoo"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
+		},
 	}
 
 	for _, test := range tests {
