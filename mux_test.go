@@ -855,6 +855,51 @@ func TestStrictSlash(t *testing.T) {
 	}
 }
 
+func TestWalk(t *testing.T) {
+	r0 := NewRouter()
+	r1 := NewRouter()
+	r2 := NewRouter()
+
+	r0.Path("/g")
+	r0.Path("/o")
+	r0.Path("/d").Handler(r1)
+	r0.Path("/r").Handler(r2)
+	r0.Path("/a")
+
+	r1.Path("/z")
+	r1.Path("/i")
+	r1.Path("/l")
+	r1.Path("/l")
+
+	r2.Path("/i")
+	r2.Path("/l")
+	r2.Path("/l")
+
+	paths := []string{"g", "o", "r", "i", "l", "l", "a"}
+	depths := []int{0, 0, 0, 1, 1, 1, 0}
+	i := 0
+	err := r0.Walk(func(route *Route, router *Router, ancestors []*Route) error {
+		matcher := route.matchers[0].(*routeRegexp)
+		if matcher.template == "/d" {
+			return SkipRouter
+		}
+		if len(ancestors) != depths[i] {
+			t.Errorf(`Expected depth of %d at i = %d; got "%s"`, depths[i], i, len(ancestors))
+		}
+		if matcher.template != "/"+paths[i] {
+			t.Errorf(`Expected "/%s" at i = %d; got "%s"`, paths[i], i, matcher.template)
+		}
+		i++
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	if i != len(paths) {
+		t.Errorf("Expected %d routes, found %d", len(paths), i)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
