@@ -855,6 +855,81 @@ func TestStrictSlash(t *testing.T) {
 	}
 }
 
+func TestWalkSingleDepth(t *testing.T) {
+	r0 := NewRouter()
+	r1 := NewRouter()
+	r2 := NewRouter()
+
+	r0.Path("/g")
+	r0.Path("/o")
+	r0.Path("/d").Handler(r1)
+	r0.Path("/r").Handler(r2)
+	r0.Path("/a")
+
+	r1.Path("/z")
+	r1.Path("/i")
+	r1.Path("/l")
+	r1.Path("/l")
+
+	r2.Path("/i")
+	r2.Path("/l")
+	r2.Path("/l")
+
+	paths := []string{"g", "o", "r", "i", "l", "l", "a"}
+	depths := []int{0, 0, 0, 1, 1, 1, 0}
+	i := 0
+	err := r0.Walk(func(route *Route, router *Router, ancestors []*Route) error {
+		matcher := route.matchers[0].(*routeRegexp)
+		if matcher.template == "/d" {
+			return SkipRouter
+		}
+		if len(ancestors) != depths[i] {
+			t.Errorf(`Expected depth of %d at i = %d; got "%s"`, depths[i], i, len(ancestors))
+		}
+		if matcher.template != "/"+paths[i] {
+			t.Errorf(`Expected "/%s" at i = %d; got "%s"`, paths[i], i, matcher.template)
+		}
+		i++
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	if i != len(paths) {
+		t.Errorf("Expected %d routes, found %d", len(paths), i)
+	}
+}
+
+func TestWalkNested(t *testing.T) {
+	router := NewRouter()
+
+	g := router.Path("/g").Subrouter()
+	o := g.PathPrefix("/o").Subrouter()
+	r := o.PathPrefix("/r").Subrouter()
+	i := r.PathPrefix("/i").Subrouter()
+	l1 := i.PathPrefix("/l").Subrouter()
+	l2 := l1.PathPrefix("/l").Subrouter()
+	l2.Path("/a")
+
+	paths := []string{"/g", "/g/o", "/g/o/r", "/g/o/r/i", "/g/o/r/i/l", "/g/o/r/i/l/l", "/g/o/r/i/l/l/a"}
+	idx := 0
+	err := router.Walk(func(route *Route, router *Router, ancestors []*Route) error {
+		path := paths[idx]
+		tpl := route.regexp.path.template
+		if tpl != path {
+			t.Errorf(`Expected %s got %s`, path, tpl)
+		}
+		idx++
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	if idx != len(paths) {
+		t.Errorf("Expected %d routes, found %d", len(paths), idx)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
