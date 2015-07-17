@@ -598,6 +598,24 @@ func TestQueries(t *testing.T) {
 			shouldMatch: true,
 		},
 		{
+			title:       "Queries route with empty value and no parameter in request, should not match",
+			route:       new(Route).Queries("foo", ""),
+			request:     newRequest("GET", "http://localhost"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
+		},
+		{
+			title:       "Queries route with empty value and empty parameter in request, should match",
+			route:       new(Route).Queries("foo", ""),
+			request:     newRequest("GET", "http://localhost?foo="),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
 			title:       "Queries route with overlapping value, should not match",
 			route:       new(Route).Queries("foo", "bar"),
 			request:     newRequest("GET", "http://localhost?foo=barfoo"),
@@ -607,13 +625,22 @@ func TestQueries(t *testing.T) {
 			shouldMatch: false,
 		},
 		{
-			title:       "Queries route with no parameter in request , should not match",
+			title:       "Queries route with no parameter in request, should not match",
 			route:       new(Route).Queries("foo", "{bar}"),
 			request:     newRequest("GET", "http://localhost"),
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
 			shouldMatch: false,
+		},
+		{
+			title:       "Queries route with empty parameter in request, should match",
+			route:       new(Route).Queries("foo", "{bar}"),
+			request:     newRequest("GET", "http://localhost?foo="),
+			vars:        map[string]string{"foo": ""},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
 		},
 	}
 
