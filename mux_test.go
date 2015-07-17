@@ -606,6 +606,15 @@ func TestQueries(t *testing.T) {
 			path:        "",
 			shouldMatch: false,
 		},
+		{
+			title:       "Queries route with no parameter in request , should not match",
+			route:       new(Route).Queries("foo", "{bar}"),
+			request:     newRequest("GET", "http://localhost"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
+		},
 	}
 
 	for _, test := range tests {
