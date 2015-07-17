@@ -186,7 +186,7 @@ func (r *routeRegexp) getUrlQuery(req *http.Request) string {
 	if !r.matchQuery {
 		return ""
 	}
-	templateKey := strings.Split(r.template, "=")[0]
+	templateKey := strings.SplitN(r.template, "=", 2)[0]
 	for key, vals := range req.URL.Query() {
 		if key == templateKey && len(vals) > 0 {
 			return key + "=" + vals[0]
