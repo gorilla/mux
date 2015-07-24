@@ -183,8 +183,9 @@ func (r *routeRegexp) url(values map[string]string) (string, error) {
 // For a URL with foo=bar&baz=ding, we return only the relevant key
 // value pair for the routeRegexp.
 func (r *routeRegexp) getUrlQuery(req *http.Request) string {
+	blank := ""
 	if !r.matchQuery {
-		return ""
+		return blank
 	}
 	templateKey := strings.SplitN(r.template, "=", 2)[0]
 	for key, vals := range req.URL.Query() {
@@ -192,7 +193,7 @@ func (r *routeRegexp) getUrlQuery(req *http.Request) string {
 			return key + "=" + vals[0]
 		}
 	}
-	return ""
+	return blank
 }
 
 func (r *routeRegexp) matchQueryString(req *http.Request) bool {
@@ -204,7 +205,8 @@ func (r *routeRegexp) matchQueryString(req *http.Request) bool {
 func braceIndices(s string) ([]int, error) {
 	var level, idx int
 	idxs := make([]int, 0)
-	for i := 0; i < len(s); i++ {
+	length := len(s)
+	for i := 0; i < length; i++ {
 		switch s[i] {
 		case '{':
 			if level++; level == 1 {
