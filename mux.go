@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"regexp"
 
 	"github.com/gorilla/context"
 )
@@ -360,16 +361,40 @@ func uniqueVars(s1, s2 []string) error {
 	return nil
 }
 
-// mapFromPairs converts variadic string parameters to a string map.
-func mapFromPairs(pairs ...string) (map[string]string, error) {
+func checkPairs(pairs ...string) (int, error) {
 	length := len(pairs)
 	if length%2 != 0 {
-		return nil, fmt.Errorf(
+		return length, fmt.Errorf(
 			"mux: number of parameters must be multiple of 2, got %v", pairs)
+	}
+	return length, nil
+}
+
+// mapFromPairs converts variadic string parameters to a string map.
+func mapFromPairsToString(pairs ...string) (map[string]string, error) {
+	length, err := checkPairs(pairs...)
+	if err != nil {
+		return nil, err
 	}
 	m := make(map[string]string, length/2)
 	for i := 0; i < length; i += 2 {
 		m[pairs[i]] = pairs[i+1]
+	}
+	return m, nil
+}
+
+func mapFromPairsToRegex(pairs ...string) (map[string]*regexp.Regexp, error) {
+	length, err := checkPairs(pairs...)
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[string]*regexp.Regexp, length/2)
+	for i := 0; i < length; i += 2 {
+		regex, err := regexp.Compile(pairs[i+1])
+		if err != nil {
+			return nil, err
+		}
+		m[pairs[i]] = regex
 	}
 	return m, nil
 }
@@ -384,9 +409,8 @@ func matchInArray(arr []string, value string) bool {
 	return false
 }
 
-// matchMap returns true if the given key/value pairs exist in a given map.
-func matchMap(toCheck map[string]string, toMatch map[string][]string,
-	canonicalKey bool) bool {
+// matchMapWithString returns true if the given key/value pairs exist in a given map.
+func matchMapWithString(toCheck map[string]string, toMatch map[string][]string, canonicalKey bool) bool {
 	for k, v := range toCheck {
 		// Check if key exists.
 		if canonicalKey {
@@ -400,6 +424,34 @@ func matchMap(toCheck map[string]string, toMatch map[string][]string,
 			valueExists := false
 			for _, value := range values {
 				if v == value {
+					valueExists = true
+					break
+				}
+			}
+			if !valueExists {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// matchMapWithRegex returns true if the given key/value pairs exist in a given map compiled against
+// the given regex
+func matchMapWithRegex(toCheck map[string]*regexp.Regexp, toMatch map[string][]string, canonicalKey bool) bool {
+	for k, v := range toCheck {
+		// Check if key exists.
+		if canonicalKey {
+			k = http.CanonicalHeaderKey(k)
+		}
+		if values := toMatch[k]; values == nil {
+			return false
+		} else if v != nil {
+			// If value was defined as an empty string we only check that the
+			// key exists. Otherwise we also check for equality.
+			valueExists := false
+			for _, value := range values {
+				if v.MatchString(value) {
 					valueExists = true
 					break
 				}
