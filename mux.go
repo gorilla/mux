@@ -85,7 +85,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var handler http.Handler
 	if r.Match(req, &match) {
 		handler = match.Handler
-		setVars(req, match.Vars)
+		SetVars(req, match.Vars)
 		setCurrentRoute(req, match.Route)
 	}
 	if handler == nil {
@@ -319,7 +319,7 @@ func CurrentRoute(r *http.Request) *Route {
 	return nil
 }
 
-func setVars(r *http.Request, val interface{}) {
+func SetVars(r *http.Request, val interface{}) {
 	context.Set(r, varsKey, val)
 }
 
