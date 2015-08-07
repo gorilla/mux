@@ -660,6 +660,15 @@ func TestQueries(t *testing.T) {
 			path:        "",
 			shouldMatch: true,
 		},
+		{
+			title:       "Queries route, bad submatch",
+			route:       new(Route).Queries("foo", "bar", "baz", "ding"),
+			request:     newRequest("GET", "http://localhost?fffoo=bar&baz=dingggg"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			shouldMatch: false,
+		},
 	}
 
 	for _, test := range tests {
