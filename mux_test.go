@@ -109,6 +109,15 @@ func TestHost(t *testing.T) {
 			shouldMatch: true,
 		},
 		{
+			title:       "Host route with pattern, additional capturing group, match",
+			route:       new(Route).Host("aaa.{v1:[a-z]{2}(b|c)}.ccc"),
+			request:     newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
+			vars:        map[string]string{"v1": "bbb"},
+			host:        "aaa.bbb.ccc",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
 			title:       "Host route with pattern, wrong host in request URL",
 			route:       new(Route).Host("aaa.{v1:[a-z]{3}}.ccc"),
 			request:     newRequest("GET", "http://aaa.222.ccc/111/222/333"),
@@ -259,6 +268,15 @@ func TestPath(t *testing.T) {
 			host:        "",
 			path:        "/111/222/333",
 			shouldMatch: false,
+		},
+		{
+			title:       "Path route with multiple patterns with pipe, match",
+			route:       new(Route).Path("/{category:a|(b/c)}/{product}/{id:[0-9]+}"),
+			request:     newRequest("GET", "http://localhost/a/product_name/1"),
+			vars:        map[string]string{"category": "a", "product": "product_name", "id": "1"},
+			host:        "",
+			path:        "/a/product_name/1",
+			shouldMatch: true,
 		},
 	}
 
@@ -596,6 +614,15 @@ func TestQueries(t *testing.T) {
 			host:        "",
 			path:        "",
 			shouldMatch: false,
+		},
+		{
+			title:       "Queries route with regexp pattern with quantifier, additional capturing group",
+			route:       new(Route).Queries("foo", "{v1:[0-9]{1}(a|b)}"),
+			request:     newRequest("GET", "http://localhost?foo=1a"),
+			vars:        map[string]string{"v1": "1a"},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
 		},
 		{
 			title:       "Queries route with regexp pattern with quantifier, additional variable in query string, regexp does not match",
