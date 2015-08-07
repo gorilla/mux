@@ -72,7 +72,7 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 				tpl[idxs[i]:end])
 		}
 		// Build the regexp pattern.
-		fmt.Fprintf(pattern, "%s(%s)", regexp.QuoteMeta(raw), patt)
+		fmt.Fprintf(pattern, "%s(?P<%s>%s)", regexp.QuoteMeta(raw), name, patt)
 		// Build the reverse template.
 		fmt.Fprintf(reverse, "%s%%s", raw)
 
@@ -241,8 +241,13 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 	if v.host != nil {
 		hostVars := v.host.regexp.FindStringSubmatch(getHost(req))
 		if hostVars != nil {
-			for k, v := range v.host.varsN {
-				m.Vars[v] = hostVars[k+1]
+			subexpNames := v.host.regexp.SubexpNames()
+			varName := 0
+			for i, name := range subexpNames[1:] {
+				if name != "" && v.host.varsN[varName] == name {
+					m.Vars[name] = hostVars[i+1]
+					varName++
+				}
 			}
 		}
 	}
@@ -250,8 +255,13 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 	if v.path != nil {
 		pathVars := v.path.regexp.FindStringSubmatch(req.URL.Path)
 		if pathVars != nil {
-			for k, v := range v.path.varsN {
-				m.Vars[v] = pathVars[k+1]
+			subexpNames := v.path.regexp.SubexpNames()
+			varName := 0
+			for i, name := range subexpNames[1:] {
+				if name != "" && v.path.varsN[varName] == name {
+					m.Vars[name] = pathVars[i+1]
+					varName++
+				}
 			}
 			// Check if we should redirect.
 			if v.path.strictSlash {
@@ -273,8 +283,13 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 	for _, q := range v.queries {
 		queryVars := q.regexp.FindStringSubmatch(q.getUrlQuery(req))
 		if queryVars != nil {
-			for k, v := range q.varsN {
-				m.Vars[v] = queryVars[k+1]
+			subexpNames := q.regexp.SubexpNames()
+			varName := 0
+			for i, name := range subexpNames[1:] {
+				if name != "" && q.varsN[varName] == name {
+					m.Vars[name] = queryVars[i+1]
+					varName++
+				}
 			}
 		}
 	}
