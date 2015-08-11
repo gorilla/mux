@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -227,7 +228,7 @@ func braceIndices(s string) ([]int, error) {
 
 // varGroupName builds a capturing group name for the indexed variable.
 func varGroupName(idx int) string {
-	return fmt.Sprintf("v%d", idx)
+	return "v" + strconv.Itoa(idx)
 }
 
 // ----------------------------------------------------------------------------
@@ -250,7 +251,7 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 			subexpNames := v.host.regexp.SubexpNames()
 			varName := 0
 			for i, name := range subexpNames[1:] {
-				if name == varGroupName(varName) {
+				if name != "" && name == varGroupName(varName) {
 					m.Vars[v.host.varsN[varName]] = hostVars[i+1]
 					varName++
 				}
@@ -264,7 +265,7 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 			subexpNames := v.path.regexp.SubexpNames()
 			varName := 0
 			for i, name := range subexpNames[1:] {
-				if name == varGroupName(varName) {
+				if name != "" && name == varGroupName(varName) {
 					m.Vars[v.path.varsN[varName]] = pathVars[i+1]
 					varName++
 				}
@@ -292,7 +293,7 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 			subexpNames := q.regexp.SubexpNames()
 			varName := 0
 			for i, name := range subexpNames[1:] {
-				if name == varGroupName(varName) {
+				if name != "" && name == varGroupName(varName) {
 					m.Vars[q.varsN[varName]] = queryVars[i+1]
 					varName++
 				}
