@@ -7,10 +7,23 @@ package mux
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/context"
 )
+
+func (r *Route) GoString() string {
+	matchers := make([]string, len(r.matchers))
+	for i, m := range r.matchers {
+		matchers[i] = fmt.Sprintf("%#v", m)
+	}
+	return fmt.Sprintf("&Route{matchers:[]matcher{%s}}", strings.Join(matchers, ", "))
+}
+
+func (r *routeRegexp) GoString() string {
+	return fmt.Sprintf("&routeRegexp{template: %q, matchHost: %t, matchQuery: %t, strictSlash: %t, regexp: regexp.MustCompile(%q), reverse: %q, varsN: %v, varsR: %v", r.template, r.matchHost, r.matchQuery, r.strictSlash, r.regexp.String(), r.reverse, r.varsN, r.varsR)
+}
 
 type routeTest struct {
 	title          string            // title of the test
