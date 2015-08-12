@@ -103,7 +103,7 @@ a way to group several routes that share the same requirements.
 We call it "subrouting".
 
 For example, let's say we have several URLs that should only match when the
-host is "www.domain.com". Create a route for that host and get a "subrouter"
+host is `"www.domain.com"`. Create a route for that host and get a "subrouter"
 from it:
 
 	r := mux.NewRouter()
@@ -116,7 +116,7 @@ Then register routes in the subrouter:
 	s.HandleFunc("/articles/{category}/{id:[0-9]+}"), ArticleHandler)
 
 The three URL paths we registered above will only be tested if the domain is
-"www.domain.com", because the subrouter is tested first. This is not
+`"www.domain.com"`, because the subrouter is tested first. This is not
 only convenient, but also optimizes request matching. You can create
 subrouters combining any attribute matchers accepted by a route.
 
