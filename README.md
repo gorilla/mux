@@ -1,6 +1,6 @@
 mux
 ===
-[![GoDoc](https://godoc.org/github.com/gorilla/securecookie?status.svg)](https://godoc.org/github.com/gorilla/securecookie)
+[![GoDoc](https://godoc.org/github.com/gorilla/mux?status.svg)](https://godoc.org/github.com/gorilla/mux)
 [![Build Status](https://travis-ci.org/gorilla/mux.png?branch=master)](https://travis-ci.org/gorilla/mux)
 
 Package gorilla/mux implements a request router and dispatcher.
