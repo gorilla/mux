@@ -537,6 +537,24 @@ func TestHeaders(t *testing.T) {
 			path:        "",
 			shouldMatch: true,
 		},
+		{
+			title:       "Headers route, regex header values to match with captured vars",
+			route:       new(Route).HeadersRegexp("foo", "{v1:ba[zr]}"),
+			request:     newRequestHeaders("GET", "http://localhost", map[string]string{"foo": "baz"}),
+			vars:        map[string]string{"v1": "baz"},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
+		{
+			title:       "Headers route, regex header values to match with several captured vars",
+			route:       new(Route).HeadersRegexp("foo", "{v1:ba[zr]}", "qux", "{v2:n.+f}"),
+			request:     newRequestHeaders("GET", "http://localhost", map[string]string{"foo": "baz", "qux": "norf"}),
+			vars:        map[string]string{"v1": "baz", "v2": "norf"},
+			host:        "",
+			path:        "",
+			shouldMatch: true,
+		},
 	}
 
 	for _, test := range tests {

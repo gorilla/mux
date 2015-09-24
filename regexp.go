@@ -24,7 +24,7 @@ import (
 // Previously we accepted only Python-like identifiers for variable
 // names ([a-zA-Z_][a-zA-Z0-9_]*), but currently the only restriction is that
 // name and pattern can't be empty, and names can't contain a colon.
-func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash bool) (*routeRegexp, error) {
+func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, matchHeaders, strictSlash bool) (*routeRegexp, error) {
 	// Check if it is well-formed.
 	idxs, errBraces := braceIndices(tpl)
 	if errBraces != nil {
@@ -39,9 +39,11 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 	} else if matchHost {
 		defaultPattern = "[^.]+"
 		matchPrefix = false
+	} else if matchHeaders {
+		defaultPattern = "[^?&]*"
 	}
 	// Only match strict slash if not matching
-	if matchPrefix || matchHost || matchQuery {
+	if matchPrefix || matchHost || matchQuery || matchHeaders {
 		strictSlash = false
 	}
 	// Set a flag for strictSlash.
@@ -97,6 +99,12 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 			pattern.WriteString(defaultPattern)
 		}
 	}
+	if matchHeaders {
+		// Likewise for headers
+		if headerVal := strings.SplitN(template, "=", 2)[1]; headerVal == "" {
+			pattern.WriteString(defaultPattern)
+		}
+	}
 	if !matchPrefix {
 		pattern.WriteByte('$')
 	}
@@ -111,14 +119,15 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 	}
 	// Done!
 	return &routeRegexp{
-		template:    template,
-		matchHost:   matchHost,
-		matchQuery:  matchQuery,
-		strictSlash: strictSlash,
-		regexp:      reg,
-		reverse:     reverse.String(),
-		varsN:       varsN,
-		varsR:       varsR,
+		template:     template,
+		matchHost:    matchHost,
+		matchQuery:   matchQuery,
+		matchHeaders: matchHeaders,
+		strictSlash:  strictSlash,
+		regexp:       reg,
+		reverse:      reverse.String(),
+		varsN:        varsN,
+		varsR:        varsR,
 	}, nil
 }
 
@@ -131,6 +140,8 @@ type routeRegexp struct {
 	matchHost bool
 	// True for query string match, false for path and host match.
 	matchQuery bool
+	//
+	matchHeaders bool
 	// The strictSlash value defined on the route, but disabled if PathPrefix was used.
 	strictSlash bool
 	// Expanded regexp.
@@ -145,6 +156,9 @@ type routeRegexp struct {
 
 // Match matches the regexp against the URL host or path.
 func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
+	if r.matchHeaders {
+		return r.matchHeadersString(req)
+	}
 	if !r.matchHost {
 		if r.matchQuery {
 			return r.matchQueryString(req)
@@ -197,8 +211,37 @@ func (r *routeRegexp) getUrlQuery(req *http.Request) string {
 	return ""
 }
 
+// getHeaders returns an array of concatenated header values from the
+// request in the form "headerField=headerValue". We only return the
+// headers whose field matches the routeRegexp.
+func (r *routeRegexp) getHeaders(req *http.Request) []string {
+	if !r.matchHeaders {
+		return make([]string, 0)
+	}
+	templateKey := strings.SplitN(r.template, "=", 2)[0]
+	templateKey = http.CanonicalHeaderKey(templateKey)
+	var matchingStrings []string
+	for key, vals := range req.Header {
+		if key == templateKey {
+			for _, headerValue := range vals {
+				matchingStrings = append(matchingStrings, key+"="+headerValue)
+			}
+		}
+	}
+	return matchingStrings
+}
+
 func (r *routeRegexp) matchQueryString(req *http.Request) bool {
 	return r.regexp.MatchString(r.getUrlQuery(req))
+}
+
+func (r *routeRegexp) matchHeadersString(req *http.Request) bool {
+	for _, header := range r.getHeaders(req) {
+		if r.regexp.MatchString(header) {
+			return true
+		}
+	}
+	return false
 }
 
 // braceIndices returns the first level curly brace indices from a string.
@@ -239,11 +282,29 @@ func varGroupName(idx int) string {
 type routeRegexpGroup struct {
 	host    *routeRegexp
 	path    *routeRegexp
+	headers []*routeRegexp
 	queries []*routeRegexp
 }
 
 // setMatch extracts the variables from the URL once a route matches.
 func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
+	// Store header variables
+	for _, h := range v.headers {
+		headers := h.getHeaders(req)
+		for _, s := range headers {
+			headerVars := h.regexp.FindStringSubmatch(s)
+			if headerVars != nil {
+				subexpNames := h.regexp.SubexpNames()
+				varName := 0
+				for i, name := range subexpNames[1:] {
+					if name != "" && name == varGroupName(varName) {
+						m.Vars[h.varsN[varName]] = headerVars[i+1]
+						varName++
+					}
+				}
+			}
+		}
+	}
 	// Store host variables.
 	if v.host != nil {
 		hostVars := v.host.regexp.FindStringSubmatch(getHost(req))
