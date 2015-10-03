@@ -70,7 +70,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Clean path to canonical form and redirect.
 	if p := cleanPath(req.URL.Path); p != req.URL.Path {
 
-		// Added 3 lines (Philip Schlump) - It was droping the query string and #whatever from query.
+		// Added 3 lines (Philip Schlump) - It was dropping the query string and #whatever from query.
 		// This matches with fix in go 1.2 r.c. 4 for same problem.  Go Issue:
 		// http://code.google.com/p/go/issues/detail?id=5252
 		url := *req.URL
@@ -365,6 +365,8 @@ func uniqueVars(s1, s2 []string) error {
 	return nil
 }
 
+// checkPairs returns the count of strings passed in, and an error if
+// the count is not an even number.
 func checkPairs(pairs ...string) (int, error) {
 	length := len(pairs)
 	if length%2 != 0 {
@@ -374,7 +376,8 @@ func checkPairs(pairs ...string) (int, error) {
 	return length, nil
 }
 
-// mapFromPairs converts variadic string parameters to a string map.
+// mapFromPairsToString converts variadic string parameters to a
+// string to string map.
 func mapFromPairsToString(pairs ...string) (map[string]string, error) {
 	length, err := checkPairs(pairs...)
 	if err != nil {
@@ -387,6 +390,8 @@ func mapFromPairsToString(pairs ...string) (map[string]string, error) {
 	return m, nil
 }
 
+// mapFromPairsToRegex converts variadic string paramers to a
+// string to regex map.
 func mapFromPairsToRegex(pairs ...string) (map[string]*regexp.Regexp, error) {
 	length, err := checkPairs(pairs...)
 	if err != nil {
