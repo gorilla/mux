@@ -1077,7 +1077,7 @@ func TestWalkSingleDepth(t *testing.T) {
 			return SkipRouter
 		}
 		if len(ancestors) != depths[i] {
-			t.Errorf(`Expected depth of %d at i = %d; got "%s"`, depths[i], i, len(ancestors))
+			t.Errorf(`Expected depth of %d at i = %d; got "%d"`, depths[i], i, len(ancestors))
 		}
 		if matcher.template != "/"+paths[i] {
 			t.Errorf(`Expected "/%s" at i = %d; got "%s"`, paths[i], i, matcher.template)
