@@ -93,7 +93,7 @@ func (r *Route) MakePrivate() *Route {
 }
 
 type extracter interface {
-  Match(*http.Request, *RouteMatch) bool
+	Match(*http.Request, *RouteMatch) bool
 	GetMatchValues() []string
 }
 
