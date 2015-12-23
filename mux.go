@@ -111,6 +111,17 @@ func (r *Router) GetRoute(name string) *Route {
 	return r.getNamedRoutes()[name]
 }
 
+// GetRoutes returns all registered routes that is not made private.
+func (r *Router) GetRoutes() []*Route {
+	var publicRoutes []*Route
+	for _, t := range r.routes {
+		if !t.private {
+			publicRoutes = append(publicRoutes, t)
+		}
+	}
+	return publicRoutes
+}
+
 // StrictSlash defines the trailing slash behavior for new routes. The initial
 // value is false.
 //
