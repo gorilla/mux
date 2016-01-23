@@ -6,6 +6,7 @@ package mux
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -30,5 +31,19 @@ func BenchmarkMuxAlternativeInRegexp(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		router.ServeHTTP(nil, requestA)
 		router.ServeHTTP(nil, requestB)
+	}
+}
+
+func BenchmarkManyPathVariables(b *testing.B) {
+	router := new(Router)
+	handler := func(w http.ResponseWriter, r *http.Request) {}
+	router.HandleFunc("/v1/{v1}/{v2}/{v3}/{v4}/{v5}", handler)
+
+	matchingRequest, _ := http.NewRequest("GET", "/v1/1/2/3/4/5", nil)
+	notMatchingRequest, _ := http.NewRequest("GET", "/v1/1/2/3/4", nil)
+	recorder := httptest.NewRecorder()
+	for i := 0; i < b.N; i++ {
+		router.ServeHTTP(nil, matchingRequest)
+		router.ServeHTTP(recorder, notMatchingRequest)
 	}
 }
