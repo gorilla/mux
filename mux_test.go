@@ -32,6 +32,8 @@ type routeTest struct {
 	vars           map[string]string // the expected vars of the match
 	host           string            // the expected host of the match
 	path           string            // the expected path of the match
+	path_template  string 			 // the expected path template to match
+	host_template  string 			 // the expected host template to match
 	shouldMatch    bool              // whether the request is expected to match the route at all
 	shouldRedirect bool              // whether the request should result in a redirect
 }
@@ -119,6 +121,7 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"v1": "bbb"},
 			host:        "aaa.bbb.ccc",
 			path:        "",
+			host_template: `aaa.{v1:[a-z]{3}}.ccc`,
 			shouldMatch: true,
 		},
 		{
@@ -128,6 +131,7 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"v1": "bbb"},
 			host:        "aaa.bbb.ccc",
 			path:        "",
+			host_template: `aaa.{v1:[a-z]{2}(b|c)}.ccc`,
 			shouldMatch: true,
 		},
 		{
@@ -137,6 +141,7 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"v1": "bbb"},
 			host:        "aaa.bbb.ccc",
 			path:        "",
+			host_template: `aaa.{v1:[a-z]{3}}.ccc`,
 			shouldMatch: false,
 		},
 		{
@@ -146,6 +151,7 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc"},
 			host:        "aaa.bbb.ccc",
 			path:        "",
+			host_template: `{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}`,
 			shouldMatch: true,
 		},
 		{
@@ -155,6 +161,7 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc"},
 			host:        "aaa.bbb.ccc",
 			path:        "",
+			host_template: `{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}`,
 			shouldMatch: false,
 		},
 		{
@@ -164,6 +171,7 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"v-1": "bbb"},
 			host:        "aaa.bbb.ccc",
 			path:        "",
+			host_template: `aaa.{v-1:[a-z]{3}}.ccc`,
 			shouldMatch: true,
 		},
 		{
@@ -173,6 +181,7 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"v-1": "bbb"},
 			host:        "aaa.bbb.ccc",
 			path:        "",
+			host_template: `aaa.{v-1:[a-z]{2}(b|c)}.ccc`,
 			shouldMatch: true,
 		},
 		{
@@ -182,6 +191,7 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"v-1": "aaa", "v-2": "bbb", "v-3": "ccc"},
 			host:        "aaa.bbb.ccc",
 			path:        "",
+			host_template: `{v-1:[a-z]{3}}.{v-2:[a-z]{3}}.{v-3:[a-z]{3}}`,
 			shouldMatch: true,
 		},
 		{
@@ -191,6 +201,7 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"category": "a"},
 			host:        "",
 			path:        "/a",
+			path_template: `/{category:a|b/c}`,
 			shouldMatch: true,
 		},
 		{
@@ -200,6 +211,7 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"category": "b/c"},
 			host:        "",
 			path:        "/b/c",
+			path_template: `/{category:a|b/c}`,
 			shouldMatch: true,
 		},
 		{
@@ -209,6 +221,7 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"category": "a", "product": "product_name", "id": "1"},
 			host:        "",
 			path:        "/a/product_name/1",
+			path_template: `/{category:a|b/c}/{product}/{id:[0-9]+}`,
 			shouldMatch: true,
 		},
 		{
@@ -218,11 +231,13 @@ func TestHost(t *testing.T) {
 			vars:        map[string]string{"category": "b/c", "product": "product_name", "id": "1"},
 			host:        "",
 			path:        "/b/c/product_name/1",
+			path_template: `/{category:a|b/c}/{product}/{id:[0-9]+}`,
 			shouldMatch: true,
 		},
 	}
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 }
 
@@ -253,6 +268,7 @@ func TestPath(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "/111",
+			path_template: `/111/`,
 			shouldMatch: false,
 		},
 		{
@@ -262,6 +278,7 @@ func TestPath(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "/111/",
+			path_template: `/111`,
 			shouldMatch: false,
 		},
 		{
@@ -280,6 +297,7 @@ func TestPath(t *testing.T) {
 			vars:        map[string]string{"v1": "222"},
 			host:        "",
 			path:        "/111/222/333",
+			path_template: `/111/{v1:[0-9]{3}}/333`,
 			shouldMatch: true,
 		},
 		{
@@ -289,6 +307,7 @@ func TestPath(t *testing.T) {
 			vars:        map[string]string{"v1": "222"},
 			host:        "",
 			path:        "/111/222/333",
+			path_template: `/111/{v1:[0-9]{3}}/333`,
 			shouldMatch: false,
 		},
 		{
@@ -298,6 +317,7 @@ func TestPath(t *testing.T) {
 			vars:        map[string]string{"v1": "111", "v2": "222", "v3": "333"},
 			host:        "",
 			path:        "/111/222/333",
+			path_template: `/{v1:[0-9]{3}}/{v2:[0-9]{3}}/{v3:[0-9]{3}}`,
 			shouldMatch: true,
 		},
 		{
@@ -307,6 +327,7 @@ func TestPath(t *testing.T) {
 			vars:        map[string]string{"v1": "111", "v2": "222", "v3": "333"},
 			host:        "",
 			path:        "/111/222/333",
+			path_template: `/{v1:[0-9]{3}}/{v2:[0-9]{3}}/{v3:[0-9]{3}}`,
 			shouldMatch: false,
 		},
 		{
@@ -316,6 +337,7 @@ func TestPath(t *testing.T) {
 			vars:        map[string]string{"category": "a", "product": "product_name", "id": "1"},
 			host:        "",
 			path:        "/a/product_name/1",
+			path_template: `/{category:a|(b/c)}/{product}/{id:[0-9]+}`,
 			shouldMatch: true,
 		},
 		{
@@ -325,6 +347,7 @@ func TestPath(t *testing.T) {
 			vars:        map[string]string{"v-1": "222"},
 			host:        "",
 			path:        "/111/222/333",
+			path_template: `/111/{v-1:[0-9]{3}}/333`,
 			shouldMatch: true,
 		},
 		{
@@ -334,6 +357,7 @@ func TestPath(t *testing.T) {
 			vars:        map[string]string{"v-1": "111", "v-2": "222", "v-3": "333"},
 			host:        "",
 			path:        "/111/222/333",
+			path_template: `/{v-1:[0-9]{3}}/{v-2:[0-9]{3}}/{v-3:[0-9]{3}}`,
 			shouldMatch: true,
 		},
 		{
@@ -343,12 +367,14 @@ func TestPath(t *testing.T) {
 			vars:        map[string]string{"product-category": "a", "product-name": "product_name", "product-id": "1"},
 			host:        "",
 			path:        "/a/product_name/1",
+			path_template: `/{product-category:a|(b/c)}/{product-name}/{product-id:[0-9]+}`,
 			shouldMatch: true,
 		},
 	}
 
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 }
 
@@ -388,6 +414,7 @@ func TestPathPrefix(t *testing.T) {
 			vars:        map[string]string{"v1": "222"},
 			host:        "",
 			path:        "/111/222",
+			path_template: `/111/{v1:[0-9]{3}}`,
 			shouldMatch: true,
 		},
 		{
@@ -397,6 +424,7 @@ func TestPathPrefix(t *testing.T) {
 			vars:        map[string]string{"v1": "222"},
 			host:        "",
 			path:        "/111/222",
+			path_template: `/111/{v1:[0-9]{3}}`,
 			shouldMatch: false,
 		},
 		{
@@ -406,6 +434,7 @@ func TestPathPrefix(t *testing.T) {
 			vars:        map[string]string{"v1": "111", "v2": "222"},
 			host:        "",
 			path:        "/111/222",
+			path_template: `/{v1:[0-9]{3}}/{v2:[0-9]{3}}`,
 			shouldMatch: true,
 		},
 		{
@@ -415,12 +444,14 @@ func TestPathPrefix(t *testing.T) {
 			vars:        map[string]string{"v1": "111", "v2": "222"},
 			host:        "",
 			path:        "/111/222",
+			path_template: `/{v1:[0-9]{3}}/{v2:[0-9]{3}}`,
 			shouldMatch: false,
 		},
 	}
 
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 }
 
@@ -433,6 +464,8 @@ func TestHostPath(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
+			path_template: `/111/222/333`,
+			host_template: `aaa.bbb.ccc`,
 			shouldMatch: true,
 		},
 		{
@@ -442,6 +475,8 @@ func TestHostPath(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
+			path_template: `/111/222/333`,
+			host_template: `aaa.bbb.ccc`,
 			shouldMatch: false,
 		},
 		{
@@ -451,6 +486,8 @@ func TestHostPath(t *testing.T) {
 			vars:        map[string]string{"v1": "bbb", "v2": "222"},
 			host:        "aaa.bbb.ccc",
 			path:        "/111/222/333",
+			path_template: `/111/{v2:[0-9]{3}}/333`,
+			host_template: `aaa.{v1:[a-z]{3}}.ccc`,
 			shouldMatch: true,
 		},
 		{
@@ -460,6 +497,8 @@ func TestHostPath(t *testing.T) {
 			vars:        map[string]string{"v1": "bbb", "v2": "222"},
 			host:        "aaa.bbb.ccc",
 			path:        "/111/222/333",
+			path_template: `/111/{v2:[0-9]{3}}/333`,
+			host_template: `aaa.{v1:[a-z]{3}}.ccc`,
 			shouldMatch: false,
 		},
 		{
@@ -469,6 +508,8 @@ func TestHostPath(t *testing.T) {
 			vars:        map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc", "v4": "111", "v5": "222", "v6": "333"},
 			host:        "aaa.bbb.ccc",
 			path:        "/111/222/333",
+			path_template: `/{v4:[0-9]{3}}/{v5:[0-9]{3}}/{v6:[0-9]{3}}`,
+			host_template: `{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}`,
 			shouldMatch: true,
 		},
 		{
@@ -478,12 +519,15 @@ func TestHostPath(t *testing.T) {
 			vars:        map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc", "v4": "111", "v5": "222", "v6": "333"},
 			host:        "aaa.bbb.ccc",
 			path:        "/111/222/333",
+			path_template: `/{v4:[0-9]{3}}/{v5:[0-9]{3}}/{v6:[0-9]{3}}`,
+			host_template: `{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}`,
 			shouldMatch: false,
 		},
 	}
 
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 }
 
@@ -541,6 +585,7 @@ func TestHeaders(t *testing.T) {
 
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 
 }
@@ -578,6 +623,7 @@ func TestMethods(t *testing.T) {
 
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 }
 
@@ -599,6 +645,8 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
+			path_template: `/api`,
+			host_template: `www.example.com`,
 			shouldMatch: true,
 		},
 		{
@@ -608,6 +656,8 @@ func TestQueries(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
+			path_template: `/api`,
+			host_template: `www.example.com`,
 			shouldMatch: true,
 		},
 		{
@@ -803,6 +853,7 @@ func TestQueries(t *testing.T) {
 
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 }
 
@@ -839,6 +890,7 @@ func TestSchemes(t *testing.T) {
 	}
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 }
 
@@ -873,6 +925,7 @@ func TestMatcherFunc(t *testing.T) {
 
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 }
 
@@ -887,6 +940,7 @@ func TestBuildVarsFunc(t *testing.T) {
 			}),
 			request:     newRequest("GET", "http://localhost/111/2"),
 			path:        "/111/3a",
+			path_template: `/111/{v1:\d}{v2:.*}`,
 			shouldMatch: true,
 		},
 		{
@@ -900,12 +954,14 @@ func TestBuildVarsFunc(t *testing.T) {
 			}),
 			request:     newRequest("GET", "http://localhost/1/a"),
 			path:        "/2/b",
+			path_template: `/{v1:\d}/{v2:\w}`,
 			shouldMatch: true,
 		},
 	}
 
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 }
 
@@ -920,6 +976,8 @@ func TestSubRouter(t *testing.T) {
 			vars:        map[string]string{"v1": "aaa", "v2": "bbb"},
 			host:        "aaa.google.com",
 			path:        "/bbb",
+			path_template: `/{v2:[a-z]+}`,
+			host_template: `{v1:[a-z]+}.google.com`,
 			shouldMatch: true,
 		},
 		{
@@ -928,6 +986,8 @@ func TestSubRouter(t *testing.T) {
 			vars:        map[string]string{"v1": "aaa", "v2": "bbb"},
 			host:        "aaa.google.com",
 			path:        "/bbb",
+			path_template: `/{v2:[a-z]+}`,
+			host_template: `{v1:[a-z]+}.google.com`,
 			shouldMatch: false,
 		},
 		{
@@ -936,6 +996,7 @@ func TestSubRouter(t *testing.T) {
 			vars:        map[string]string{"v1": "bar", "v2": "ding"},
 			host:        "",
 			path:        "/foo/bar/baz/ding",
+			path_template: `/foo/{v1}/baz/{v2}`,
 			shouldMatch: true,
 		},
 		{
@@ -944,12 +1005,14 @@ func TestSubRouter(t *testing.T) {
 			vars:        map[string]string{"v1": "bar", "v2": "ding"},
 			host:        "",
 			path:        "/foo/bar/baz/ding",
+			path_template: `/foo/{v1}/baz/{v2}`,
 			shouldMatch: false,
 		},
 	}
 
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 }
 
@@ -1045,6 +1108,7 @@ func TestStrictSlash(t *testing.T) {
 
 	for _, test := range tests {
 		testRoute(t, test)
+		testTemplate(t, test)
 	}
 }
 
@@ -1152,14 +1216,13 @@ func TestSubrouterErrorHandling(t *testing.T) {
 // ----------------------------------------------------------------------------
 
 func getRouteTemplate(route *Route) string {
-	host, path := "none", "none"
-	if route.regexp != nil {
-		if route.regexp.host != nil {
-			host = route.regexp.host.template
-		}
-		if route.regexp.path != nil {
-			path = route.regexp.path.template
-		}
+	host, err := route.GetHostTemplate()
+	if err != nil {
+		host = "none"
+	}
+	path, err := route.GetPathTemplate()
+	if err != nil {
+		path = "none"
 	}
 	return fmt.Sprintf("Host: %v, Path: %v", host, path)
 }
@@ -1218,6 +1281,29 @@ func testRoute(t *testing.T, test routeTest) {
 			t.Errorf("(%v) Unexpected redirect", test.title)
 			return
 		}
+	}
+}
+
+func testTemplate(t *testing.T, test routeTest) {
+	route := test.route
+	path_template := test.path_template
+	if len(path_template) == 0 {
+		path_template = test.path
+	}
+	host_template := test.host_template
+	if len(host_template) == 0 {
+		host_template = test.host
+	}
+
+	path_tmpl, path_err := route.GetPathTemplate()
+	if path_err == nil  && path_tmpl != path_template {
+		t.Errorf("(%v) GetPathTemplate not equal: expected %v, got %v", test.title, path_template, path_tmpl)
+	}
+
+
+	host_tmpl, host_err := route.GetHostTemplate()
+	if host_err == nil  && host_tmpl != host_template {
+		t.Errorf("(%v) GetHostTemplate not equal: expected %v, got %v", test.title, host_template, host_tmpl)
 	}
 }
 

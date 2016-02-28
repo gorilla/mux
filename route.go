@@ -532,10 +532,11 @@ func (r *Route) URLPath(pairs ...string) (*url.URL, error) {
 	}, nil
 }
 
-// URLPathTemplate returns the template used to match against for the route
-//
+// GetPathTemplate and GetHostTemplate returns the template used to match against for the route
+// This is userful for building simple REST API documentation,
+// and instrumentation for services like New Relic to ensure consistent reporting
 // The route must have a path defined.
-func (r *Route) URLPathTemplate() (string, error) {
+func (r *Route) GetPathTemplate() (string, error) {
 	if r.err != nil {
 		return "", r.err
 	}
@@ -543,6 +544,16 @@ func (r *Route) URLPathTemplate() (string, error) {
 		return "", errors.New("mux: route doesn't have a path")
 	}
 	return r.regexp.path.template, nil
+}
+
+func (r *Route) GetHostTemplate() (string, error) {
+	if r.err != nil {
+		return "", r.err
+	}
+	if r.regexp == nil || r.regexp.host == nil {
+		return "", errors.New("mux: route doesn't have a host")
+	}
+	return r.regexp.host.template, nil
 }
 
 // prepareVars converts the route variable pairs into a map. If the route has a
