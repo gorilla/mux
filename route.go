@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -188,7 +189,7 @@ func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix, matchQuery 
 type headerMatcher map[string]string
 
 func (m headerMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchMap(m, r.Header, true)
+	return matchMapWithString(m, r.Header, true)
 }
 
 // Headers adds a matcher for request header values.
@@ -199,13 +200,36 @@ func (m headerMatcher) Match(r *http.Request, match *RouteMatch) bool {
 //               "X-Requested-With", "XMLHttpRequest")
 //
 // The above route will only match if both request header values match.
-//
-// It the value is an empty string, it will match any value if the key is set.
+// If the value is an empty string, it will match any value if the key is set.
 func (r *Route) Headers(pairs ...string) *Route {
 	if r.err == nil {
 		var headers map[string]string
-		headers, r.err = mapFromPairs(pairs...)
+		headers, r.err = mapFromPairsToString(pairs...)
 		return r.addMatcher(headerMatcher(headers))
+	}
+	return r
+}
+
+// headerRegexMatcher matches the request against the route given a regex for the header
+type headerRegexMatcher map[string]*regexp.Regexp
+
+func (m headerRegexMatcher) Match(r *http.Request, match *RouteMatch) bool {
+	return matchMapWithRegex(m, r.Header, true)
+}
+
+// Regular expressions can be used with headers as well.
+// It accepts a sequence of key/value pairs, where the value has regex support. For example
+//     r := mux.NewRouter()
+//     r.HeadersRegexp("Content-Type", "application/(text|json)",
+//               "X-Requested-With", "XMLHttpRequest")
+//
+// The above route will only match if both the request header matches both regular expressions.
+// It the value is an empty string, it will match any value if the key is set.
+func (r *Route) HeadersRegexp(pairs ...string) *Route {
+	if r.err == nil {
+		var headers map[string]*regexp.Regexp
+		headers, r.err = mapFromPairsToRegex(pairs...)
+		return r.addMatcher(headerRegexMatcher(headers))
 	}
 	return r
 }
@@ -223,7 +247,7 @@ func (r *Route) Headers(pairs ...string) *Route {
 // For example:
 //
 //     r := mux.NewRouter()
-//     r.Host("www.domain.com")
+//     r.Host("www.example.com")
 //     r.Host("{subdomain}.domain.com")
 //     r.Host("{subdomain:[a-z]+}.domain.com")
 //
@@ -382,7 +406,7 @@ func (r *Route) BuildVarsFunc(f BuildVarsFunc) *Route {
 // It will test the inner routes only if the parent route matched. For example:
 //
 //     r := mux.NewRouter()
-//     s := r.Host("www.domain.com").Subrouter()
+//     s := r.Host("www.example.com").Subrouter()
 //     s.HandleFunc("/products/", ProductsHandler)
 //     s.HandleFunc("/products/{key}", ProductHandler)
 //     s.HandleFunc("/articles/{category}/{id:[0-9]+}"), ArticleHandler)
@@ -524,7 +548,7 @@ func (r *Route) URLPathTemplate() (string, error) {
 // prepareVars converts the route variable pairs into a map. If the route has a
 // BuildVarsFunc, it is invoked.
 func (r *Route) prepareVars(pairs ...string) (map[string]string, error) {
-	m, err := mapFromPairs(pairs...)
+	m, err := mapFromPairsToString(pairs...)
 	if err != nil {
 		return nil, err
 	}

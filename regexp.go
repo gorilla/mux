@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -34,7 +35,7 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 	// Now let's parse it.
 	defaultPattern := "[^/]+"
 	if matchQuery {
-		defaultPattern = "[^?&]+"
+		defaultPattern = "[^?&]*"
 	} else if matchHost {
 		defaultPattern = "[^.]+"
 		matchPrefix = false
@@ -72,7 +73,11 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 				tpl[idxs[i]:end])
 		}
 		// Build the regexp pattern.
-		fmt.Fprintf(pattern, "%s(%s)", regexp.QuoteMeta(raw), patt)
+		if patt[0] == '(' && patt[len(patt)-1] == ')' {
+			fmt.Fprintf(pattern, "%s%s", regexp.QuoteMeta(raw), patt)
+		} else {
+			fmt.Fprintf(pattern, "%s(%s)", regexp.QuoteMeta(raw), patt)
+		}
 		// Build the reverse template.
 		fmt.Fprintf(reverse, "%s%%s", raw)
 
@@ -88,6 +93,12 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 	pattern.WriteString(regexp.QuoteMeta(raw))
 	if strictSlash {
 		pattern.WriteString("[/]?")
+	}
+	if matchQuery {
+		// Add the default pattern if the query value is empty
+		if queryVal := strings.SplitN(template, "=", 2)[1]; queryVal == "" {
+			pattern.WriteString(defaultPattern)
+		}
 	}
 	if !matchPrefix {
 		pattern.WriteByte('$')
@@ -180,9 +191,13 @@ func (r *routeRegexp) getUrlQuery(req *http.Request) string {
 	if !r.matchQuery {
 		return ""
 	}
-	key := strings.Split(r.template, "=")[0]
-	val := req.URL.Query().Get(key)
-	return key + "=" + val
+	templateKey := strings.SplitN(r.template, "=", 2)[0]
+	for key, vals := range req.URL.Query() {
+		if key == templateKey && len(vals) > 0 {
+			return key + "=" + vals[0]
+		}
+	}
+	return ""
 }
 
 func (r *routeRegexp) matchQueryString(req *http.Request) bool {
@@ -214,6 +229,11 @@ func braceIndices(s string) ([]int, error) {
 	return idxs, nil
 }
 
+// varGroupName builds a capturing group name for the indexed variable.
+func varGroupName(idx int) string {
+	return "v" + strconv.Itoa(idx)
+}
+
 // ----------------------------------------------------------------------------
 // routeRegexpGroup
 // ----------------------------------------------------------------------------
@@ -229,20 +249,17 @@ type routeRegexpGroup struct {
 func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
 	// Store host variables.
 	if v.host != nil {
-		hostVars := v.host.regexp.FindStringSubmatch(getHost(req))
-		if hostVars != nil {
-			for k, v := range v.host.varsN {
-				m.Vars[v] = hostVars[k+1]
-			}
+		host := getHost(req)
+		matches := v.host.regexp.FindStringSubmatchIndex(host)
+		if len(matches) > 0 {
+			extractVars(host, matches, v.host.varsN, m.Vars)
 		}
 	}
 	// Store path variables.
 	if v.path != nil {
-		pathVars := v.path.regexp.FindStringSubmatch(req.URL.Path)
-		if pathVars != nil {
-			for k, v := range v.path.varsN {
-				m.Vars[v] = pathVars[k+1]
-			}
+		matches := v.path.regexp.FindStringSubmatchIndex(req.URL.Path)
+		if len(matches) > 0 {
+			extractVars(req.URL.Path, matches, v.path.varsN, m.Vars)
 			// Check if we should redirect.
 			if v.path.strictSlash {
 				p1 := strings.HasSuffix(req.URL.Path, "/")
@@ -261,11 +278,10 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 	}
 	// Store query string variables.
 	for _, q := range v.queries {
-		queryVars := q.regexp.FindStringSubmatch(q.getUrlQuery(req))
-		if queryVars != nil {
-			for k, v := range q.varsN {
-				m.Vars[v] = queryVars[k+1]
-			}
+		queryUrl := q.getUrlQuery(req)
+		matches := q.regexp.FindStringSubmatchIndex(queryUrl)
+		if len(matches) > 0 {
+			extractVars(queryUrl, matches, q.varsN, m.Vars)
 		}
 	}
 }
@@ -282,4 +298,17 @@ func getHost(r *http.Request) string {
 	}
 	return host
 
+}
+
+func extractVars(input string, matches []int, names []string, output map[string]string) {
+	matchesCount := 0
+	prevEnd := -1
+	for i := 2; i < len(matches) && matchesCount < len(names); i += 2 {
+		if prevEnd < matches[i+1] {
+			value := input[matches[i]:matches[i+1]]
+			output[names[matchesCount]] = value
+			prevEnd = matches[i+1]
+			matchesCount++
+		}
+	}
 }
