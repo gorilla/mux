@@ -576,10 +576,10 @@ func TestSubRouting(t *testing.T) {
 	}
 
 	u, _ := router.Get("products").URL()
-	builtUrl := u.String()
+	builtURL := u.String()
 	// Yay, subroute aware of the domain when building!
-	if builtUrl != url {
-		t.Errorf("Expected %q, got %q.", url, builtUrl)
+	if builtURL != url {
+		t.Errorf("Expected %q, got %q.", url, builtURL)
 	}
 }
 
