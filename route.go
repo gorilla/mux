@@ -534,6 +534,36 @@ func (r *Route) URLPath(pairs ...string) (*url.URL, error) {
 	}, nil
 }
 
+// GetPathTemplate returns the template used to build the
+// route match.
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An error will be returned if the route does not define a path.
+func (r *Route) GetPathTemplate() (string, error) {
+	if r.err != nil {
+		return "", r.err
+	}
+	if r.regexp == nil || r.regexp.path == nil {
+		return "", errors.New("mux: route doesn't have a path")
+	}
+	return r.regexp.path.template, nil
+}
+
+// GetHostTemplate returns the template used to build the
+// route match.
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An error will be returned if the route does not define a host.
+func (r *Route) GetHostTemplate() (string, error) {
+	if r.err != nil {
+		return "", r.err
+	}
+	if r.regexp == nil || r.regexp.host == nil {
+		return "", errors.New("mux: route doesn't have a host")
+	}
+	return r.regexp.host.template, nil
+}
+
 // prepareVars converts the route variable pairs into a map. If the route has a
 // BuildVarsFunc, it is invoked.
 func (r *Route) prepareVars(pairs ...string) (map[string]string, error) {
