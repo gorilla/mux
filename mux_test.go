@@ -1269,8 +1269,6 @@ func (ho TestA301ResponseWriter) WriteHeader(code int) {
 }
 
 func Test301Redirect(t *testing.T) {
-	m := make(http.Header)
-
 	func1 := func(w http.ResponseWriter, r *http.Request) {}
 	func2 := func(w http.ResponseWriter, r *http.Request) {}
 
@@ -1280,6 +1278,7 @@ func Test301Redirect(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", "http://localhost//api/?abc=def", nil)
 
+	m := make(http.Header)
 	res := TestA301ResponseWriter{
 		hh:     m,
 		status: 0,
@@ -1288,6 +1287,19 @@ func Test301Redirect(t *testing.T) {
 
 	if "http://localhost/api/?abc=def" != res.hh["Location"][0] {
 		t.Errorf("Should have complete URL with query string")
+	}
+
+	req, _ = http.NewRequest("GET", "http://localhost/api/http://localhost/foo", nil)
+
+	m = make(http.Header)
+	res = TestA301ResponseWriter{
+		hh:     m,
+		status: 0,
+	}
+	r.ServeHTTP(&res, req)
+
+	if _, ok := res.hh["Location"]; ok {
+		t.Errorf("Shouldn't redirect since it's a valid URL")
 	}
 }
 

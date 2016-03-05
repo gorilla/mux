@@ -10,8 +10,14 @@ import (
 	"net/http"
 	"path"
 	"regexp"
+	"strings"
 
 	"github.com/gorilla/context"
+)
+
+const (
+	protoSep        = "://"
+	protoSepEncoded = "%3A%2F%2F"
 )
 
 // NewRouter returns a new router instance.
@@ -351,13 +357,18 @@ func cleanPath(p string) string {
 	if p[0] != '/' {
 		p = "/" + p
 	}
+	// The path can include a URL, e.g., /a/http://localhost/b.
+	// path.Clean will clean the extra '/' and make it as /a/http:/localhost/b.
+	// "://" is encoded here retain a valid URL after path.Clean
+	p = strings.Replace(p, protoSep, protoSepEncoded, -1)
 	np := path.Clean(p)
 	// path.Clean removes trailing slash except for root;
 	// put the trailing slash back if necessary.
 	if p[len(p)-1] == '/' && np != "/" {
 		np += "/"
 	}
-	return np
+	// Decoding the "://" part
+	return strings.Replace(np, protoSepEncoded, protoSep, -1)
 }
 
 // uniqueVars returns an error if two slices contain duplicated strings.
