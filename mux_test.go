@@ -370,6 +370,16 @@ func TestPath(t *testing.T) {
 			path_template: `/{product-category:a|(b/c)}/{product-name}/{product-id:[0-9]+}`,
 			shouldMatch:   true,
 		},
+		{
+			title:         "Path route with multiple hyphenated names and patterns with pipe and case insensitive, match",
+			route:         new(Route).Path("/{type:(?i:daily|mini|variety)}-{date:\\d{4,4}-\\d{2,2}-\\d{2,2}}"),
+			request:       newRequest("GET", "http://localhost/daily-2016-01-01"),
+			vars:          map[string]string{"type": "daily", "date": "2016-01-01"},
+			host:          "",
+			path:          "/daily-2016-01-01",
+			path_template: `/{type:(?i:daily|mini|variety)}-{date:\d{4,4}-\d{2,2}-\d{2,2}}`,
+			shouldMatch:   true,
+		},
 	}
 
 	for _, test := range tests {
