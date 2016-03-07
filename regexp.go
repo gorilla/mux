@@ -73,11 +73,8 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 				tpl[idxs[i]:end])
 		}
 		// Build the regexp pattern.
-		if patt[0] == '(' && patt[len(patt)-1] == ')' {
-			fmt.Fprintf(pattern, "%s%s", regexp.QuoteMeta(raw), patt)
-		} else {
-			fmt.Fprintf(pattern, "%s(%s)", regexp.QuoteMeta(raw), patt)
-		}
+		fmt.Fprintf(pattern, "%s(?P<%s>%s)", regexp.QuoteMeta(raw), varGroupName(i/2), patt)
+
 		// Build the reverse template.
 		fmt.Fprintf(reverse, "%s%%s", raw)
 
