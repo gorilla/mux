@@ -36,10 +36,6 @@ func NewRecorder() *ResponseRecorder {
 	}
 }
 
-// DefaultRemoteAddr is the default remote address to return in RemoteAddr if
-// an explicit DefaultRemoteAddr isn't set on ResponseRecorder.
-const DefaultRemoteAddr = "1.2.3.4"
-
 // Header returns the response headers.
 func (rw *ResponseRecorder) Header() http.Header {
 	return rw.HeaderMap
