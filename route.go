@@ -483,7 +483,7 @@ func (r *Route) URL(pairs ...string) (*url.URL, error) {
 	}
 	var scheme, host, path string
 	if r.regexp.host != nil {
-		if r.secure {
+		if r.isSecure() {
 			scheme = "https"
 		} else {
 			scheme = "http"
@@ -611,6 +611,15 @@ type parentRoute interface {
 	getNamedRoutes() map[string]*Route
 	getRegexpGroup() *routeRegexpGroup
 	buildVars(map[string]string) map[string]string
+	isSecure() bool
+}
+
+func (r *Route) isSecure() bool {
+	if r.parent == nil {
+		// During tests router is not always set.
+		r.parent = NewRouter()
+	}
+	return r.secure || r.parent.isSecure()
 }
 
 // getNamedRoutes returns the map where named routes are registered.

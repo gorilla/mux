@@ -176,6 +176,13 @@ func (r *Router) UseEncodedPath() *Router {
 // parentRoute
 // ----------------------------------------------------------------------------
 
+func (r *Router) isSecure() bool {
+	if r.parent != nil {
+		return r.parent.isSecure()
+	}
+	return false
+}
+
 // getNamedRoutes returns the map where named routes are registered.
 func (r *Router) getNamedRoutes() map[string]*Route {
 	if r.namedRoutes == nil {
