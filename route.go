@@ -523,8 +523,14 @@ func (r *Route) URLHost(pairs ...string) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
+	var scheme string
+	if r.isSecure() {
+		scheme = "https"
+	} else {
+		scheme = "http"
+	}
 	return &url.URL{
-		Scheme: "http",
+		Scheme: scheme,
 		Host:   host,
 	}, nil
 }
