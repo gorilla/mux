@@ -37,6 +37,8 @@ type Route struct {
 	name string
 	// Error resulted from building a route.
 	err error
+	// Available schemes
+	secure bool
 
 	buildVarsFunc BuildVarsFunc
 }
@@ -393,6 +395,9 @@ func (m schemeMatcher) Match(r *http.Request, match *RouteMatch) bool {
 func (r *Route) Schemes(schemes ...string) *Route {
 	for k, v := range schemes {
 		schemes[k] = strings.ToLower(v)
+		if v == "https" {
+			r.secure = true
+		}
 	}
 	return r.addMatcher(schemeMatcher(schemes))
 }
@@ -478,8 +483,12 @@ func (r *Route) URL(pairs ...string) (*url.URL, error) {
 	}
 	var scheme, host, path string
 	if r.regexp.host != nil {
-		// Set a default scheme.
-		scheme = "http"
+		if r.secure {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+
 		if host, err = r.regexp.host.url(values); err != nil {
 			return nil, err
 		}
