@@ -39,6 +39,10 @@ type Route struct {
 	buildVarsFunc BuildVarsFunc
 }
 
+func (r *Route) SkipClean() bool {
+	return r.skipClean
+}
+
 // Match matches the route against the request.
 func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	if r.buildOnly || r.err != nil {
