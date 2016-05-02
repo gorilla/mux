@@ -138,7 +138,7 @@ func (r *Router) StrictSlash(value bool) *Router {
 }
 
 // SkipClean defines the path cleaning behaviour for new routes. The initial
-// value is false.
+// value is false. Users should be careful about which routes are not cleaned
 //
 // When true, if the route path is "/path//to", it will remain with the double
 // slash. This is helpful if you have a route like: /fetch/http://xkcd.com/534/
