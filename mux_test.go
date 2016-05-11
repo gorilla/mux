@@ -1122,6 +1122,36 @@ func TestStrictSlash(t *testing.T) {
 	}
 }
 
+func TestPreserveEscaping(t *testing.T) {
+	r := NewRouter()
+	r.PreserveEscaping(true)
+
+	tests := []routeTest{
+		{
+			title:       "Path route with URL encoded path",
+			route:       r.NewRoute().Path("/foo/{arg}/bar"),
+			request:     newRequest("GET", "http://localhost/foo/dummy1%2Fdummy2/bar"),
+			vars:        map[string]string{"arg": "dummy1%2Fdummy2"},
+			host:        "",
+			path:        "/foo/dummy1%2Fdummy2/bar",
+			shouldMatch: true,
+		},
+		{
+			title:       "Path route with more complicated URL encoded path",
+			route:       r.NewRoute().Path("/types/{arg}/instances"),
+			request:     newRequest("GET", "http://localhost/types/https%3A%2F%2Fraw.githubusercontent.com%2Fkubernetes%2Fdeployment-manager%2Fmaster%2Ftemplates%2Fredis%2Fv1%2Fredis.jinja/instances"),
+			vars:        map[string]string{"arg": "https%3A%2F%2Fraw.githubusercontent.com%2Fkubernetes%2Fdeployment-manager%2Fmaster%2Ftemplates%2Fredis%2Fv1%2Fredis.jinja"},
+			host:        "",
+			path:        "/types/https%3A%2F%2Fraw.githubusercontent.com%2Fkubernetes%2Fdeployment-manager%2Fmaster%2Ftemplates%2Fredis%2Fv1%2Fredis.jinja/instances",
+			shouldMatch: true,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+	}
+}
+
 func TestWalkSingleDepth(t *testing.T) {
 	r0 := NewRouter()
 	r1 := NewRouter()

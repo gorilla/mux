@@ -12,6 +12,7 @@ import (
 	"regexp"
 
 	"github.com/gorilla/context"
+	"net/url"
 )
 
 // NewRouter returns a new router instance.
@@ -52,6 +53,8 @@ type Router struct {
 	skipClean bool
 	// If true, do not clear the request context after handling the request
 	KeepContext bool
+	// See Router.PreserveEscaping(). This defines the flag for new routes.
+	preserveEscaping bool
 }
 
 // Match matches registered routes against the request.
@@ -76,8 +79,15 @@ func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 // mux.Vars(request).
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.skipClean {
+		var dirtyPath string
+		if r.preserveEscaping {
+			dirtyPath = req.URL.EscapedPath()
+		} else {
+			dirtyPath = req.URL.Path
+		}
+
 		// Clean path to canonical form and redirect.
-		if p := cleanPath(req.URL.Path); p != req.URL.Path {
+		if p := cleanPath(dirtyPath); p != dirtyPath {
 
 			// Added 3 lines (Philip Schlump) - It was dropping the query string and #whatever from query.
 			// This matches with fix in go 1.2 r.c. 4 for same problem.  Go Issue:
@@ -118,6 +128,10 @@ func (r *Router) GetRoute(name string) *Route {
 	return r.getNamedRoutes()[name]
 }
 
+// ----------------------------------------------------------------------------
+// Special options
+// ----------------------------------------------------------------------------
+
 // StrictSlash defines the trailing slash behavior for new routes. The initial
 // value is false.
 //
@@ -147,6 +161,24 @@ func (r *Router) StrictSlash(value bool) *Router {
 // become /fetch/http/xkcd.com/534
 func (r *Router) SkipClean(value bool) *Router {
 	r.skipClean = value
+	return r
+}
+
+// PreserveEscaping defines the url parsing behavior for new routes. The
+// initial value is false.
+//
+// When true, the raw version of the url with escaped characters left intact
+// will be used for route matching.
+//
+// When false, the escaped characters will be unescaped before any routing
+// logic is applied. In this case, the route path "/path%2Fto" will be
+// equivalent to "/path/to" for route matching purposes.
+//
+// Please note that if this is true, then the route variables will be stored as
+// escaped strings. If you want the unescaped version of these variables,
+// you'll need to use mux.UnescapedVars(request) instead.
+func (r *Router) PreserveEscaping(value bool) *Router {
+	r.preserveEscaping = value
 	return r
 }
 
@@ -187,7 +219,7 @@ func (r *Router) buildVars(m map[string]string) map[string]string {
 
 // NewRoute registers an empty route.
 func (r *Router) NewRoute() *Route {
-	route := &Route{parent: r, strictSlash: r.strictSlash, skipClean: r.skipClean}
+	route := &Route{parent: r, strictSlash: r.strictSlash, skipClean: r.skipClean, preserveEscaping: r.preserveEscaping}
 	r.routes = append(r.routes, route)
 	return route
 }
@@ -327,6 +359,26 @@ const (
 func Vars(r *http.Request) map[string]string {
 	if rv := context.Get(r, varsKey); rv != nil {
 		return rv.(map[string]string)
+	}
+	return nil
+}
+
+// UnescapedVars attempts to unescape special URL-encoded characters from the
+// current request's route variables and return them. If URL unescaping fails,
+// the raw route variable is returned instead.
+//
+// Route variables should be unescaped by default, but this function might be
+// useful if preserveEscaping is set to true.
+func UnescapedVars(r *http.Request) map[string]string {
+	if rv := context.Get(r, varsKey); rv != nil {
+		vars := rv.(map[string]string)
+		for key, rawVar := range vars {
+			unescapedVar, escapeErr := url.QueryUnescape(rawVar)
+			if escapeErr == nil {
+				vars[key] = unescapedVar
+			}
+		}
+		return vars
 	}
 	return nil
 }
