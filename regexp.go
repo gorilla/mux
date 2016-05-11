@@ -24,7 +24,7 @@ import (
 // Previously we accepted only Python-like identifiers for variable
 // names ([a-zA-Z_][a-zA-Z0-9_]*), but currently the only restriction is that
 // name and pattern can't be empty, and names can't contain a colon.
-func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash bool) (*routeRegexp, error) {
+func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash bool, preserveEscaping bool) (*routeRegexp, error) {
 	// Check if it is well-formed.
 	idxs, errBraces := braceIndices(tpl)
 	if errBraces != nil {
@@ -111,14 +111,15 @@ func newRouteRegexp(tpl string, matchHost, matchPrefix, matchQuery, strictSlash 
 	}
 	// Done!
 	return &routeRegexp{
-		template:    template,
-		matchHost:   matchHost,
-		matchQuery:  matchQuery,
-		strictSlash: strictSlash,
-		regexp:      reg,
-		reverse:     reverse.String(),
-		varsN:       varsN,
-		varsR:       varsR,
+		template:         template,
+		matchHost:        matchHost,
+		matchQuery:       matchQuery,
+		strictSlash:      strictSlash,
+		preserveEscaping: preserveEscaping,
+		regexp:           reg,
+		reverse:          reverse.String(),
+		varsN:            varsN,
+		varsR:            varsR,
 	}, nil
 }
 
@@ -133,6 +134,8 @@ type routeRegexp struct {
 	matchQuery bool
 	// The strictSlash value defined on the route, but disabled if PathPrefix was used.
 	strictSlash bool
+	// The preserveEscaping value defined on the route
+	preserveEscaping bool
 	// Expanded regexp.
 	regexp *regexp.Regexp
 	// Reverse template.
@@ -150,7 +153,11 @@ func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
 			return r.matchQueryString(req)
 		}
 
-		return r.regexp.MatchString(req.URL.Path)
+		if r.preserveEscaping {
+			return r.regexp.MatchString(req.URL.EscapedPath())
+		} else {
+			return r.regexp.MatchString(req.URL.Path)
+		}
 	}
 
 	return r.regexp.MatchString(getHost(req))
@@ -255,12 +262,19 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 	}
 	// Store path variables.
 	if v.path != nil {
-		matches := v.path.regexp.FindStringSubmatchIndex(req.URL.Path)
+		var reqPath string
+		if v.path.preserveEscaping {
+			reqPath = req.URL.EscapedPath()
+		} else {
+			reqPath = req.URL.Path
+		}
+
+		matches := v.path.regexp.FindStringSubmatchIndex(reqPath)
 		if len(matches) > 0 {
-			extractVars(req.URL.Path, matches, v.path.varsN, m.Vars)
+			extractVars(reqPath, matches, v.path.varsN, m.Vars)
 			// Check if we should redirect.
 			if v.path.strictSlash {
-				p1 := strings.HasSuffix(req.URL.Path, "/")
+				p1 := strings.HasSuffix(reqPath, "/")
 				p2 := strings.HasSuffix(v.path.template, "/")
 				if p1 != p2 {
 					u, _ := url.Parse(req.URL.String())
