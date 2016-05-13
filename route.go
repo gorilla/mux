@@ -39,6 +39,7 @@ type Route struct {
 	buildVarsFunc BuildVarsFunc
 }
 
+// SkipClean returns whether accessing "/path//to" will not redirect
 func (r *Route) SkipClean() bool {
 	return r.skipClean
 }
