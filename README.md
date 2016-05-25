@@ -219,7 +219,7 @@ package main
 
 import (
 	"net/http"
-
+	"log"
 	"github.com/gorilla/mux"
 )
 
@@ -233,7 +233,7 @@ func main() {
 	r.HandleFunc("/", YourHandler)
 
 	// Bind to a port and pass our router in
-	http.ListenAndServe(":8000", r)
+	log.Fatal(http.ListenAndServe(":8000", r))
 }
 ```
 
