@@ -118,7 +118,7 @@ Then register routes in the subrouter:
 ```go
 s.HandleFunc("/products/", ProductsHandler)
 s.HandleFunc("/products/{key}", ProductHandler)
-s.HandleFunc("/articles/{category}/{id:[0-9]+}"), ArticleHandler)
+s.HandleFunc("/articles/{category}/{id:[0-9]+}", ArticleHandler)
 ```
 
 The three URL paths we registered above will only be tested if the domain is `www.example.com`, because the subrouter is tested first. This is not only convenient, but also optimizes request matching. You can create subrouters combining any attribute matchers accepted by a route.
