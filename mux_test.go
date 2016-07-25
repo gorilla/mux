@@ -5,6 +5,7 @@
 package mux
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -1192,6 +1193,42 @@ func TestWalkNested(t *testing.T) {
 	}
 	if idx != len(paths) {
 		t.Errorf("Expected %d routes, found %d", len(paths), idx)
+	}
+}
+
+func TestWalkErrorRoute(t *testing.T) {
+	router := NewRouter()
+	router.Path("/g")
+	expectedError := errors.New("error")
+	err := router.Walk(func(route *Route, router *Router, ancestors []*Route) error {
+		return expectedError
+	})
+	if err != expectedError {
+		t.Errorf("Expected %v routes, found %v", expectedError, err)
+	}
+}
+
+func TestWalkErrorMatcher(t *testing.T) {
+	router := NewRouter()
+	expectedError := router.Path("/g").Subrouter().Path("").GetError()
+	err := router.Walk(func(route *Route, router *Router, ancestors []*Route) error {
+		return route.GetError()
+	})
+	if err != expectedError {
+		t.Errorf("Expected %v routes, found %v", expectedError, err)
+	}
+}
+
+func TestWalkErrorHandler(t *testing.T) {
+	handler := NewRouter()
+	expectedError := handler.Path("/path").Subrouter().Path("").GetError()
+	router := NewRouter()
+	router.Path("/g").Handler(handler)
+	err := router.Walk(func(route *Route, router *Router, ancestors []*Route) error {
+		return route.GetError()
+	})
+	if err != expectedError {
+		t.Errorf("Expected %v routes, found %v", expectedError, err)
 	}
 }
 
