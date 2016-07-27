@@ -285,6 +285,9 @@ func (r *Router) walk(walkFn WalkFunc, ancestors []*Route) error {
 		if err == SkipRouter {
 			continue
 		}
+		if err != nil {
+			return err
+		}
 		for _, sr := range t.matchers {
 			if h, ok := sr.(*Router); ok {
 				err := h.walk(walkFn, ancestors)
