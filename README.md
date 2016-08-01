@@ -15,6 +15,27 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * Routes can be used as subrouters: nested routes are only tested if the parent route matches. This is useful to define groups of routes that share common conditions like a host, a path prefix or other repeated attributes. As a bonus, this optimizes request matching.
 * It implements the `http.Handler` interface so it is compatible with the standard `http.ServeMux`.
 
+---
+
+* [Install](#install)
+* [Examples](#examples)
+* [Matching Routes](#matching-routes)
+* [Static Files](#static-files)
+* [Registered URLs](#registered-urls)
+* [Full Example](#full-example)
+
+---
+
+## Install
+
+With a [correctly configured](https://golang.org/doc/install#testing) Go toolchain:
+
+```sh
+go get -u github.com/gorilla/mux
+```
+
+## Examples
+
 Let's start registering a couple of URL paths and handlers:
 
 ```go
@@ -46,6 +67,8 @@ category := vars["category"]
 ```
 
 And this is all you need to know about the basic usage. More advanced options are explained below.
+
+### Matching Routes
 
 Routes can also be restricted to a domain or subdomain. Just define a host pattern to be matched. They can also have variables:
 
@@ -137,6 +160,37 @@ s.HandleFunc("/{key}/", ProductHandler)
 // "/products/{key}/details"
 s.HandleFunc("/{key}/details", ProductDetailsHandler)
 ```
+
+### Static Files
+
+Note that the path provided to `PathPrefix()` represents a "wildcard": calling
+`PathPrefix("/static/").Handler(...)` means that the handler will be passed any
+request that matches "/static/*". This makes it easy to serve static files with mux:
+
+```go
+func main() {
+	var dir string
+
+	flag.StringVar(&dir, "dir", ".", "the directory to serve files from. Defaults to the current dir")
+	flag.Parse()
+	r := mux.NewRouter()
+
+	// This will serve files under http://localhost:8000/static/<filename>
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(dir))))
+
+	srv := &http.Server{
+		Handler:      r,
+		Addr:         "127.0.0.1:8000",
+		// Good practice: enforce timeouts for servers you create!
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	log.Fatal(srv.ListenAndServe())
+}
+```
+
+### Registered URLs
 
 Now let's see how to build registered URLs.
 
