@@ -125,12 +125,12 @@ func TestHost(t *testing.T) {
 		},
 		{
 			title:        "Host route with pattern, additional capturing group, match",
-			route:        new(Route).Host("aaa.{v1:[a-z]{2}(b|c)}.ccc"),
+			route:        new(Route).Host("aaa.{v1:[a-z]{2}(?:b|c)}.ccc"),
 			request:      newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
 			vars:         map[string]string{"v1": "bbb"},
 			host:         "aaa.bbb.ccc",
 			path:         "",
-			hostTemplate: `aaa.{v1:[a-z]{2}(b|c)}.ccc`,
+			hostTemplate: `aaa.{v1:[a-z]{2}(?:b|c)}.ccc`,
 			shouldMatch:  true,
 		},
 		{
@@ -175,12 +175,12 @@ func TestHost(t *testing.T) {
 		},
 		{
 			title:        "Host route with hyphenated name and pattern, additional capturing group, match",
-			route:        new(Route).Host("aaa.{v-1:[a-z]{2}(b|c)}.ccc"),
+			route:        new(Route).Host("aaa.{v-1:[a-z]{2}(?:b|c)}.ccc"),
 			request:      newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
 			vars:         map[string]string{"v-1": "bbb"},
 			host:         "aaa.bbb.ccc",
 			path:         "",
-			hostTemplate: `aaa.{v-1:[a-z]{2}(b|c)}.ccc`,
+			hostTemplate: `aaa.{v-1:[a-z]{2}(?:b|c)}.ccc`,
 			shouldMatch:  true,
 		},
 		{
@@ -331,12 +331,12 @@ func TestPath(t *testing.T) {
 		},
 		{
 			title:        "Path route with multiple patterns with pipe, match",
-			route:        new(Route).Path("/{category:a|(b/c)}/{product}/{id:[0-9]+}"),
+			route:        new(Route).Path("/{category:a|(?:b/c)}/{product}/{id:[0-9]+}"),
 			request:      newRequest("GET", "http://localhost/a/product_name/1"),
 			vars:         map[string]string{"category": "a", "product": "product_name", "id": "1"},
 			host:         "",
 			path:         "/a/product_name/1",
-			pathTemplate: `/{category:a|(b/c)}/{product}/{id:[0-9]+}`,
+			pathTemplate: `/{category:a|(?:b/c)}/{product}/{id:[0-9]+}`,
 			shouldMatch:  true,
 		},
 		{
@@ -361,12 +361,12 @@ func TestPath(t *testing.T) {
 		},
 		{
 			title:        "Path route with multiple hyphenated names and patterns with pipe, match",
-			route:        new(Route).Path("/{product-category:a|(b/c)}/{product-name}/{product-id:[0-9]+}"),
+			route:        new(Route).Path("/{product-category:a|(?:b/c)}/{product-name}/{product-id:[0-9]+}"),
 			request:      newRequest("GET", "http://localhost/a/product_name/1"),
 			vars:         map[string]string{"product-category": "a", "product-name": "product_name", "product-id": "1"},
 			host:         "",
 			path:         "/a/product_name/1",
-			pathTemplate: `/{product-category:a|(b/c)}/{product-name}/{product-id:[0-9]+}`,
+			pathTemplate: `/{product-category:a|(?:b/c)}/{product-name}/{product-id:[0-9]+}`,
 			shouldMatch:  true,
 		},
 		{
@@ -377,6 +377,16 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/daily-2016-01-01",
 			pathTemplate: `/{type:(?i:daily|mini|variety)}-{date:\d{4,4}-\d{2,2}-\d{2,2}}`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Path route with empty match right after other match",
+			route:        new(Route).Path(`/{v1:[0-9]*}{v2:[a-z]*}/{v3:[0-9]*}`),
+			request:      newRequest("GET", "http://localhost/111/222"),
+			vars:         map[string]string{"v1": "111", "v2": "", "v3": "222"},
+			host:         "",
+			path:         "/111/222",
+			pathTemplate: `/{v1:[0-9]*}{v2:[a-z]*}/{v3:[0-9]*}`,
 			shouldMatch:  true,
 		},
 	}
@@ -743,7 +753,7 @@ func TestQueries(t *testing.T) {
 		},
 		{
 			title:       "Queries route with regexp pattern with quantifier, additional capturing group",
-			route:       new(Route).Queries("foo", "{v1:[0-9]{1}(a|b)}"),
+			route:       new(Route).Queries("foo", "{v1:[0-9]{1}(?:a|b)}"),
 			request:     newRequest("GET", "http://localhost?foo=1a"),
 			vars:        map[string]string{"v1": "1a"},
 			host:        "",
@@ -788,7 +798,7 @@ func TestQueries(t *testing.T) {
 		},
 		{
 			title:       "Queries route with hyphenated name and pattern with quantifier, additional capturing group",
-			route:       new(Route).Queries("foo", "{v-1:[0-9]{1}(a|b)}"),
+			route:       new(Route).Queries("foo", "{v-1:[0-9]{1}(?:a|b)}"),
 			request:     newRequest("GET", "http://localhost?foo=1a"),
 			vars:        map[string]string{"v-1": "1a"},
 			host:        "",
