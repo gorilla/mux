@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 	"testing"
 )
@@ -1490,12 +1489,17 @@ func newRequest(method, url string) *http.Request {
 	}
 	// extract the escaped original host+path from url
 	// http://localhost/path/here?v=1#frag -> //localhost/path/here
-	re := regexp.MustCompile(req.URL.Scheme + ":")
-	opaque := re.ReplaceAllLiteralString(url, "")
-	re = regexp.MustCompile(`\?` + req.URL.RawQuery)
-	opaque = re.ReplaceAllLiteralString(opaque, "")
-	re = regexp.MustCompile(`#` + req.URL.Fragment)
-	opaque = re.ReplaceAllLiteralString(opaque, "")
+	opaque := ""
+	if i := len(req.URL.Scheme); i > 0 {
+		opaque = url[i+1:]
+	}
+
+	if i := strings.LastIndex(opaque, "?"); i > -1 {
+		opaque = opaque[:i]
+	}
+	if i := strings.LastIndex(opaque, "#"); i > -1 {
+		opaque = opaque[:i]
+	}
 
 	// Escaped host+path workaround as detailed in https://golang.org/pkg/net/url/#URL
 	// for < 1.5 client side workaround

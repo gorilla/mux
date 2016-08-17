@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"path"
 	"regexp"
+	"strings"
 )
 
 // NewRouter returns a new router instance.
@@ -367,10 +368,14 @@ func getPath(req *http.Request) string {
 		// as detailed here as detailed in https://golang.org/pkg/net/url/#URL
 		// for < 1.5 server side workaround
 		// http://localhost/path/here?v=1 -> /path/here
-		re := regexp.MustCompile(req.URL.Scheme + `://` + req.URL.Host)
-		path := re.ReplaceAllLiteralString(req.RequestURI, "")
-		re = regexp.MustCompile(`\?` + req.URL.RawQuery)
-		path = re.ReplaceAllLiteralString(path, "")
+		iStart := len(req.URL.Scheme + `://` + req.URL.Host)
+		path := req.RequestURI[iStart:]
+		if i := strings.LastIndex(path, "?"); i > -1 {
+			path = path[:i]
+		}
+		if i := strings.LastIndex(path, "#"); i > -1 {
+			path = path[:i]
+		}
 		return path
 	}
 	return req.URL.Path
