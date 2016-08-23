@@ -368,8 +368,13 @@ func getPath(req *http.Request) string {
 		// as detailed here as detailed in https://golang.org/pkg/net/url/#URL
 		// for < 1.5 server side workaround
 		// http://localhost/path/here?v=1 -> /path/here
-		iStart := len(req.URL.Scheme + `://` + req.URL.Host)
-		path := req.RequestURI[iStart:]
+		path := req.RequestURI
+		if i := len(req.URL.Scheme); i > 0 {
+			path = path[i+len(`://`):]
+		}
+		if i := len(req.URL.Host); i > 0 {
+			path = path[i:]
+		}
 		if i := strings.LastIndex(path, "?"); i > -1 {
 			path = path[:i]
 		}

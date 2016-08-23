@@ -283,6 +283,16 @@ func TestPath(t *testing.T) {
 			shouldMatch:  false,
 		},
 		{
+			title:        "Path route, match root with no host",
+			route:        new(Route).Path("/"),
+			request:      newRequest("GET", "/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  true,
+		},
+		{
 			title:       "Path route, wrong path in request in request URL",
 			route:       new(Route).Path("/111/222/333"),
 			request:     newRequest("GET", "http://localhost/1/2/3"),
