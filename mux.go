@@ -369,12 +369,8 @@ func getPath(req *http.Request) string {
 		// for < 1.5 server side workaround
 		// http://localhost/path/here?v=1 -> /path/here
 		path := req.RequestURI
-		if i := len(req.URL.Scheme); i > 0 {
-			path = path[i+len(`://`):]
-		}
-		if i := len(req.URL.Host); i > 0 {
-			path = path[i:]
-		}
+		path = strings.TrimPrefix(path, req.URL.Scheme+`://`)
+		path = strings.TrimPrefix(path, req.URL.Host)
 		if i := strings.LastIndex(path, "?"); i > -1 {
 			path = path[:i]
 		}
