@@ -5,6 +5,8 @@
 package mux
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
@@ -281,6 +283,16 @@ func TestPath(t *testing.T) {
 			shouldMatch:  false,
 		},
 		{
+			title:        "Path route, match root with no host",
+			route:        new(Route).Path("/"),
+			request:      newRequest("GET", "/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  true,
+		},
+		{
 			title:       "Path route, wrong path in request in request URL",
 			route:       new(Route).Path("/111/222/333"),
 			request:     newRequest("GET", "http://localhost/1/2/3"),
@@ -308,6 +320,16 @@ func TestPath(t *testing.T) {
 			path:         "/111/222/333",
 			pathTemplate: `/111/{v1:[0-9]{3}}/333`,
 			shouldMatch:  false,
+		},
+		{
+			title:        "Path route, URL with encoded slash does match",
+			route:        new(Route).Path("/v1/{v1}/v2"),
+			request:      newRequest("GET", "http://localhost/v1/1%2F2/v2"),
+			vars:         map[string]string{"v1": "1%2F2"},
+			host:         "",
+			path:         "/v1/1%2F2/v2",
+			pathTemplate: `/v1/{v1}/v2`,
+			shouldMatch:  true,
 		},
 		{
 			title:        "Path route with multiple patterns, match",
@@ -1466,9 +1488,40 @@ func stringMapEqual(m1, m2 map[string]string) bool {
 	return true
 }
 
-// newRequest is a helper function to create a new request with a method and url
+// newRequest is a helper function to create a new request with a method and url.
+// The request returned is a 'server' request as opposed to a 'client' one through
+// simulated write onto the wire and read off of the wire.
+// The differences between requests are detailed in the net/http package.
 func newRequest(method, url string) *http.Request {
 	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		panic(err)
+	}
+	// extract the escaped original host+path from url
+	// http://localhost/path/here?v=1#frag -> //localhost/path/here
+	opaque := ""
+	if i := len(req.URL.Scheme); i > 0 {
+		opaque = url[i+1:]
+	}
+
+	if i := strings.LastIndex(opaque, "?"); i > -1 {
+		opaque = opaque[:i]
+	}
+	if i := strings.LastIndex(opaque, "#"); i > -1 {
+		opaque = opaque[:i]
+	}
+
+	// Escaped host+path workaround as detailed in https://golang.org/pkg/net/url/#URL
+	// for < 1.5 client side workaround
+	req.URL.Opaque = opaque
+
+	// Simulate writing to wire
+	var buff bytes.Buffer
+	req.Write(&buff)
+	ioreader := bufio.NewReader(&buff)
+
+	// Parse request off of 'wire'
+	req, err = http.ReadRequest(ioreader)
 	if err != nil {
 		panic(err)
 	}
