@@ -145,12 +145,12 @@ func (r *Route) addMatcher(m matcher) *Route {
 }
 
 // addRegexpMatcher adds a host or path matcher and builder to a route.
-func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix, matchQuery bool) error {
+func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix, matchQuery bool, matchHeader bool) error {
 	if r.err != nil {
 		return r.err
 	}
 	r.regexp = r.getRegexpGroup()
-	if !matchHost && !matchQuery {
+	if !matchHost && !matchQuery && !matchHeader {
 		if len(tpl) == 0 || tpl[0] != '/' {
 			return fmt.Errorf("mux: path must start with a slash, got %q", tpl)
 		}
@@ -158,11 +158,16 @@ func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix, matchQuery 
 			tpl = strings.TrimRight(r.regexp.path.template, "/") + tpl
 		}
 	}
-	rr, err := newRouteRegexp(tpl, matchHost, matchPrefix, matchQuery, r.strictSlash)
+	rr, err := newRouteRegexp(tpl, matchHost, matchPrefix, matchQuery, matchHeader, r.strictSlash)
 	if err != nil {
 		return err
 	}
 	for _, q := range r.regexp.queries {
+		if err = uniqueVars(rr.varsN, q.varsN); err != nil {
+			return err
+		}
+	}
+	for _, q := range r.regexp.headers {
 		if err = uniqueVars(rr.varsN, q.varsN); err != nil {
 			return err
 		}
@@ -182,9 +187,12 @@ func (r *Route) addRegexpMatcher(tpl string, matchHost, matchPrefix, matchQuery 
 		}
 		if matchQuery {
 			r.regexp.queries = append(r.regexp.queries, rr)
-		} else {
+		} else if !matchHeader {
 			r.regexp.path = rr
 		}
+	}
+	if matchHeader {
+		r.regexp.headers = append(r.regexp.headers, rr)
 	}
 	r.addMatcher(rr)
 	return nil
@@ -234,11 +242,31 @@ func (m headerRegexMatcher) Match(r *http.Request, match *RouteMatch) bool {
 // The above route will only match if both the request header matches both regular expressions.
 // It the value is an empty string, it will match any value if the key is set.
 func (r *Route) HeadersRegexp(pairs ...string) *Route {
-	if r.err == nil {
-		var headers map[string]*regexp.Regexp
-		headers, r.err = mapFromPairsToRegex(pairs...)
-		return r.addMatcher(headerRegexMatcher(headers))
+	length := len(pairs)
+	if length%2 != 0 {
+		r.err = fmt.Errorf(
+			"mux: number of parameters must be multiple of 2, got %v", pairs)
+		return nil
 	}
+
+	var matchPairs []string
+	for i := 0; i < length; i += 2 {
+		if !strings.HasPrefix(pairs[i+1], "{") {
+			matchPairs = append(matchPairs, pairs[i], pairs[i+1])
+			continue
+		}
+		headerField := http.CanonicalHeaderKey(pairs[i])
+		headerValue := pairs[i+1]
+		if r.err = r.addRegexpMatcher(headerField+"="+headerValue, false, false, false, true); r.err != nil {
+			return r
+		}
+	}
+	var headers map[string]*regexp.Regexp
+	if headers, r.err = mapFromPairsToRegex(matchPairs...); r.err != nil {
+		return nil
+	}
+	r.addMatcher(headerRegexMatcher(headers))
+
 	return r
 }
 
@@ -262,7 +290,7 @@ func (r *Route) HeadersRegexp(pairs ...string) *Route {
 // Variable names must be unique in a given route. They can be retrieved
 // calling mux.Vars(request).
 func (r *Route) Host(tpl string) *Route {
-	r.err = r.addRegexpMatcher(tpl, true, false, false)
+	r.err = r.addRegexpMatcher(tpl, true, false, false, false)
 	return r
 }
 
@@ -322,7 +350,7 @@ func (r *Route) Methods(methods ...string) *Route {
 // Variable names must be unique in a given route. They can be retrieved
 // calling mux.Vars(request).
 func (r *Route) Path(tpl string) *Route {
-	r.err = r.addRegexpMatcher(tpl, false, false, false)
+	r.err = r.addRegexpMatcher(tpl, false, false, false, false)
 	return r
 }
 
@@ -338,7 +366,7 @@ func (r *Route) Path(tpl string) *Route {
 // Also note that the setting of Router.StrictSlash() has no effect on routes
 // with a PathPrefix matcher.
 func (r *Route) PathPrefix(tpl string) *Route {
-	r.err = r.addRegexpMatcher(tpl, false, true, false)
+	r.err = r.addRegexpMatcher(tpl, false, true, false, false)
 	return r
 }
 
@@ -369,7 +397,7 @@ func (r *Route) Queries(pairs ...string) *Route {
 		return nil
 	}
 	for i := 0; i < length; i += 2 {
-		if r.err = r.addRegexpMatcher(pairs[i]+"="+pairs[i+1], false, false, true); r.err != nil {
+		if r.err = r.addRegexpMatcher(pairs[i]+"="+pairs[i+1], false, false, true, false); r.err != nil {
 			return r
 		}
 	}
@@ -626,6 +654,7 @@ func (r *Route) getRegexpGroup() *routeRegexpGroup {
 			r.regexp = &routeRegexpGroup{
 				host:    regexp.host,
 				path:    regexp.path,
+				headers: regexp.headers,
 				queries: regexp.queries,
 			}
 		}
