@@ -336,16 +336,6 @@ func TestPath(t *testing.T) {
 			shouldMatch:  false,
 		},
 		{
-			title:        "Path route, URL with encoded slash does match",
-			route:        new(Route).Path("/v1/{v1}/v2"),
-			request:      newRequest("GET", "http://localhost/v1/1%2F2/v2"),
-			vars:         map[string]string{"v1": "1%2F2"},
-			host:         "",
-			path:         "/v1/1%2F2/v2",
-			pathTemplate: `/v1/{v1}/v2`,
-			shouldMatch:  true,
-		},
-		{
 			title:        "Path route with multiple patterns, match",
 			route:        new(Route).Path("/{v1:[0-9]{3}}/{v2:[0-9]{3}}/{v3:[0-9]{3}}"),
 			request:      newRequest("GET", "http://localhost/111/222/333"),
@@ -430,6 +420,7 @@ func TestPath(t *testing.T) {
 	for _, test := range tests {
 		testRoute(t, test)
 		testTemplate(t, test)
+		testUseEscapedRoute(t, test)
 	}
 }
 
@@ -507,6 +498,7 @@ func TestPathPrefix(t *testing.T) {
 	for _, test := range tests {
 		testRoute(t, test)
 		testTemplate(t, test)
+		testUseEscapedRoute(t, test)
 	}
 }
 
@@ -583,6 +575,7 @@ func TestHostPath(t *testing.T) {
 	for _, test := range tests {
 		testRoute(t, test)
 		testTemplate(t, test)
+		testUseEscapedRoute(t, test)
 	}
 }
 
@@ -909,6 +902,7 @@ func TestQueries(t *testing.T) {
 	for _, test := range tests {
 		testRoute(t, test)
 		testTemplate(t, test)
+		testUseEscapedRoute(t, test)
 	}
 }
 
@@ -1068,6 +1062,7 @@ func TestSubRouter(t *testing.T) {
 	for _, test := range tests {
 		testRoute(t, test)
 		testTemplate(t, test)
+		testUseEscapedRoute(t, test)
 	}
 }
 
@@ -1158,6 +1153,40 @@ func TestStrictSlash(t *testing.T) {
 			path:           "/static/",
 			shouldMatch:    true,
 			shouldRedirect: false,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+		testTemplate(t, test)
+		testUseEscapedRoute(t, test)
+	}
+}
+
+func TestUseEncodedPath(t *testing.T) {
+	r := NewRouter()
+	r.UseEncodedPath()
+
+	tests := []routeTest{
+		{
+			title:        "Router with useEncodedPath, URL with encoded slash does match",
+			route:        r.NewRoute().Path("/v1/{v1}/v2"),
+			request:      newRequest("GET", "http://localhost/v1/1%2F2/v2"),
+			vars:         map[string]string{"v1": "1%2F2"},
+			host:         "",
+			path:         "/v1/1%2F2/v2",
+			pathTemplate: `/v1/{v1}/v2`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Router with useEncodedPath, URL with encoded slash doesn't match",
+			route:        r.NewRoute().Path("/v1/1/2/v2"),
+			request:      newRequest("GET", "http://localhost/v1/1%2F2/v2"),
+			vars:         map[string]string{"v1": "1%2F2"},
+			host:         "",
+			path:         "/v1/1%2F2/v2",
+			pathTemplate: `/v1/1/2/v2`,
+			shouldMatch:  false,
 		},
 	}
 
@@ -1373,6 +1402,11 @@ func testRoute(t *testing.T, test routeTest) {
 			return
 		}
 	}
+}
+
+func testUseEscapedRoute(t *testing.T, test routeTest) {
+	test.route.useEncodedPath = true
+	testRoute(t, test)
 }
 
 func testTemplate(t *testing.T, test routeTest) {
