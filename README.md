@@ -65,8 +65,12 @@ r.HandleFunc("/articles/{category}/{id:[0-9]+}", ArticleHandler)
 The names are used to create a map of route variables which can be retrieved calling `mux.Vars()`:
 
 ```go
-vars := mux.Vars(request)
-category := vars["category"]
+func ArticlesCategoryHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Category: %v\n", vars["category"])
+}
 ```
 
 And this is all you need to know about the basic usage. More advanced options are explained below.
