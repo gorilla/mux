@@ -67,7 +67,6 @@ The names are used to create a map of route variables which can be retrieved cal
 ```go
 func ArticlesCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Category: %v\n", vars["category"])
 }
