@@ -1014,6 +1014,26 @@ func TestBuildVarsFunc(t *testing.T) {
 	}
 }
 
+// Addresses https://github.com/gorilla/mux/issues/200
+func TestCorrectVars(t *testing.T) {
+	tests := []routeTest{
+		{
+			title:        "Correct nested regex vars",
+			route:        new(Route).PathPrefix("/{id}/{kind:(a|b)}/{idx:[0-9]+}"),
+			request:      newRequest("GET", "http://localhost/1/a/2"),
+			vars:         map[string]string{"id": "1", "kind": "a", "idx": "2"},
+			host:         "",
+			pathTemplate: "/{id}/{kind:(a|b)}/{idx:[0-9]+}",
+			path:         "/1/a/2",
+			shouldMatch:  true,
+		},
+	}
+	for _, test := range tests {
+		testRoute(t, test)
+		testTemplate(t, test)
+	}
+}
+
 func TestSubRouter(t *testing.T) {
 	subrouter1 := new(Route).Host("{v1:[a-z]+}.google.com").Subrouter()
 	subrouter2 := new(Route).PathPrefix("/foo/{v1}").Subrouter()
