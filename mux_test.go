@@ -1017,6 +1017,8 @@ func TestBuildVarsFunc(t *testing.T) {
 func TestSubRouter(t *testing.T) {
 	subrouter1 := new(Route).Host("{v1:[a-z]+}.google.com").Subrouter()
 	subrouter2 := new(Route).PathPrefix("/foo/{v1}").Subrouter()
+	subrouter3 := NewRouter().StrictSlash(true).PathPrefix("/prefix/").Subrouter()
+	subrouter4 := NewRouter().PathPrefix("/prefix").Subrouter()
 
 	tests := []routeTest{
 		{
@@ -1056,6 +1058,66 @@ func TestSubRouter(t *testing.T) {
 			path:         "/foo/bar/baz/ding",
 			pathTemplate: `/foo/{v1}/baz/{v2}`,
 			shouldMatch:  false,
+		},
+		{
+			route:       subrouter3.Path("/"),
+			request:     newRequest("GET", "http://localhost/prefix/"),
+			host:        "",
+			path:        "/prefix/",
+			shouldMatch: true,
+		},
+		{
+			route:          subrouter3.Path(""),
+			request:        newRequest("GET", "http://localhost/prefix/"),
+			host:           "",
+			path:           "/prefix",
+			shouldMatch:    true,
+			shouldRedirect: true,
+		},
+		{
+			route:       subrouter3.Path(""),
+			request:     newRequest("GET", "http://localhost/prefix"),
+			host:        "",
+			path:        "/prefix",
+			shouldMatch: true,
+		},
+		{
+			route:          subrouter3.Path("/path"),
+			request:        newRequest("GET", "http://localhost/prefix/path/"),
+			host:           "",
+			path:           "/prefix/path",
+			shouldMatch:    true,
+			shouldRedirect: true,
+		},
+		{
+			route:          subrouter3.Path("/path/"),
+			request:        newRequest("GET", "http://localhost/prefix/path/"),
+			host:           "",
+			path:           "/prefix/path/",
+			shouldMatch:    true,
+			shouldRedirect: false,
+		},
+		{
+			route:          subrouter3.Path("/path/"),
+			request:        newRequest("GET", "http://localhost/prefix/path"),
+			host:           "",
+			path:           "/prefix/path/",
+			shouldMatch:    true,
+			shouldRedirect: true,
+		},
+		{
+			route:       subrouter4.Path(""),
+			request:     newRequest("GET", "http://localhost/prefix"),
+			host:        "",
+			path:        "/prefix",
+			shouldMatch: true,
+		},
+		{
+			route:       subrouter4.Path("/"),
+			request:     newRequest("GET", "http://localhost/prefix"),
+			host:        "",
+			path:        "/prefix/",
+			shouldMatch: false,
 		},
 	}
 
