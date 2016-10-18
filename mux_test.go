@@ -405,16 +405,6 @@ func TestPath(t *testing.T) {
 			pathTemplate: `/{type:(?i:daily|mini|variety)}-{date:\d{4,4}-\d{2,2}-\d{2,2}}`,
 			shouldMatch:  true,
 		},
-		{
-			title:        "Path route with empty match right after other match",
-			route:        new(Route).Path(`/{v1:[0-9]*}{v2:[a-z]*}/{v3:[0-9]*}`),
-			request:      newRequest("GET", "http://localhost/111/222"),
-			vars:         map[string]string{"v1": "111", "v2": "", "v3": "222"},
-			host:         "",
-			path:         "/111/222",
-			pathTemplate: `/{v1:[0-9]*}{v2:[a-z]*}/{v3:[0-9]*}`,
-			shouldMatch:  true,
-		},
 	}
 
 	for _, test := range tests {
