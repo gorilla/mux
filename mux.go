@@ -14,6 +14,12 @@ import (
 	"github.com/gorilla/context"
 )
 
+var contextSet = func(r *http.Request, key interface{}, val interface{}) *http.Request {
+	context.Set(r, key, val)
+	return r
+}
+var contextGet = context.Get
+
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
 	return &Router{namedRoutes: make(map[string]*Route), KeepContext: false}
@@ -85,8 +91,8 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var handler http.Handler
 	if r.Match(req, &match) {
 		handler = match.Handler
-		setVars(req, match.Vars)
-		setCurrentRoute(req, match.Route)
+		req = setVars(req, match.Vars)
+		req = setCurrentRoute(req, match.Route)
 	}
 	if handler == nil {
 		handler = r.NotFoundHandler
@@ -305,7 +311,7 @@ const (
 
 // Vars returns the route variables for the current request, if any.
 func Vars(r *http.Request) map[string]string {
-	if rv := context.Get(r, varsKey); rv != nil {
+	if rv := contextGet(r, varsKey); rv != nil {
 		return rv.(map[string]string)
 	}
 	return nil
@@ -317,18 +323,18 @@ func Vars(r *http.Request) map[string]string {
 // after the handler returns, unless the KeepContext option is set on the
 // Router.
 func CurrentRoute(r *http.Request) *Route {
-	if rv := context.Get(r, routeKey); rv != nil {
+	if rv := contextGet(r, routeKey); rv != nil {
 		return rv.(*Route)
 	}
 	return nil
 }
 
-func setVars(r *http.Request, val interface{}) {
-	context.Set(r, varsKey, val)
+func setVars(r *http.Request, val interface{}) *http.Request {
+	return contextSet(r, varsKey, val)
 }
 
-func setCurrentRoute(r *http.Request, val interface{}) {
-	context.Set(r, routeKey, val)
+func setCurrentRoute(r *http.Request, val interface{}) *http.Request {
+	return contextSet(r, routeKey, val)
 }
 
 // ----------------------------------------------------------------------------
