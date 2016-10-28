@@ -21,6 +21,8 @@ type Route struct {
 	handler http.Handler
 	// List of matchers.
 	matchers []matcher
+	// Additional information for documenting the route
+	information map[string]string
 	// Manager for the variables from host and path.
 	regexp *routeRegexpGroup
 	// If true, when the path pattern is "/path/", accessing "/path" will
@@ -299,6 +301,7 @@ func (r *Route) Methods(methods ...string) *Route {
 	for k, v := range methods {
 		methods[k] = strings.ToUpper(v)
 	}
+	r.addInformation(InformationMethods, strings.Join(methods, ","))
 	return r.addMatcher(methodMatcher(methods))
 }
 
@@ -633,4 +636,49 @@ func (r *Route) getRegexpGroup() *routeRegexpGroup {
 		}
 	}
 	return r.regexp
+}
+
+// ----------------------------------------------------------------------------
+// Route documentation
+// ----------------------------------------------------------------------------
+
+const (
+	InformationMethods = "Methods"
+)
+
+// addInformation adds documentation information to a route
+func (r *Route) addInformation(name, value string) {
+	if r.information == nil {
+		// If there is no information, then add it with the new information
+		r.information = map[string]string{
+			name: value,
+		}
+		return
+	}
+
+	// Otherwise, check if we need to concatentate with any existing information
+	existing, ok := r.information[name]
+	if ok {
+		r.information[name] = existing + "," + value
+	} else {
+		r.information[name] = value
+	}
+}
+
+// GetInformation returns an item of information used to build the route
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An error will be returned if the route does not define the information.
+func (r *Route) GetInformation(name string) (string, error) {
+	if r.err != nil {
+		return "", r.err
+	}
+	if r.information == nil {
+		return "", errors.New("mux: route has no information")
+	}
+	information, ok := r.information[name]
+	if !ok {
+		return "", errors.New("mux: information '" + name + "' has not been set")
+	}
+	return information, nil
 }
