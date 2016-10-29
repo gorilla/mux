@@ -305,8 +305,14 @@ r.HandleFunc("/", HomeHandler).Methods("GET")
 r.HandleFunc("/products", ProductsHandler).Methods("GET", "POST")
 r.HandleFunc("/articles", ArticlesHandler).Methods("GET")
 if err := r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-    template, _ := route.GetPathTemplate()
-    method, _ := route.GetInformation(mux.InformationMethods)
+    template, err := route.GetPathTemplate()
+    if err != nil {
+        return
+    }
+    method, err := route.GetInformation(mux.InformationMethods)
+    if err != nil {
+        return
+    }
     fmt.Println("[" + method + "]: " + template)
     return nil
 }); err != nil {
