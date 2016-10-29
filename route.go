@@ -674,11 +674,11 @@ func (r *Route) GetInformation(name string) (string, error) {
 		return "", r.err
 	}
 	if r.information == nil {
-		return "", errors.New("mux: route has no information")
+		return "", nil
 	}
 	information, ok := r.information[name]
 	if !ok {
-		return "", errors.New("mux: information '" + name + "' has not been set")
+		return "", nil
 	}
 	return information, nil
 }
