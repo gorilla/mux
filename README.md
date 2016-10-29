@@ -307,11 +307,11 @@ r.HandleFunc("/articles", ArticlesHandler).Methods("GET")
 if err := r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
     template, err := route.GetPathTemplate()
     if err != nil {
-        return
+        return err
     }
     method, err := route.GetInformation(mux.InformationMethods)
     if err != nil {
-        return
+        return err
     }
     fmt.Println("[" + method + "]: " + template)
     return nil
