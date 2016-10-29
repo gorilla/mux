@@ -304,12 +304,14 @@ r := mux.NewRouter()
 r.HandleFunc("/", HomeHandler).Methods("GET")
 r.HandleFunc("/products", ProductsHandler).Methods("GET", "POST")
 r.HandleFunc("/articles", ArticlesHandler).Methods("GET")
-r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+if err := r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
     template, _ := route.GetPathTemplate()
     method, _ := route.GetInformation(mux.InformationMethods)
     fmt.Println("[" + method + "]: " + template)
     return nil
-})
+}); err != nil {
+    // Handle error
+}
 ```
 
 ## License
