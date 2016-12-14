@@ -423,13 +423,19 @@ func cleanPath(p string) string {
 
 // uniqueVars returns an error if two slices contain duplicated strings.
 func uniqueVars(s1, s2 []string) error {
-	for _, v1 := range s1 {
-		for _, v2 := range s2 {
-			if v1 == v2 {
-				return fmt.Errorf("mux: duplicated route variable %q", v2)
-			}
+
+	m := make(map[string]bool, len(s1))
+
+	for i := range s1 {
+		m[s1[i]] = true
+	}
+
+	for i := range s2 {
+		if m[s2[i]] {
+			return fmt.Errorf("mux: duplicated route variable %q", s2[i])
 		}
 	}
+
 	return nil
 }
 
@@ -474,16 +480,6 @@ func mapFromPairsToRegex(pairs ...string) (map[string]*regexp.Regexp, error) {
 		m[pairs[i]] = regex
 	}
 	return m, nil
-}
-
-// matchInArray returns true if the given string value is in the array.
-func matchInArray(arr []string, value string) bool {
-	for _, v := range arr {
-		if v == value {
-			return true
-		}
-	}
-	return false
 }
 
 // matchMapWithString returns true if the given key/value pairs exist in a given map.
