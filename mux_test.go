@@ -1017,6 +1017,7 @@ func TestBuildVarsFunc(t *testing.T) {
 func TestSubRouter(t *testing.T) {
 	subrouter1 := new(Route).Host("{v1:[a-z]+}.google.com").Subrouter()
 	subrouter2 := new(Route).PathPrefix("/foo/{v1}").Subrouter()
+	subrouter3 := new(Route).PathPrefix("/foo").Subrouter()
 
 	tests := []routeTest{
 		{
@@ -1046,6 +1047,15 @@ func TestSubRouter(t *testing.T) {
 			host:         "",
 			path:         "/foo/bar/baz/ding",
 			pathTemplate: `/foo/{v1}/baz/{v2}`,
+			shouldMatch:  true,
+		},
+		{
+			route:        subrouter3.Path("/"),
+			request:      newRequest("GET", "http://localhost/foo/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/foo/",
+			pathTemplate: `/foo/`,
 			shouldMatch:  true,
 		},
 		{
