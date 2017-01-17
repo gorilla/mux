@@ -23,6 +23,7 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * [Install](#install)
 * [Examples](#examples)
 * [Matching Routes](#matching-routes)
+* [Listing Routes](#listing-routes)
 * [Static Files](#static-files)
 * [Registered URLs](#registered-urls)
 * [Full Example](#full-example)
@@ -165,6 +166,42 @@ s.HandleFunc("/", ProductsHandler)
 s.HandleFunc("/{key}/", ProductHandler)
 // "/products/{key}/details"
 s.HandleFunc("/{key}/details", ProductDetailsHandler)
+```
+
+### Listing Routes
+
+Routes on a mux Router can be listed using the Router.Walk method:
+
+```go
+package main
+
+import (
+    "fmt"
+    "net/http"
+
+    "github.com/gorilla/mux"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+    return
+}
+
+func main() {
+    r := mux.NewRouter()
+    r.HandleFunc("/", handler)
+    r.HandleFunc("/products", handler)
+    r.HandleFunc("/articles", handler)
+    r.HandleFunc("/articles/{id}", handler)
+    r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+        t, err := route.GetPathTemplate()
+        if err != nil {
+            return err
+        }
+        fmt.Println(t)
+        return nil
+    })
+    http.Handle("/", r)
+}
 ```
 
 ### Static Files
