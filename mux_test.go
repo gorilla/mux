@@ -1018,6 +1018,8 @@ func TestSubRouter(t *testing.T) {
 	subrouter1 := new(Route).Host("{v1:[a-z]+}.google.com").Subrouter()
 	subrouter2 := new(Route).PathPrefix("/foo/{v1}").Subrouter()
 	subrouter3 := new(Route).PathPrefix("/foo").Subrouter()
+	subrouter4 := new(Route).PathPrefix("/foo/bar").Subrouter()
+	subrouter5 := new(Route).PathPrefix("/{category}").Subrouter()
 
 	tests := []routeTest{
 		{
@@ -1050,6 +1052,15 @@ func TestSubRouter(t *testing.T) {
 			shouldMatch:  true,
 		},
 		{
+			route:        subrouter2.Path("/baz/{v2}"),
+			request:      newRequest("GET", "http://localhost/foo/bar"),
+			vars:         map[string]string{"v1": "bar", "v2": "ding"},
+			host:         "",
+			path:         "/foo/bar/baz/ding",
+			pathTemplate: `/foo/{v1}/baz/{v2}`,
+			shouldMatch:  false,
+		},
+		{
 			route:        subrouter3.Path("/"),
 			request:      newRequest("GET", "http://localhost/foo/"),
 			vars:         map[string]string{},
@@ -1059,13 +1070,50 @@ func TestSubRouter(t *testing.T) {
 			shouldMatch:  true,
 		},
 		{
-			route:        subrouter2.Path("/baz/{v2}"),
-			request:      newRequest("GET", "http://localhost/foo/bar"),
-			vars:         map[string]string{"v1": "bar", "v2": "ding"},
+			route:        subrouter3.Path(""),
+			request:      newRequest("GET", "http://localhost/foo"),
+			vars:         map[string]string{},
 			host:         "",
-			path:         "/foo/bar/baz/ding",
-			pathTemplate: `/foo/{v1}/baz/{v2}`,
-			shouldMatch:  false,
+			path:         "/foo",
+			pathTemplate: `/foo`,
+			shouldMatch:  true,
+		},
+
+		{
+			route:        subrouter4.Path("/"),
+			request:      newRequest("GET", "http://localhost/foo/bar/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/foo/bar/",
+			pathTemplate: `/foo/bar/`,
+			shouldMatch:  true,
+		},
+		{
+			route:        subrouter4.Path(""),
+			request:      newRequest("GET", "http://localhost/foo/bar"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/foo/bar",
+			pathTemplate: `/foo/bar`,
+			shouldMatch:  true,
+		},
+		{
+			route:        subrouter5.Path("/"),
+			request:      newRequest("GET", "http://localhost/baz/"),
+			vars:         map[string]string{"category": "baz"},
+			host:         "",
+			path:         "/baz/",
+			pathTemplate: `/{category}/`,
+			shouldMatch:  true,
+		},
+		{
+			route:        subrouter5.Path(""),
+			request:      newRequest("GET", "http://localhost/baz"),
+			vars:         map[string]string{"category": "baz"},
+			host:         "",
+			path:         "/baz",
+			pathTemplate: `/{category}`,
+			shouldMatch:  true,
 		},
 	}
 
