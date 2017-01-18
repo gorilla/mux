@@ -170,7 +170,7 @@ s.HandleFunc("/{key}/details", ProductDetailsHandler)
 
 ### Listing Routes
 
-Routes on a mux Router can be listed using the Router.Walk method:
+Routes on a mux can be listed using the Router.Walk method—useful for generating documentation:
 
 ```go
 package main
