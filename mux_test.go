@@ -1124,6 +1124,98 @@ func TestSubRouter(t *testing.T) {
 	}
 }
 
+func TestAddSubrouter(t *testing.T) {
+	subrouter1 := NewRouter()
+	subrouter1.Path("/bar")
+	subrouter2 := NewRouter()
+	subrouter2.Path("/ipso/facto")
+	subrouter3 := NewRouter()
+	subrouter3.Path("/foo/{id}")
+
+	router1 := NewRouter().
+		AddSubrouter("/foo", subrouter1).
+		AddSubrouter("", subrouter2)
+	router2 := NewRouter().
+		AddSubrouter("/{collection}", subrouter1).
+		AddSubrouter("/{collection}", subrouter3)
+	router3 := NewRouter().
+		AddSubrouter("/{collection}", subrouter3)
+	router4 := NewRouter().
+		AddSubrouter("/api", router3)
+
+	tests := []routeTest{
+		{
+			route:        router1.Path("/foo/bar"),
+			request:      newRequest("GET", "http://localhost/foo/bar"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/foo/bar",
+			pathTemplate: `/foo/bar`,
+			shouldMatch:  true,
+		},
+		{
+			route:        router1.Path("/ipso/facto"),
+			request:      newRequest("GET", "http://localhost/ipso/facto"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/ipso/facto",
+			pathTemplate: `/ipso/facto`,
+			shouldMatch:  true,
+		},
+		{
+			route:        router2.Path("/{collection}/bar"),
+			request:      newRequest("GET", "http://localhost/ipso/bar"),
+			vars:         map[string]string{"collection": "ipso"},
+			host:         "",
+			path:         "/ipso/bar",
+			pathTemplate: `/{collection}/bar`,
+			shouldMatch:  true,
+		},
+		{
+			route:        router2.Path("/{collection}/foo/{id}"),
+			request:      newRequest("GET", "http://localhost/ipso/foo/12345"),
+			vars:         map[string]string{"collection": "ipso", "id": "12345"},
+			host:         "",
+			path:         "/ipso/foo/12345",
+			pathTemplate: `/{collection}/foo/{id}`,
+			shouldMatch:  true,
+		},
+		{
+			route:        router2.Path("/{collection}/foo/{id}"),
+			request:      newRequest("GET", "http://localhost/ipso/bar/12345"),
+			vars:         map[string]string{"collection": "ipso", "id": "12345"},
+			host:         "",
+			path:         "/ipso/foo/12345",
+			pathTemplate: `/{collection}/foo/{id}`,
+			shouldMatch:  false,
+		},
+		{
+			route:        router4.Path("/api/{collection}/foo/{id}"),
+			request:      newRequest("GET", "http://localhost/api/ipso/foo/12345"),
+			vars:         map[string]string{"collection": "ipso", "id": "12345"},
+			host:         "",
+			path:         "/api/ipso/foo/12345",
+			pathTemplate: `/api/{collection}/foo/{id}`,
+			shouldMatch:  true,
+		},
+		{
+			route:        router4.Path("/api/{collection}/foo/{id}"),
+			request:      newRequest("GET", "http://localhost/ipso/foo/12345"),
+			vars:         map[string]string{"collection": "ipso", "id": "12345"},
+			host:         "",
+			path:         "/api/ipso/foo/12345",
+			pathTemplate: `/api/{collection}/foo/{id}`,
+			shouldMatch:  false,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+		testTemplate(t, test)
+		testUseEscapedRoute(t, test)
+	}
+}
+
 func TestNamedRoutes(t *testing.T) {
 	r1 := NewRouter()
 	r1.NewRoute().Name("a")
