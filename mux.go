@@ -102,8 +102,9 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var handler http.Handler
 	if r.Match(req, &match) {
 		handler = match.Handler
-		req = setVars(req, match.Vars)
-		req = setCurrentRoute(req, match.Route)
+		req1 := setVars(req, match.Vars)
+		req2 := setCurrentRoute(req1, match.Route)
+		*req = *req2
 	}
 	if handler == nil {
 		handler = http.NotFoundHandler()
