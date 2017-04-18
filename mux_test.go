@@ -35,6 +35,7 @@ type routeTest struct {
 	path           string            // the expected path of the match
 	pathTemplate   string            // the expected path template to match
 	hostTemplate   string            // the expected host template to match
+	pathRegexp     string            // the expected path regexp
 	shouldMatch    bool              // whether the request is expected to match the route at all
 	shouldRedirect bool              // whether the request should result in a redirect
 }
@@ -270,6 +271,7 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/111",
 			pathTemplate: `/111/`,
+			pathRegexp:   `^/111/$`,
 			shouldMatch:  false,
 		},
 		{
@@ -290,6 +292,7 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/",
 			pathTemplate: `/`,
+			pathRegexp:   `^/$`,
 			shouldMatch:  true,
 		},
 		{
@@ -333,6 +336,7 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/111/222/333",
 			pathTemplate: `/111/{v1:[0-9]{3}}/333`,
+			pathRegexp:   `^/111/(?P<v0>[0-9]{3})/333$`,
 			shouldMatch:  false,
 		},
 		{
@@ -343,6 +347,7 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/111/222/333",
 			pathTemplate: `/{v1:[0-9]{3}}/{v2:[0-9]{3}}/{v3:[0-9]{3}}`,
+			pathRegexp:   `^/(?P<v0>[0-9]{3})/(?P<v1>[0-9]{3})/(?P<v2>[0-9]{3})$`,
 			shouldMatch:  true,
 		},
 		{
@@ -353,6 +358,7 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/111/222/333",
 			pathTemplate: `/{v1:[0-9]{3}}/{v2:[0-9]{3}}/{v3:[0-9]{3}}`,
+			pathRegexp:   `^/(?P<v0>[0-9]{3})/(?P<v1>[0-9]{3})/(?P<v2>[0-9]{3})$`,
 			shouldMatch:  false,
 		},
 		{
@@ -363,6 +369,7 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/a/product_name/1",
 			pathTemplate: `/{category:a|(?:b/c)}/{product}/{id:[0-9]+}`,
+			pathRegexp:   `^/(?P<v0>a|(?:b/c))/(?P<v1>[^/]+)/(?P<v2>[0-9]+)$`,
 			shouldMatch:  true,
 		},
 		{
@@ -373,6 +380,7 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/111/222/333",
 			pathTemplate: `/111/{v-1:[0-9]{3}}/333`,
+			pathRegexp:   `^/111/(?P<v0>[0-9]{3})/333$`,
 			shouldMatch:  true,
 		},
 		{
@@ -383,6 +391,7 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/111/222/333",
 			pathTemplate: `/{v-1:[0-9]{3}}/{v-2:[0-9]{3}}/{v-3:[0-9]{3}}`,
+			pathRegexp:   `^/(?P<v0>[0-9]{3})/(?P<v1>[0-9]{3})/(?P<v2>[0-9]{3})$`,
 			shouldMatch:  true,
 		},
 		{
@@ -393,6 +402,7 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/a/product_name/1",
 			pathTemplate: `/{product-category:a|(?:b/c)}/{product-name}/{product-id:[0-9]+}`,
+			pathRegexp:   `^/(?P<v0>a|(?:b/c))/(?P<v1>[^/]+)/(?P<v2>[0-9]+)$`,
 			shouldMatch:  true,
 		},
 		{
@@ -403,6 +413,7 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/daily-2016-01-01",
 			pathTemplate: `/{type:(?i:daily|mini|variety)}-{date:\d{4,4}-\d{2,2}-\d{2,2}}`,
+			pathRegexp:   `^/(?P<v0>(?i:daily|mini|variety))-(?P<v1>\d{4,4}-\d{2,2}-\d{2,2})$`,
 			shouldMatch:  true,
 		},
 		{
@@ -413,6 +424,7 @@ func TestPath(t *testing.T) {
 			host:         "",
 			path:         "/111/222",
 			pathTemplate: `/{v1:[0-9]*}{v2:[a-z]*}/{v3:[0-9]*}`,
+			pathRegexp:   `^/(?P<v0>[0-9]*)(?P<v1>[a-z]*)/(?P<v2>[0-9]*)$`,
 			shouldMatch:  true,
 		},
 	}
@@ -421,6 +433,7 @@ func TestPath(t *testing.T) {
 		testRoute(t, test)
 		testTemplate(t, test)
 		testUseEscapedRoute(t, test)
+		testRegexp(t, test)
 	}
 }
 
@@ -1496,6 +1509,14 @@ func testTemplate(t *testing.T, test routeTest) {
 	routeHostTemplate, hostErr := route.GetHostTemplate()
 	if hostErr == nil && routeHostTemplate != hostTemplate {
 		t.Errorf("(%v) GetHostTemplate not equal: expected %v, got %v", test.title, hostTemplate, routeHostTemplate)
+	}
+}
+
+func testRegexp(t *testing.T, test routeTest) {
+	route := test.route
+	routePathRegexp, regexpErr := route.GetPathRegexp()
+	if test.pathRegexp != "" && regexpErr == nil && routePathRegexp != test.pathRegexp {
+		t.Errorf("(%v) GetPathRegexp not equal: expected %v, got %v", test.title, test.pathRegexp, routePathRegexp)
 	}
 }
 

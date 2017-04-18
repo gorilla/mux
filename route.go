@@ -558,6 +558,20 @@ func (r *Route) GetPathTemplate() (string, error) {
 	return r.regexp.path.template, nil
 }
 
+// GetPathRegexp returns the expanded regular expression used to match route path.
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An error will be returned if the route does not define a path.
+func (r *Route) GetPathRegexp() (string, error) {
+	if r.err != nil {
+		return "", r.err
+	}
+	if r.regexp == nil || r.regexp.path == nil {
+		return "", errors.New("mux: route does not have a path")
+	}
+	return r.regexp.path.regexp.String(), nil
+}
+
 // GetHostTemplate returns the template used to build the
 // route match.
 // This is useful for building simple REST API documentation and for instrumentation
