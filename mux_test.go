@@ -35,6 +35,7 @@ type routeTest struct {
 	path           string            // the expected path of the match
 	pathTemplate   string            // the expected path template to match
 	hostTemplate   string            // the expected host template to match
+	methods        []string          // the expected route methods
 	pathRegexp     string            // the expected path regexp
 	shouldMatch    bool              // whether the request is expected to match the route at all
 	shouldRedirect bool              // whether the request should result in a redirect
@@ -660,6 +661,7 @@ func TestMethods(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
+			methods:     []string{"GET", "POST"},
 			shouldMatch: true,
 		},
 		{
@@ -669,6 +671,7 @@ func TestMethods(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
+			methods:     []string{"GET", "POST"},
 			shouldMatch: true,
 		},
 		{
@@ -678,13 +681,25 @@ func TestMethods(t *testing.T) {
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
+			methods:     []string{"GET", "POST"},
 			shouldMatch: false,
+		},
+		{
+			title:       "Route without methods",
+			route:       new(Route),
+			request:     newRequest("PUT", "http://localhost"),
+			vars:        map[string]string{},
+			host:        "",
+			path:        "",
+			methods:     []string{},
+			shouldMatch: true,
 		},
 	}
 
 	for _, test := range tests {
 		testRoute(t, test)
 		testTemplate(t, test)
+		testMethods(t, test)
 	}
 }
 
@@ -1509,6 +1524,14 @@ func testTemplate(t *testing.T, test routeTest) {
 	routeHostTemplate, hostErr := route.GetHostTemplate()
 	if hostErr == nil && routeHostTemplate != hostTemplate {
 		t.Errorf("(%v) GetHostTemplate not equal: expected %v, got %v", test.title, hostTemplate, routeHostTemplate)
+	}
+}
+
+func testMethods(t *testing.T, test routeTest) {
+	route := test.route
+	methods, _ := route.GetMethods()
+	if strings.Join(methods, ",") != strings.Join(test.methods, ",") {
+		t.Errorf("(%v) GetMethods not equal: expected %v, got %v", test.title, test.methods, methods)
 	}
 }
 

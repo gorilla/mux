@@ -572,6 +572,22 @@ func (r *Route) GetPathRegexp() (string, error) {
 	return r.regexp.path.regexp.String(), nil
 }
 
+// GetMethods returns the methods the route matches against
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An empty list will be returned if route does not have methods.
+func (r *Route) GetMethods() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	for _, m := range r.matchers {
+		if methods, ok := m.(methodMatcher); ok {
+			return []string(methods), nil
+		}
+	}
+	return nil, nil
+}
+
 // GetHostTemplate returns the template used to build the
 // route match.
 // This is useful for building simple REST API documentation and for instrumentation
