@@ -317,7 +317,14 @@ func getHost(r *http.Request) string {
 }
 
 func extractVars(input string, matches []int, names []string, output map[string]string) {
-	for i, name := range names {
-		output[name] = input[matches[2*i+2]:matches[2*i+3]]
+	matchesCount := 0
+	prevEnd := -1
+	for i := 2; i < len(matches) && matchesCount < len(names); i += 2 {
+		if prevEnd < matches[i+1] {
+			value := input[matches[i]:matches[i+1]]
+			output[names[matchesCount]] = value
+			prevEnd = matches[i+1]
+			matchesCount++
+		}
 	}
 }

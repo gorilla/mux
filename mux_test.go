@@ -405,16 +405,6 @@ func TestPath(t *testing.T) {
 			pathTemplate: `/{type:(?i:daily|mini|variety)}-{date:\d{4,4}-\d{2,2}-\d{2,2}}`,
 			shouldMatch:  true,
 		},
-		{
-			title:        "Path route with empty match right after other match",
-			route:        new(Route).Path(`/{v1:[0-9]*}{v2:[a-z]*}/{v3:[0-9]*}`),
-			request:      newRequest("GET", "http://localhost/111/222"),
-			vars:         map[string]string{"v1": "111", "v2": "", "v3": "222"},
-			host:         "",
-			path:         "/111/222",
-			pathTemplate: `/{v1:[0-9]*}{v2:[a-z]*}/{v3:[0-9]*}`,
-			shouldMatch:  true,
-		},
 	}
 
 	for _, test := range tests {
@@ -1008,6 +998,26 @@ func TestBuildVarsFunc(t *testing.T) {
 		},
 	}
 
+	for _, test := range tests {
+		testRoute(t, test)
+		testTemplate(t, test)
+	}
+}
+
+// Addresses https://github.com/gorilla/mux/issues/200
+func TestCorrectVars(t *testing.T) {
+	tests := []routeTest{
+		{
+			title:        "Correct nested regex vars",
+			route:        new(Route).PathPrefix("/{id}/{kind:(a|b)}/{idx:[0-9]+}"),
+			request:      newRequest("GET", "http://localhost/1/a/2"),
+			vars:         map[string]string{"id": "1", "kind": "a", "idx": "2"},
+			host:         "",
+			pathTemplate: "/{id}/{kind:(a|b)}/{idx:[0-9]+}",
+			path:         "/1/a/2",
+			shouldMatch:  true,
+		},
+	}
 	for _, test := range tests {
 		testRoute(t, test)
 		testTemplate(t, test)
