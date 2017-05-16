@@ -9,8 +9,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"net/url"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -1499,8 +1499,8 @@ func testRoute(t *testing.T, test routeTest) {
 	path := test.path
 	uri := url.URL{
 		Scheme: test.scheme,
-		Host: test.host,
-		Path: test.path,
+		Host:   test.host,
+		Path:   test.path,
 	}
 	shouldRedirect := test.shouldRedirect
 
