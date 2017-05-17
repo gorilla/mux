@@ -37,6 +37,8 @@ type Route struct {
 	name string
 	// Error resulted from building a route.
 	err error
+	// Available schemes
+	secure bool
 
 	buildVarsFunc BuildVarsFunc
 }
@@ -393,6 +395,9 @@ func (m schemeMatcher) Match(r *http.Request, match *RouteMatch) bool {
 func (r *Route) Schemes(schemes ...string) *Route {
 	for k, v := range schemes {
 		schemes[k] = strings.ToLower(v)
+		if v == "https" {
+			r.secure = true
+		}
 	}
 	return r.addMatcher(schemeMatcher(schemes))
 }
@@ -478,8 +483,12 @@ func (r *Route) URL(pairs ...string) (*url.URL, error) {
 	}
 	var scheme, host, path string
 	if r.regexp.host != nil {
-		// Set a default scheme.
-		scheme = "http"
+		if r.isSecure() {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+
 		if host, err = r.regexp.host.url(values); err != nil {
 			return nil, err
 		}
@@ -514,8 +523,14 @@ func (r *Route) URLHost(pairs ...string) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
+	var scheme string
+	if r.isSecure() {
+		scheme = "https"
+	} else {
+		scheme = "http"
+	}
 	return &url.URL{
-		Scheme: "http",
+		Scheme: scheme,
 		Host:   host,
 	}, nil
 }
@@ -602,6 +617,15 @@ type parentRoute interface {
 	getNamedRoutes() map[string]*Route
 	getRegexpGroup() *routeRegexpGroup
 	buildVars(map[string]string) map[string]string
+	isSecure() bool
+}
+
+func (r *Route) isSecure() bool {
+	if r.parent == nil {
+		// During tests router is not always set.
+		r.parent = NewRouter()
+	}
+	return r.secure || r.parent.isSecure()
 }
 
 // getNamedRoutes returns the map where named routes are registered.
