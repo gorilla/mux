@@ -1,4 +1,4 @@
-// Copyright 2012 The Gorilla Authors. All rights reserved.
+﻿// Copyright 2012 The Gorilla Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -31,10 +31,10 @@ type routeTest struct {
 	route          *Route            // the route being tested
 	request        *http.Request     // a request to test the route
 	vars           map[string]string // the expected vars of the match
-	host           string            // the expected host of the match
-	path           string            // the expected path of the match
-	pathTemplate   string            // the expected path template to match
-	hostTemplate   string            // the expected host template to match
+	host           string            // the expected host of the built URL
+	path           string            // the expected path of the built URL
+	pathTemplate   string            // the expected path template of the route
+	hostTemplate   string            // the expected host template of the route
 	methods        []string          // the expected route methods
 	pathRegexp     string            // the expected path regexp
 	shouldMatch    bool              // whether the request is expected to match the route at all
@@ -195,46 +195,6 @@ func TestHost(t *testing.T) {
 			host:         "aaa.bbb.ccc",
 			path:         "",
 			hostTemplate: `{v-1:[a-z]{3}}.{v-2:[a-z]{3}}.{v-3:[a-z]{3}}`,
-			shouldMatch:  true,
-		},
-		{
-			title:        "Path route with single pattern with pipe, match",
-			route:        new(Route).Path("/{category:a|b/c}"),
-			request:      newRequest("GET", "http://localhost/a"),
-			vars:         map[string]string{"category": "a"},
-			host:         "",
-			path:         "/a",
-			pathTemplate: `/{category:a|b/c}`,
-			shouldMatch:  true,
-		},
-		{
-			title:        "Path route with single pattern with pipe, match",
-			route:        new(Route).Path("/{category:a|b/c}"),
-			request:      newRequest("GET", "http://localhost/b/c"),
-			vars:         map[string]string{"category": "b/c"},
-			host:         "",
-			path:         "/b/c",
-			pathTemplate: `/{category:a|b/c}`,
-			shouldMatch:  true,
-		},
-		{
-			title:        "Path route with multiple patterns with pipe, match",
-			route:        new(Route).Path("/{category:a|b/c}/{product}/{id:[0-9]+}"),
-			request:      newRequest("GET", "http://localhost/a/product_name/1"),
-			vars:         map[string]string{"category": "a", "product": "product_name", "id": "1"},
-			host:         "",
-			path:         "/a/product_name/1",
-			pathTemplate: `/{category:a|b/c}/{product}/{id:[0-9]+}`,
-			shouldMatch:  true,
-		},
-		{
-			title:        "Path route with multiple patterns with pipe, match",
-			route:        new(Route).Path("/{category:a|b/c}/{product}/{id:[0-9]+}"),
-			request:      newRequest("GET", "http://localhost/b/c/product_name/1"),
-			vars:         map[string]string{"category": "b/c", "product": "product_name", "id": "1"},
-			host:         "",
-			path:         "/b/c/product_name/1",
-			pathTemplate: `/{category:a|b/c}/{product}/{id:[0-9]+}`,
 			shouldMatch:  true,
 		},
 	}
@@ -426,6 +386,46 @@ func TestPath(t *testing.T) {
 			path:         "/111/222",
 			pathTemplate: `/{v1:[0-9]*}{v2:[a-z]*}/{v3:[0-9]*}`,
 			pathRegexp:   `^/(?P<v0>[0-9]*)(?P<v1>[a-z]*)/(?P<v2>[0-9]*)$`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Path route with single pattern with pipe, match",
+			route:        new(Route).Path("/{category:a|b/c}"),
+			request:      newRequest("GET", "http://localhost/a"),
+			vars:         map[string]string{"category": "a"},
+			host:         "",
+			path:         "/a",
+			pathTemplate: `/{category:a|b/c}`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Path route with single pattern with pipe, match",
+			route:        new(Route).Path("/{category:a|b/c}"),
+			request:      newRequest("GET", "http://localhost/b/c"),
+			vars:         map[string]string{"category": "b/c"},
+			host:         "",
+			path:         "/b/c",
+			pathTemplate: `/{category:a|b/c}`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Path route with multiple patterns with pipe, match",
+			route:        new(Route).Path("/{category:a|b/c}/{product}/{id:[0-9]+}"),
+			request:      newRequest("GET", "http://localhost/a/product_name/1"),
+			vars:         map[string]string{"category": "a", "product": "product_name", "id": "1"},
+			host:         "",
+			path:         "/a/product_name/1",
+			pathTemplate: `/{category:a|b/c}/{product}/{id:[0-9]+}`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Path route with multiple patterns with pipe, match",
+			route:        new(Route).Path("/{category:a|b/c}/{product}/{id:[0-9]+}"),
+			request:      newRequest("GET", "http://localhost/b/c/product_name/1"),
+			vars:         map[string]string{"category": "b/c", "product": "product_name", "id": "1"},
+			host:         "",
+			path:         "/b/c/product_name/1",
+			pathTemplate: `/{category:a|b/c}/{product}/{id:[0-9]+}`,
 			shouldMatch:  true,
 		},
 	}
@@ -649,7 +649,6 @@ func TestHeaders(t *testing.T) {
 		testRoute(t, test)
 		testTemplate(t, test)
 	}
-
 }
 
 func TestMethods(t *testing.T) {
