@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -31,6 +32,7 @@ type routeTest struct {
 	route          *Route            // the route being tested
 	request        *http.Request     // a request to test the route
 	vars           map[string]string // the expected vars of the match
+	scheme         string            // the expected scheme of the built URL
 	host           string            // the expected host of the built URL
 	path           string            // the expected path of the built URL
 	pathTemplate   string            // the expected path template of the route
@@ -516,15 +518,28 @@ func TestPathPrefix(t *testing.T) {
 	}
 }
 
-func TestHostPath(t *testing.T) {
+func TestSchemeHostPath(t *testing.T) {
 	tests := []routeTest{
 		{
 			title:        "Host and Path route, match",
 			route:        new(Route).Host("aaa.bbb.ccc").Path("/111/222/333"),
 			request:      newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
 			vars:         map[string]string{},
-			host:         "",
-			path:         "",
+			scheme:       "http",
+			host:         "aaa.bbb.ccc",
+			path:         "/111/222/333",
+			pathTemplate: `/111/222/333`,
+			hostTemplate: `aaa.bbb.ccc`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Scheme, Host, and Path route, match",
+			route:        new(Route).Schemes("https").Host("aaa.bbb.ccc").Path("/111/222/333"),
+			request:      newRequest("GET", "https://aaa.bbb.ccc/111/222/333"),
+			vars:         map[string]string{},
+			scheme:       "https",
+			host:         "aaa.bbb.ccc",
+			path:         "/111/222/333",
 			pathTemplate: `/111/222/333`,
 			hostTemplate: `aaa.bbb.ccc`,
 			shouldMatch:  true,
@@ -534,8 +549,9 @@ func TestHostPath(t *testing.T) {
 			route:        new(Route).Host("aaa.bbb.ccc").Path("/111/222/333"),
 			request:      newRequest("GET", "http://aaa.222.ccc/111/222/333"),
 			vars:         map[string]string{},
-			host:         "",
-			path:         "",
+			scheme:       "http",
+			host:         "aaa.bbb.ccc",
+			path:         "/111/222/333",
 			pathTemplate: `/111/222/333`,
 			hostTemplate: `aaa.bbb.ccc`,
 			shouldMatch:  false,
@@ -545,6 +561,19 @@ func TestHostPath(t *testing.T) {
 			route:        new(Route).Host("aaa.{v1:[a-z]{3}}.ccc").Path("/111/{v2:[0-9]{3}}/333"),
 			request:      newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
 			vars:         map[string]string{"v1": "bbb", "v2": "222"},
+			scheme:       "http",
+			host:         "aaa.bbb.ccc",
+			path:         "/111/222/333",
+			pathTemplate: `/111/{v2:[0-9]{3}}/333`,
+			hostTemplate: `aaa.{v1:[a-z]{3}}.ccc`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Scheme, Host, and Path route with host and path patterns, match",
+			route:        new(Route).Schemes("ftp", "ssss").Host("aaa.{v1:[a-z]{3}}.ccc").Path("/111/{v2:[0-9]{3}}/333"),
+			request:      newRequest("GET", "ssss://aaa.bbb.ccc/111/222/333"),
+			vars:         map[string]string{"v1": "bbb", "v2": "222"},
+			scheme:       "ftp",
 			host:         "aaa.bbb.ccc",
 			path:         "/111/222/333",
 			pathTemplate: `/111/{v2:[0-9]{3}}/333`,
@@ -556,6 +585,7 @@ func TestHostPath(t *testing.T) {
 			route:        new(Route).Host("aaa.{v1:[a-z]{3}}.ccc").Path("/111/{v2:[0-9]{3}}/333"),
 			request:      newRequest("GET", "http://aaa.222.ccc/111/222/333"),
 			vars:         map[string]string{"v1": "bbb", "v2": "222"},
+			scheme:       "http",
 			host:         "aaa.bbb.ccc",
 			path:         "/111/222/333",
 			pathTemplate: `/111/{v2:[0-9]{3}}/333`,
@@ -567,6 +597,7 @@ func TestHostPath(t *testing.T) {
 			route:        new(Route).Host("{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}").Path("/{v4:[0-9]{3}}/{v5:[0-9]{3}}/{v6:[0-9]{3}}"),
 			request:      newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
 			vars:         map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc", "v4": "111", "v5": "222", "v6": "333"},
+			scheme:       "http",
 			host:         "aaa.bbb.ccc",
 			path:         "/111/222/333",
 			pathTemplate: `/{v4:[0-9]{3}}/{v5:[0-9]{3}}/{v6:[0-9]{3}}`,
@@ -578,6 +609,7 @@ func TestHostPath(t *testing.T) {
 			route:        new(Route).Host("{v1:[a-z]{3}}.{v2:[a-z]{3}}.{v3:[a-z]{3}}").Path("/{v4:[0-9]{3}}/{v5:[0-9]{3}}/{v6:[0-9]{3}}"),
 			request:      newRequest("GET", "http://aaa.222.ccc/111/222/333"),
 			vars:         map[string]string{"v1": "aaa", "v2": "bbb", "v3": "ccc", "v4": "111", "v5": "222", "v6": "333"},
+			scheme:       "http",
 			host:         "aaa.bbb.ccc",
 			path:         "/111/222/333",
 			pathTemplate: `/{v4:[0-9]{3}}/{v5:[0-9]{3}}/{v6:[0-9]{3}}`,
@@ -937,30 +969,38 @@ func TestSchemes(t *testing.T) {
 	tests := []routeTest{
 		// Schemes
 		{
-			title:       "Schemes route, match https",
-			route:       new(Route).Schemes("https", "ftp"),
-			request:     newRequest("GET", "https://localhost"),
-			vars:        map[string]string{},
-			host:        "",
-			path:        "",
+			title:       "Schemes route, default scheme, match http, build http",
+			route:       new(Route),
+			request:     newRequest("GET", "http://localhost"),
+			scheme:      "http",
 			shouldMatch: true,
 		},
 		{
-			title:       "Schemes route, match ftp",
+			title:       "Schemes route, match https, build https",
+			route:       new(Route).Schemes("https", "ftp"),
+			request:     newRequest("GET", "https://localhost"),
+			scheme:      "https",
+			shouldMatch: true,
+		},
+		{
+			title:       "Schemes route, match ftp, build https",
 			route:       new(Route).Schemes("https", "ftp"),
 			request:     newRequest("GET", "ftp://localhost"),
-			vars:        map[string]string{},
-			host:        "",
-			path:        "",
+			scheme:      "https",
+			shouldMatch: true,
+		},
+		{
+			title:       "Schemes route, match ftp, build ftp",
+			route:       new(Route).Schemes("ftp", "https"),
+			request:     newRequest("GET", "ftp://localhost"),
+			scheme:      "ftp",
 			shouldMatch: true,
 		},
 		{
 			title:       "Schemes route, bad scheme",
 			route:       new(Route).Schemes("https", "ftp"),
 			request:     newRequest("GET", "http://localhost"),
-			vars:        map[string]string{},
-			host:        "",
-			path:        "",
+			scheme:      "https",
 			shouldMatch: false,
 		},
 	}
@@ -1447,10 +1487,15 @@ func testRoute(t *testing.T, test routeTest) {
 	route := test.route
 	vars := test.vars
 	shouldMatch := test.shouldMatch
-	host := test.host
-	path := test.path
-	url := test.host + test.path
 	shouldRedirect := test.shouldRedirect
+	uri := url.URL{
+		Scheme: test.scheme,
+		Host:   test.host,
+		Path:   test.path,
+	}
+	if uri.Scheme == "" {
+		uri.Scheme = "http"
+	}
 
 	var match RouteMatch
 	ok := route.Match(request, &match)
@@ -1463,28 +1508,39 @@ func testRoute(t *testing.T, test routeTest) {
 		return
 	}
 	if shouldMatch {
-		if test.vars != nil && !stringMapEqual(test.vars, match.Vars) {
+		if vars != nil && !stringMapEqual(vars, match.Vars) {
 			t.Errorf("(%v) Vars not equal: expected %v, got %v", test.title, vars, match.Vars)
 			return
 		}
-		if host != "" {
+		if test.scheme != "" {
+			u, _ := route.URLScheme()
+			if uri.Scheme != u.Scheme {
+				t.Errorf("(%v) URLScheme not equal: expected %v, got %v", test.title, uri.Scheme, u.Scheme)
+				return
+			}
+		}
+		if test.host != "" {
 			u, _ := test.route.URLHost(mapToPairs(match.Vars)...)
-			if host != u.Host {
-				t.Errorf("(%v) URLHost not equal: expected %v, got %v -- %v", test.title, host, u.Host, getRouteTemplate(route))
+			if uri.Scheme != u.Scheme {
+				t.Errorf("(%v) URLHost scheme not equal: expected %v, got %v -- %v", test.title, uri.Scheme, u.Scheme, getRouteTemplate(route))
+				return
+			}
+			if uri.Host != u.Host {
+				t.Errorf("(%v) URLHost host not equal: expected %v, got %v -- %v", test.title, uri.Host, u.Host, getRouteTemplate(route))
 				return
 			}
 		}
-		if path != "" {
+		if test.path != "" {
 			u, _ := route.URLPath(mapToPairs(match.Vars)...)
-			if path != u.Path {
-				t.Errorf("(%v) URLPath not equal: expected %v, got %v -- %v", test.title, path, u.Path, getRouteTemplate(route))
+			if uri.Path != u.Path {
+				t.Errorf("(%v) URLPath not equal: expected %v, got %v -- %v", test.title, uri.Path, u.Path, getRouteTemplate(route))
 				return
 			}
 		}
-		if url != "" {
+		if test.host != "" && test.path != "" {
 			u, _ := route.URL(mapToPairs(match.Vars)...)
-			if url != u.Host+u.Path {
-				t.Errorf("(%v) URL not equal: expected %v, got %v -- %v", test.title, url, u.Host+u.Path, getRouteTemplate(route))
+			if expected, got := uri.String(), u.String(); expected != got {
+				t.Errorf("(%v) URL not equal: expected %v, got %v -- %v", test.title, expected, got, getRouteTemplate(route))
 				return
 			}
 		}
