@@ -39,6 +39,11 @@ func NewRouter() *Router {
 type Router struct {
 	// Configurable Handler to be used when no route matches.
 	NotFoundHandler http.Handler
+	// BeforeHandler is a handler that is always invoked before the primary handler.
+	// It is invoked whether or not a matching handler is found. Only the root router
+	// (the one running the ServeHTTP function) invokes its BeforeHandler -- any
+	// BeforeHandler functions that might exist on subrouters are ignored.
+	BeforeHandler http.Handler
 	// Parent route, if this is a subrouter.
 	parent parentRoute
 	// Routes to be matched, in order.
@@ -110,6 +115,9 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if !r.KeepContext {
 		defer contextClear(req)
+	}
+	if r.BeforeHandler != nil {
+		r.BeforeHandler.ServeHTTP(w, req)
 	}
 	handler.ServeHTTP(w, req)
 }
