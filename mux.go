@@ -312,10 +312,12 @@ func (r *Router) walk(walkFn WalkFunc, ancestors []*Route) error {
 		}
 		for _, sr := range t.matchers {
 			if h, ok := sr.(*Router); ok {
+				ancestors = append(ancestors, t)
 				err := h.walk(walkFn, ancestors)
 				if err != nil {
 					return err
 				}
+				ancestors = ancestors[:len(ancestors)-1]
 			}
 		}
 		if h, ok := t.handler.(*Router); ok {
