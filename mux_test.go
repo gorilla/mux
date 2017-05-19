@@ -1329,6 +1329,34 @@ func TestWalkNested(t *testing.T) {
 	}
 }
 
+func TestWalkSubrouters(t *testing.T) {
+	router := NewRouter()
+
+	g := router.Path("/g").Subrouter()
+	o := g.PathPrefix("/o").Subrouter()
+	o.Methods("GET")
+	o.Methods("PUT")
+
+	// all 4 routes should be matched, but final 2 routes do not have path templates
+	paths := []string{"/g", "/g/o", "", ""}
+	idx := 0
+	err := router.Walk(func(route *Route, router *Router, ancestors []*Route) error {
+		path := paths[idx]
+		tpl, _ := route.GetPathTemplate()
+		if tpl != path {
+			t.Errorf(`Expected %s got %s`, path, tpl)
+		}
+		idx++
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	if idx != len(paths) {
+		t.Errorf("Expected %d routes, found %d", len(paths), idx)
+	}
+}
+
 func TestWalkErrorRoute(t *testing.T) {
 	router := NewRouter()
 	router.Path("/g")
