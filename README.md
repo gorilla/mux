@@ -24,9 +24,9 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * [Install](#install)
 * [Examples](#examples)
 * [Matching Routes](#matching-routes)
-* [Listing Routes](#listing-routes)
 * [Static Files](#static-files)
 * [Registered URLs](#registered-urls)
+* [Walking Routes](#walking-routes)
 * [Full Example](#full-example)
 
 ---
@@ -169,6 +169,7 @@ s.HandleFunc("/{key}/", ProductHandler)
 s.HandleFunc("/{key}/details", ProductDetailsHandler)
 ```
 
+<<<<<<< f85983fbfd0e0146e24ba184acbdca25f0361e99
 ### Listing Routes
 
 Routes on a mux can be listed using the Router.Walk method—useful for generating documentation:
@@ -317,6 +318,37 @@ s.Path("/articles/{category}/{id:[0-9]+}").
 url, err := r.Get("article").URL("subdomain", "news",
                                  "category", "technology",
                                  "id", "42")
+```
+
+### Walking Routes
+
+The `Walk` function on `mux.Router` can be used to visit all of the routes that are registered on a router. For example,
+the following prints all of the registered routes:
+
+```go
+r := mux.NewRouter()
+r.HandleFunc("/", handler)
+r.Methods("POST").HandleFunc("/products", handler)
+r.Methods("GET").HandleFunc("/articles", handler)
+r.Methods("GET", "PUT").HandleFunc("/articles/{id}", handler)
+r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+    t, err := route.GetPathTemplate()
+    if err != nil {
+        return err
+    }
+    // p will contain a regular expression that is compatible with regular expressions in Perl, Python, and other languages.
+    // For example, the regular expression for path '/articles/{id}' will be '^/articles/(?P<v0>[^/]+)$'.
+    p, err := route.GetPathRegexp()
+    if err != nil {
+        return err
+    }
+    m, err := route.GetMethods()
+    if err != nil {
+        return err
+    }
+    fmt.Println(strings.Join(m, ","), t, p)
+    return nil
+})
 ```
 
 ## Full Example
