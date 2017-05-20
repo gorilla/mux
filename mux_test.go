@@ -970,37 +970,42 @@ func TestSchemes(t *testing.T) {
 		// Schemes
 		{
 			title:       "Schemes route, default scheme, match http, build http",
-			route:       new(Route),
+			route:       new(Route).Host("localhost"),
 			request:     newRequest("GET", "http://localhost"),
 			scheme:      "http",
+			host:        "localhost",
 			shouldMatch: true,
 		},
 		{
 			title:       "Schemes route, match https, build https",
-			route:       new(Route).Schemes("https", "ftp"),
+			route:       new(Route).Schemes("https", "ftp").Host("localhost"),
 			request:     newRequest("GET", "https://localhost"),
 			scheme:      "https",
+			host:        "localhost",
 			shouldMatch: true,
 		},
 		{
 			title:       "Schemes route, match ftp, build https",
-			route:       new(Route).Schemes("https", "ftp"),
+			route:       new(Route).Schemes("https", "ftp").Host("localhost"),
 			request:     newRequest("GET", "ftp://localhost"),
 			scheme:      "https",
+			host:        "localhost",
 			shouldMatch: true,
 		},
 		{
 			title:       "Schemes route, match ftp, build ftp",
-			route:       new(Route).Schemes("ftp", "https"),
+			route:       new(Route).Schemes("ftp", "https").Host("localhost"),
 			request:     newRequest("GET", "ftp://localhost"),
 			scheme:      "ftp",
+			host:        "localhost",
 			shouldMatch: true,
 		},
 		{
 			title:       "Schemes route, bad scheme",
-			route:       new(Route).Schemes("https", "ftp"),
+			route:       new(Route).Schemes("https", "ftp").Host("localhost"),
 			request:     newRequest("GET", "http://localhost"),
 			scheme:      "https",
+			host:        "localhost",
 			shouldMatch: false,
 		},
 	}
@@ -1513,14 +1518,20 @@ func testRoute(t *testing.T, test routeTest) {
 			return
 		}
 		if test.scheme != "" {
-			u, _ := route.URLScheme()
+			u, err := route.URL(mapToPairs(match.Vars)...)
+			if err != nil {
+				t.Fatalf("(%v) URL error: %v -- %v", test.title, err, getRouteTemplate(route))
+			}
 			if uri.Scheme != u.Scheme {
 				t.Errorf("(%v) URLScheme not equal: expected %v, got %v", test.title, uri.Scheme, u.Scheme)
 				return
 			}
 		}
 		if test.host != "" {
-			u, _ := test.route.URLHost(mapToPairs(match.Vars)...)
+			u, err := test.route.URLHost(mapToPairs(match.Vars)...)
+			if err != nil {
+				t.Fatalf("(%v) URLHost error: %v -- %v", test.title, err, getRouteTemplate(route))
+			}
 			if uri.Scheme != u.Scheme {
 				t.Errorf("(%v) URLHost scheme not equal: expected %v, got %v -- %v", test.title, uri.Scheme, u.Scheme, getRouteTemplate(route))
 				return
@@ -1531,14 +1542,20 @@ func testRoute(t *testing.T, test routeTest) {
 			}
 		}
 		if test.path != "" {
-			u, _ := route.URLPath(mapToPairs(match.Vars)...)
+			u, err := route.URLPath(mapToPairs(match.Vars)...)
+			if err != nil {
+				t.Fatalf("(%v) URLPath error: %v -- %v", test.title, err, getRouteTemplate(route))
+			}
 			if uri.Path != u.Path {
 				t.Errorf("(%v) URLPath not equal: expected %v, got %v -- %v", test.title, uri.Path, u.Path, getRouteTemplate(route))
 				return
 			}
 		}
 		if test.host != "" && test.path != "" {
-			u, _ := route.URL(mapToPairs(match.Vars)...)
+			u, err := route.URL(mapToPairs(match.Vars)...)
+			if err != nil {
+				t.Fatalf("(%v) URL error: %v -- %v", test.title, err, getRouteTemplate(route))
+			}
 			if expected, got := uri.String(), u.String(); expected != got {
 				t.Errorf("(%v) URL not equal: expected %v, got %v -- %v", test.title, expected, got, getRouteTemplate(route))
 				return

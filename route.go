@@ -503,23 +503,6 @@ func (r *Route) URL(pairs ...string) (*url.URL, error) {
 	}, nil
 }
 
-// URLScheme builds the scheme part of the URL for a route. See Route.URL().
-//
-// A route with multiple schemes will return the first scheme of the route. A
-// route with no schemes will return "http" as the scheme.
-func (r *Route) URLScheme() (*url.URL, error) {
-	if r.err != nil {
-		return nil, r.err
-	}
-	u := &url.URL{
-		Scheme: "http",
-	}
-	if r.buildScheme != "" {
-		u.Scheme = r.buildScheme
-	}
-	return u, nil
-}
-
 // URLHost builds the host part of the URL for a route. See Route.URL().
 //
 // The route must have a host defined.
