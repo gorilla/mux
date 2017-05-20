@@ -286,20 +286,21 @@ func (r *Route) MatcherFunc(f MatcherFunc) *Route {
 // Methods --------------------------------------------------------------------
 
 // methodMatcher matches the request against HTTP methods.
-type methodMatcher []string
+type methodMatcher map[string]bool
 
 func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchInArray(m, r.Method)
+	return m[r.Method]
 }
 
 // Methods adds a matcher for HTTP methods.
 // It accepts a sequence of one or more methods to be matched, e.g.:
 // "GET", "POST", "PUT".
 func (r *Route) Methods(methods ...string) *Route {
-	for k, v := range methods {
-		methods[k] = strings.ToUpper(v)
+	mm := make(methodMatcher, len(methods))
+	for k := range methods {
+		mm[strings.ToUpper(methods[k])] = true
 	}
-	return r.addMatcher(methodMatcher(methods))
+	return r.addMatcher(mm)
 }
 
 // Path -----------------------------------------------------------------------
@@ -382,19 +383,20 @@ func (r *Route) Queries(pairs ...string) *Route {
 // Schemes --------------------------------------------------------------------
 
 // schemeMatcher matches the request against URL schemes.
-type schemeMatcher []string
+type schemeMatcher map[string]bool
 
 func (m schemeMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchInArray(m, r.URL.Scheme)
+	return m[r.URL.Scheme]
 }
 
 // Schemes adds a matcher for URL schemes.
 // It accepts a sequence of schemes to be matched, e.g.: "http", "https".
 func (r *Route) Schemes(schemes ...string) *Route {
-	for k, v := range schemes {
-		schemes[k] = strings.ToLower(v)
+	sm := make(schemeMatcher, len(schemes))
+	for k := range schemes {
+		sm[strings.ToLower(schemes[k])] = true
 	}
-	return r.addMatcher(schemeMatcher(schemes))
+	return r.addMatcher(sm)
 }
 
 // BuildVarsFunc --------------------------------------------------------------

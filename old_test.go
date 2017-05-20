@@ -282,22 +282,22 @@ type methodMatcherTest struct {
 
 var methodMatcherTests = []methodMatcherTest{
 	{
-		matcher: methodMatcher([]string{"GET", "POST", "PUT"}),
+		matcher: methodMatcher(map[string]bool{"GET": true, "POST": true, "PUT": true}),
 		method:  "GET",
 		result:  true,
 	},
 	{
-		matcher: methodMatcher([]string{"GET", "POST", "PUT"}),
+		matcher: methodMatcher(map[string]bool{"GET": true, "POST": true, "PUT": true}),
 		method:  "POST",
 		result:  true,
 	},
 	{
-		matcher: methodMatcher([]string{"GET", "POST", "PUT"}),
+		matcher: methodMatcher(map[string]bool{"GET": true, "POST": true, "PUT": true}),
 		method:  "PUT",
 		result:  true,
 	},
 	{
-		matcher: methodMatcher([]string{"GET", "POST", "PUT"}),
+		matcher: methodMatcher(map[string]bool{"GET": true, "POST": true, "PUT": true}),
 		method:  "DELETE",
 		result:  false,
 	},
@@ -333,22 +333,22 @@ type schemeMatcherTest struct {
 
 var schemeMatcherTests = []schemeMatcherTest{
 	{
-		matcher: schemeMatcher([]string{"http", "https"}),
+		matcher: schemeMatcher(map[string]bool{"http": true, "https": true}),
 		url:     "http://localhost:8080/",
 		result:  true,
 	},
 	{
-		matcher: schemeMatcher([]string{"http", "https"}),
+		matcher: schemeMatcher(map[string]bool{"http": true, "https": true}),
 		url:     "https://localhost:8080/",
 		result:  true,
 	},
 	{
-		matcher: schemeMatcher([]string{"https"}),
+		matcher: schemeMatcher(map[string]bool{"https": true}),
 		url:     "http://localhost:8080/",
 		result:  false,
 	},
 	{
-		matcher: schemeMatcher([]string{"http"}),
+		matcher: schemeMatcher(map[string]bool{"http": true}),
 		url:     "https://localhost:8080/",
 		result:  false,
 	},
