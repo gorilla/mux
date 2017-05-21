@@ -31,6 +31,8 @@ type Route struct {
 	skipClean bool
 	// If true, "/path/foo%2Fbar/to" will match the path "/path/{var}/to"
 	useEncodedPath bool
+	// The scheme used when building URLs.
+	buildScheme string
 	// If true, this route never matches: it is only used to build URLs.
 	buildOnly bool
 	// The name used to build URLs.
@@ -394,6 +396,9 @@ func (r *Route) Schemes(schemes ...string) *Route {
 	for k, v := range schemes {
 		schemes[k] = strings.ToLower(v)
 	}
+	if r.buildScheme == "" && len(schemes) > 0 {
+		r.buildScheme = schemes[0]
+	}
 	return r.addMatcher(schemeMatcher(schemes))
 }
 
@@ -478,10 +483,12 @@ func (r *Route) URL(pairs ...string) (*url.URL, error) {
 	}
 	var scheme, host, path string
 	if r.regexp.host != nil {
-		// Set a default scheme.
-		scheme = "http"
 		if host, err = r.regexp.host.url(values); err != nil {
 			return nil, err
+		}
+		scheme = "http"
+		if r.buildScheme != "" {
+			scheme = r.buildScheme
 		}
 	}
 	if r.regexp.path != nil {
@@ -514,10 +521,14 @@ func (r *Route) URLHost(pairs ...string) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &url.URL{
+	u := &url.URL{
 		Scheme: "http",
 		Host:   host,
-	}, nil
+	}
+	if r.buildScheme != "" {
+		u.Scheme = r.buildScheme
+	}
+	return u, nil
 }
 
 // URLPath builds the path part of the URL for a route. See Route.URL().
