@@ -168,8 +168,6 @@ s.HandleFunc("/{key}/", ProductHandler)
 // "/products/{key}/details"
 s.HandleFunc("/{key}/details", ProductDetailsHandler)
 ```
-
-<<<<<<< f85983fbfd0e0146e24ba184acbdca25f0361e99
 ### Listing Routes
 
 Routes on a mux can be listed using the Router.Walk method—useful for generating documentation:
