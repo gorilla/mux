@@ -326,9 +326,9 @@ the following prints all of the registered routes:
 ```go
 r := mux.NewRouter()
 r.HandleFunc("/", handler)
-r.Methods("POST").HandleFunc("/products", handler)
-r.Methods("GET").HandleFunc("/articles", handler)
-r.Methods("GET", "PUT").HandleFunc("/articles/{id}", handler)
+r.HandleFunc("/products", handler).Methods("POST")
+r.HandleFunc("/articles", handler).Methods("GET")
+r.HandleFunc("/articles/{id}", handler).Methods("GET", "PUT")
 r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
     t, err := route.GetPathTemplate()
     if err != nil {
