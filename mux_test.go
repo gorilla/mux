@@ -36,7 +36,7 @@ type routeTest struct {
 	scheme         string            // the expected scheme of the built URL
 	host           string            // the expected host of the built URL
 	path           string            // the expected path of the built URL
-	query          string            // the expected query string to match
+	query          string            // the expected query string of the built URL
 	pathTemplate   string            // the expected path template of the route
 	hostTemplate   string            // the expected host template of the route
 	methods        []string          // the expected route methods
@@ -973,6 +973,16 @@ func TestQueries(t *testing.T) {
 			host:        "",
 			path:        "",
 			shouldMatch: false,
+		},
+		{
+			title:       "Queries route with pattern, match, escaped value",
+			route:       new(Route).Queries("foo", "{v1}"),
+			request:     newRequest("GET", "http://localhost?foo=%25bar%26%20%2F%3D%3F"),
+			vars:        map[string]string{"v1": "%bar& /=?"},
+			host:        "",
+			path:        "",
+			query:       "foo=%25bar%26+%2F%3D%3F",
+			shouldMatch: true,
 		},
 	}
 
