@@ -307,10 +307,19 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 
 // getHost tries its best to return the request host.
 func getHost(r *http.Request) string {
+    host := r.Host
+    forwardedHost := r.Header.Get("X-Forwarded-Host")
+    if len(forwardedHost) > 0 {
+        // According to the Apache mod_proxy docs, X-Forwarded-Host can be a
+        // comma-separated list of hosts, to which each proxy appends the
+        // requested host. We want to grab the first from this comma-separated
+        // list.
+        hosts := strings.SplitN(forwardedHost, ",", 2)
+        host = strings.TrimSpace(hosts[0])
+    }
 	if r.URL.IsAbs() {
-		return r.URL.Host
+		return host
 	}
-	host := r.Host
 	// Slice off any port information.
 	if i := strings.Index(host, ":"); i != -1 {
 		host = host[:i]
