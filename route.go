@@ -220,6 +220,14 @@ func (r *Route) Headers(pairs ...string) *Route {
 	}
 	return r
 }
+// If Headers are already stored in a map
+func (r *Route) HeadersFromMap(headers map[string]string) *Route {
+	if r.err == nil {
+		return r.addMatcher(headerMatcher(headers))
+	}
+	return r
+}
+
 
 // headerRegexMatcher matches the request against the route given a regex for the header
 type headerRegexMatcher map[string]*regexp.Regexp
