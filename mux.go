@@ -13,6 +13,12 @@ import (
 	"strings"
 )
 
+var contextSet = func(r *http.Request, key interface{}, val interface{}) *http.Request {
+	context.Set(r, key, val)
+	return r
+}
+var contextGet = context.Get
+
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
 	return &Router{namedRoutes: make(map[string]*Route), KeepContext: false}
