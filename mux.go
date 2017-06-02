@@ -227,6 +227,37 @@ func (r *Router) HandleFunc(path string, f func(http.ResponseWriter,
 	return r.NewRoute().Path(path).HandlerFunc(f)
 }
 
+// AddSubrouter adds the given router as a subrouter underneath the
+// provided parent route.
+//
+// Similar to Route.Subrouter(), it will test the inner routes only
+// if the parent route matched. For example:
+//
+//     s := mux.NewRouter()
+//     s.HandleFunc("/products/", ProductsHandler)
+//     s.HandleFunc("/products/{key}", ProductHandler)
+//     s.HandleFunc("/articles/{category}/{id:[0-9]+}"), ArticleHandler)
+//
+//     r := mux.NewRouter()
+//     r.AddSubrouter("/api", s)
+//
+// In the above example, the final routes registered are:
+//
+//    /api/products/
+//    /api/products/{key}
+//    /api/products/{category}/{id:[0-9]+}
+func (r *Router) AddSubrouter(path string, child *Router) *Router {
+	route := r.PathPrefix(path)
+	child.parent = route
+	child.strictSlash = route.strictSlash
+	route.addMatcher(child)
+	return r
+}
+
+// router := &Router{parent: r, strictSlash: r.strictSlash}
+// r.addMatcher(router)
+// return router
+
 // Headers registers a new route with a matcher for request header values.
 // See Route.Headers().
 func (r *Router) Headers(pairs ...string) *Route {
