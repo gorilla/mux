@@ -1224,6 +1224,91 @@ func TestSubRouter(t *testing.T) {
 	}
 }
 
+func TestBeforeHandlerCalled(t *testing.T) {
+	tests := []struct {
+		path      string
+		wantMatch bool
+	}{
+		{"http://aaa.google.com/nomatch", false},
+		{"http://aaa.google.com/test", true},
+	}
+
+	for _, test := range tests {
+		router := new(Route).Host("{v1:[a-z]+}.google.com").Subrouter()
+		beforeCalled := false
+		router.BeforeHandler = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			beforeCalled = true
+		})
+
+		matched := false
+		router.Path("/test").HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			matched = true
+		})
+
+		router.ServeHTTP(NewRecorder(), newRequest("GET", test.path))
+
+		if matched != test.wantMatch {
+			t.Errorf("expected URL %s to match router", test.path)
+		}
+
+		if !beforeCalled {
+			t.Error("BeforeHandler should always be called")
+		}
+	}
+}
+
+func TestBeforeHandlerSubrouters(t *testing.T) {
+	tests := []struct {
+		path           string
+		wantFooMatched bool
+		wantBarMatched bool
+	}{
+		{"http://google.com/foo", true, false},
+		{"http://google.com/bar/", false, true},
+	}
+
+	for _, test := range tests {
+		router := NewRouter()
+		rootBeforeCalled := false
+		router.BeforeHandler = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			rootBeforeCalled = true
+		})
+
+		domainRouter := router.Host("google.com").Subrouter()
+
+		fooMatched := false
+		domainRouter.HandleFunc("/foo", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			fooMatched = true
+		}))
+
+		barSubrouter := domainRouter.PathPrefix("/bar").Subrouter()
+		subrouterBeforeCalled := false
+		barSubrouter.BeforeHandler = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			subrouterBeforeCalled = true
+		})
+
+		barMatched := false
+		barSubrouter.HandleFunc("/", http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			barMatched = true
+		}))
+
+		router.ServeHTTP(NewRecorder(), newRequest("GET", test.path))
+
+		if !rootBeforeCalled {
+			t.Errorf("root BeforeHandler should always be called")
+		}
+		if fooMatched != test.wantFooMatched {
+			t.Errorf("fooMatched != wantFooMatched: %v != %v", fooMatched, test.wantFooMatched)
+		}
+		if subrouterBeforeCalled {
+			t.Errorf("subrouter BeforeHandler should never be called")
+		}
+		if barMatched != test.wantBarMatched {
+			t.Errorf("barMatched != wantBarMatched: %v != %v", barMatched, test.wantBarMatched)
+		}
+	}
+}
+
 func TestNamedRoutes(t *testing.T) {
 	r1 := NewRouter()
 	r1.NewRoute().Name("a")
