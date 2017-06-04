@@ -35,6 +35,8 @@ type Route struct {
 	buildScheme string
 	// If true, this route never matches: it is only used to build URLs.
 	buildOnly bool
+	// If true, this route wont show in getRoutesMethod.
+	private bool
 	// The name used to build URLs.
 	name string
 	// Error resulted from building a route.
@@ -84,10 +86,36 @@ func (r *Route) GetError() error {
 	return r.err
 }
 
+// GetPath returns an string equal to the path of the route.
+func (r *Route) GetPath() string{
+	return r.regexp.path.template
+}
+
 // BuildOnly sets the route to never match: it is only used to build URLs.
 func (r *Route) BuildOnly() *Route {
 	r.buildOnly = true
 	return r
+}
+
+// MakePrivate sets the private flag making it not show up in GetRoutes.
+func (r *Route) MakePrivate() *Route {
+	r.private = true
+	return r
+}
+
+type extracter interface {
+	Match(*http.Request, *RouteMatch) bool
+	GetMatchValues() []string
+}
+
+func (r *Route) GetMethods() []string {
+	for _, v := range r.matchers {
+		matcher, found := v.(extracter)
+		if found {
+			return matcher.GetMatchValues()
+		}
+	}
+	return nil
 }
 
 // Handler --------------------------------------------------------------------
@@ -292,6 +320,10 @@ type methodMatcher []string
 
 func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
 	return matchInArray(m, r.Method)
+}
+
+func (m methodMatcher) GetMatchValues() []string {
+	return m;
 }
 
 // Methods adds a matcher for HTTP methods.
