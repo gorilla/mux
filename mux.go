@@ -7,6 +7,7 @@ package mux
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"path"
 	"regexp"
@@ -111,6 +112,8 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.KeepContext {
 		defer contextClear(req)
 	}
+
+	log.Println("   ", req.Method, req.RequestURI)
 	handler.ServeHTTP(w, req)
 }
 
