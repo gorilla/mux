@@ -435,6 +435,29 @@ func (r *Route) Subrouter() *Router {
 	return router
 }
 
+
+// Attach------------------------------------------------------------------
+
+// Attach creates a subrouter for the route and passes it to the handler.
+// It is best used to break a complex API into multiple sub-packages.
+//
+//  It will test the inner routes only if the parent route matched. For example:
+//      package domaindotcom
+//  func getRoutes(r *mux.Router) {
+//     r.HandleFunc("/products/", ProductsHandler)
+//     r.HandleFunc("/products/{key}", ProductHandler)
+//     r.HandleFunc("/articles/{category}/{id:[0-9]+}"), ArticleHandler)
+//  }
+
+//  package main
+//  r := mux.NewRouter()
+//  r.Host("www.domain.com").Attach(domaindotcom.getRoutes)
+
+func (r *Route) Attach(routes func(r *Router)) {
+        routes(r.Subrouter())
+}
+
+
 // ----------------------------------------------------------------------------
 // URL building
 // ----------------------------------------------------------------------------
