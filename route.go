@@ -396,7 +396,7 @@ func (r *Route) Schemes(schemes ...string) *Route {
 	for k, v := range schemes {
 		schemes[k] = strings.ToLower(v)
 	}
-	if r.getBuildScheme() == "" && len(schemes) > 0 {
+	if r.buildScheme == "" && len(schemes) > 0 {
 		r.buildScheme = schemes[0]
 	}
 	return r.addMatcher(schemeMatcher(schemes))
