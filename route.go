@@ -39,6 +39,8 @@ type Route struct {
 	name string
 	// Error resulted from building a route.
 	err error
+	// Priority of this route
+	priority int
 
 	buildVarsFunc BuildVarsFunc
 }
@@ -129,6 +131,19 @@ func (r *Route) Name(name string) *Route {
 // GetName returns the name for the route, if any.
 func (r *Route) GetName() string {
 	return r.name
+}
+
+// Priority -----------------------------------------------------------------------
+
+// Priority sets the priority for the route
+func (r *Route) Priority(priority int) *Route {
+	r.priority = priority
+	return r
+}
+
+// GetPriority returns the priority for the route.
+func (r *Route) GetPriority() int {
+	return r.priority
 }
 
 // ----------------------------------------------------------------------------
