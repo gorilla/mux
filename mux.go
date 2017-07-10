@@ -234,6 +234,26 @@ func (r *Router) HandleFunc(path string, f func(http.ResponseWriter,
 	return r.NewRoute().Path(path).HandlerFunc(f)
 }
 
+
+// We can use HandleFunc().Methods() easily through these.
+func(r *Router) GET(path string, f func(http.ResponseWriter, *http.Request)) *Route {
+	return r.HandleFunc(path, f).Methods("GET")
+}
+
+func(r *Router) POST(path string, f func(http.ResponseWriter, *http.Request)) *Route {
+	return r.HandleFunc(path, f).Methods("POST")
+}
+
+
+func(r *Router) PUT(path string, f func(http.ResponseWriter, *http.Request)) *Route {
+	return r.HandleFunc(path, f).Methods("PUT")
+}
+
+
+func(r *Router) DELETE(path string, f func(http.ResponseWriter, *http.Request)) *Route {
+	return r.HandleFunc(path, f).Methods("DELETE")
+}
+
 // Headers registers a new route with a matcher for request header values.
 // See Route.Headers().
 func (r *Router) Headers(pairs ...string) *Route {
