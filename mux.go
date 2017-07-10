@@ -236,21 +236,21 @@ func (r *Router) HandleFunc(path string, f func(http.ResponseWriter,
 
 
 // We can use HandleFunc().Methods() easily through these.
-func(r *Router) GET(path string, f func(http.ResponseWriter, *http.Request)) *mux.Route {
+func(r *Router) GET(path string, f func(http.ResponseWriter, *http.Request)) *Route {
 	return r.HandleFunc(path, handler).Methods("GET")
 }
 
-func(r *Router) POST(path string, f func(http.ResponseWriter, *http.Request)) *mux.Route {
+func(r *Router) POST(path string, f func(http.ResponseWriter, *http.Request)) *Route {
 	return r.HandleFunc(path, handler).Methods("POST")
 }
 
 
-func(r *Router) PUT(path string, f func(http.ResponseWriter, *http.Request)) *mux.Route {
+func(r *Router) PUT(path string, f func(http.ResponseWriter, *http.Request)) *Route {
 	return r.HandleFunc(path, handler).Methods("PUT")
 }
 
 
-func(r *Router) DELETE(path string, f func(http.ResponseWriter, *http.Request)) *mux.Route {
+func(r *Router) DELETE(path string, f func(http.ResponseWriter, *http.Request)) *Route {
 	return r.HandleFunc(path, handler).Methods("DELETE")
 }
 
