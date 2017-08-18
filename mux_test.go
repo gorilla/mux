@@ -1890,6 +1890,6 @@ func TestNoMatchMethodErrors(t *testing.T) {
 	resp := NewRecorder()
 	r.ServeHTTP(resp, req)
 	if resp.Code != 405 {
-		t.Errorf("Expecting code %s", 405)
+		t.Errorf("Expecting code %v", 405)
 	}
 }
