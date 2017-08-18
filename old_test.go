@@ -183,11 +183,10 @@ func TestRouteMatchers(t *testing.T) {
 	match(true)
 
 	// 2nd route --------------------------------------------------------------
-	t.Log("Here")
 	// Everything match.
 	reset2()
 	match(true)
-	t.Log("Here")
+
 	// Scheme doesn't match.
 	reset2()
 	scheme = "https"

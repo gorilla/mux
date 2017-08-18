@@ -556,7 +556,7 @@ func matchMapWithRegex(toCheck map[string]*regexp.Regexp, toMatch map[string][]s
 	return true
 }
 
-// MethodNotAllowed replies to the request with an HTTP 404 not found error.
+// MethodNotAllowed replies to the request with an HTTP status code 405.
 func MethodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusMethodNotAllowed)
 }
