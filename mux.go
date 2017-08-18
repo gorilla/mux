@@ -105,9 +105,15 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		req = setVars(req, match.Vars)
 		req = setCurrentRoute(req, match.Route)
 	}
+
+	if match.MethodMismatch {
+		handler = MethodNotAllowedHandler()
+	}
+
 	if handler == nil {
 		handler = http.NotFoundHandler()
 	}
+
 	if !r.KeepContext {
 		defer contextClear(req)
 	}
@@ -344,6 +350,10 @@ type RouteMatch struct {
 	Route   *Route
 	Handler http.Handler
 	Vars    map[string]string
+
+	// MethodMismatch flag is set to true if a route is matched but there
+	// is a mismatch in the request method and route method
+	MethodMismatch bool
 }
 
 type contextKey int
@@ -545,3 +555,12 @@ func matchMapWithRegex(toCheck map[string]*regexp.Regexp, toMatch map[string][]s
 	}
 	return true
 }
+
+// MethodNotAllowed replies to the request with an HTTP 404 not found error.
+func MethodNotAllowed(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusMethodNotAllowed)
+}
+
+// MethodNotAllowedHandler returns a simple request handler
+// that replies to each request with a status code 405.
+func MethodNotAllowedHandler() http.Handler { return http.HandlerFunc(MethodNotAllowed) }

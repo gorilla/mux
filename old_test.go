@@ -121,12 +121,7 @@ func TestRouteMatchers(t *testing.T) {
 		var routeMatch RouteMatch
 		matched := router.Match(request, &routeMatch)
 		if matched != shouldMatch {
-			// Need better messages. :)
-			if matched {
-				t.Errorf("Should match.")
-			} else {
-				t.Errorf("Should not match.")
-			}
+			t.Errorf("Match Expectation: %v\nGot: %v\nRequest: %v %v", shouldMatch, matched, request.Method, url)
 		}
 
 		if matched {
@@ -188,11 +183,11 @@ func TestRouteMatchers(t *testing.T) {
 	match(true)
 
 	// 2nd route --------------------------------------------------------------
-
+	t.Log("Here")
 	// Everything match.
 	reset2()
 	match(true)
-
+	t.Log("Here")
 	// Scheme doesn't match.
 	reset2()
 	scheme = "https"

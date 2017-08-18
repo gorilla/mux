@@ -52,12 +52,22 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	if r.buildOnly || r.err != nil {
 		return false
 	}
+
 	// Match everything.
 	for _, m := range r.matchers {
 		if matched := m.Match(req, match); !matched {
+			if _, ok := m.(methodMatcher); ok {
+				match.MethodMismatch = true
+				continue
+			}
 			return false
 		}
 	}
+
+	if match.MethodMismatch {
+		return false
+	}
+
 	// Yay, we have a match. Let's collect some info about it.
 	if match.Route == nil {
 		match.Route = r
@@ -68,6 +78,7 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	if match.Vars == nil {
 		match.Vars = make(map[string]string)
 	}
+
 	// Set variables.
 	if r.regexp != nil {
 		r.regexp.setMatch(req, match, r)

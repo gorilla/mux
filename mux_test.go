@@ -1871,3 +1871,25 @@ func newRequest(method, url string) *http.Request {
 	}
 	return req
 }
+
+func TestNoMatchMethodErrors(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	s := r.Methods("GET", "POST").Subrouter()
+	s.HandleFunc("/", func1).Name("func1")
+
+	req, _ := http.NewRequest("PUT", "http://localhost/", nil)
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+
+	if matched {
+		t.Error("Should not have matched route for methods")
+	}
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 405 {
+		t.Errorf("Expecting code %s", 405)
+	}
+}
