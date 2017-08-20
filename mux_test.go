@@ -1887,6 +1887,10 @@ func TestNoMatchMethodErrors(t *testing.T) {
 		t.Error("Should not have matched route for methods")
 	}
 
+	if match.MatchErr != ErrMethodMismatch {
+		t.Error("Should get ErrMethodMismatch error")
+	}
+
 	resp := NewRecorder()
 	r.ServeHTTP(resp, req)
 	if resp.Code != 405 {

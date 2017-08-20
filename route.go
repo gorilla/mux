@@ -57,14 +57,14 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	for _, m := range r.matchers {
 		if matched := m.Match(req, match); !matched {
 			if _, ok := m.(methodMatcher); ok {
-				match.MethodMismatch = true
+				match.MatchErr = ErrMethodMismatch
 				continue
 			}
 			return false
 		}
 	}
 
-	if match.MethodMismatch {
+	if match.MatchErr != nil {
 		return false
 	}
 
