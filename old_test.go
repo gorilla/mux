@@ -121,7 +121,7 @@ func TestRouteMatchers(t *testing.T) {
 		var routeMatch RouteMatch
 		matched := router.Match(request, &routeMatch)
 		if matched != shouldMatch {
-			t.Errorf("Match Expectation: %v\nGot: %v\nRequest: %v %v", shouldMatch, matched, request.Method, url)
+			t.Errorf("Expected: %v\nGot: %v\nRequest: %v %v", shouldMatch, matched, request.Method, url)
 		}
 
 		if matched {

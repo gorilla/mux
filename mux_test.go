@@ -1872,7 +1872,7 @@ func newRequest(method, url string) *http.Request {
 	return req
 }
 
-func TestNoMatchMethodErrors(t *testing.T) {
+func TestNoMatchMethodErrorHandler(t *testing.T) {
 	func1 := func(w http.ResponseWriter, r *http.Request) {}
 
 	r := NewRouter()

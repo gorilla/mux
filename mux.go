@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	ErrMethodMismatch = errors.New("Method is Not Allowed")
+	ErrMethodMismatch = errors.New("method is not allowed")
 )
 
 // NewRouter returns a new router instance.
