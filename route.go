@@ -53,21 +53,26 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 		return false
 	}
 
+	var matchErr error
+
 	// Match everything.
 	for _, m := range r.matchers {
 		if matched := m.Match(req, match); !matched {
 			if _, ok := m.(methodMatcher); ok {
-				match.MatchErr = ErrMethodMismatch
+				matchErr = ErrMethodMismatch
 				continue
 			}
+			matchErr = nil
 			return false
 		}
 	}
 
-	if match.MatchErr != nil {
+	if matchErr != nil {
+		match.MatchErr = matchErr
 		return false
 	}
 
+	match.MatchErr = nil
 	// Yay, we have a match. Let's collect some info about it.
 	if match.Route == nil {
 		match.Route = r

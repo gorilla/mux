@@ -43,6 +43,10 @@ func NewRouter() *Router {
 type Router struct {
 	// Configurable Handler to be used when no route matches.
 	NotFoundHandler http.Handler
+
+	// Configurable Handler to be used request has method mismatch with route
+	MethodNotAllowedHandler http.Handler
+
 	// Parent route, if this is a subrouter.
 	parent parentRoute
 	// Routes to be matched, in order.
@@ -67,6 +71,11 @@ func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 		if route.Match(req, match) {
 			return true
 		}
+	}
+
+	if match.MatchErr == ErrMethodMismatch && r.MethodNotAllowedHandler != nil {
+		match.Handler = r.MethodNotAllowedHandler
+		return true
 	}
 
 	// Closest match for a router (includes sub-routers)
