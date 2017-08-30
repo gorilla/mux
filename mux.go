@@ -44,7 +44,7 @@ type Router struct {
 	// Configurable Handler to be used when no route matches.
 	NotFoundHandler http.Handler
 
-	// Configurable Handler to be used request has method mismatch with route
+	// Configurable Handler to be used when the request method does not match the route.
 	MethodNotAllowedHandler http.Handler
 
 	// Parent route, if this is a subrouter.
