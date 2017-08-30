@@ -1896,7 +1896,7 @@ func TestNoMatchMethodErrorHandler(t *testing.T) {
 		t.Errorf("Expecting code %v", 405)
 	}
 
-	//Add matching route now
+	// Add matching route
 	r.HandleFunc("/", func1).Methods("PUT")
 
 	match = new(RouteMatch)
