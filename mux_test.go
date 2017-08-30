@@ -1871,3 +1871,42 @@ func newRequest(method, url string) *http.Request {
 	}
 	return req
 }
+
+func TestNoMatchMethodErrorHandler(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	r.HandleFunc("/", func1).Methods("GET", "POST")
+
+	req, _ := http.NewRequest("PUT", "http://localhost/", nil)
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+
+	if matched {
+		t.Error("Should not have matched route for methods")
+	}
+
+	if match.MatchErr != ErrMethodMismatch {
+		t.Error("Should get ErrMethodMismatch error")
+	}
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 405 {
+		t.Errorf("Expecting code %v", 405)
+	}
+
+	//Add matching route now
+	r.HandleFunc("/", func1).Methods("PUT")
+
+	match = new(RouteMatch)
+	matched = r.Match(req, match)
+
+	if !matched {
+		t.Error("Should have matched route for methods")
+	}
+
+	if match.MatchErr != nil {
+		t.Error("Should not have any matching error. Found:", match.MatchErr)
+	}
+}
