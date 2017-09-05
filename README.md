@@ -274,7 +274,7 @@ This also works for host and query value variables:
 r := mux.NewRouter()
 r.Host("{subdomain}.domain.com").
   Path("/articles/{category}/{id:[0-9]+}").
-  Queries("filter", "{filter}")
+  Queries("filter", "{filter}").
   HandlerFunc(ArticleHandler).
   Name("article")
 
