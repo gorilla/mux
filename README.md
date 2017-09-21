@@ -135,6 +135,14 @@ r.HandleFunc("/products", ProductsHandler).
   Schemes("http")
 ```
 
+Routes are tested in the order they were added to the router. If two routes match, the first one wins:
+
+```go
+r := mux.NewRouter()
+r.HandleFunc("/specific", specificHandler)
+r.PathPrefix("/").Handler(catchAllHandler)
+```
+
 Setting the same matching conditions again and again can be boring, so we have a way to group several routes that share the same requirements. We call it "subrouting".
 
 For example, let's say we have several URLs that should only match when the host is `www.example.com`. Create a route for that host and get a "subrouter" from it:
