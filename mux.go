@@ -63,6 +63,8 @@ type Router struct {
 	KeepContext bool
 	// see Router.UseEncodedPath(). This defines a flag for all routes.
 	useEncodedPath bool
+	// Slice of middlewares to be called after a match is found
+	middlewares []middleware
 }
 
 // Match attempts to match the given request against the router's registered routes.
@@ -79,6 +81,12 @@ type Router struct {
 func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 	for _, route := range r.routes {
 		if route.Match(req, match) {
+			// Build middleware chain if no error was found
+			if match.MatchErr == nil {
+				for i := len(r.middlewares) - 1; i >= 0; i-- {
+					match.Handler = r.middlewares[i].Middleware(match.Handler)
+				}
+			}
 			return true
 		}
 	}
@@ -147,6 +155,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.KeepContext {
 		defer contextClear(req)
 	}
+
 	handler.ServeHTTP(w, req)
 }
 
