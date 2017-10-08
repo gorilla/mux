@@ -163,6 +163,19 @@ func (r *Router) StrictSlash(value bool) *Router {
 	return r
 }
 
+// StrictRouting serves as a clearer version of StrictSlash. It does the
+// the opposite of StrictSlash.
+//
+// When true, if the route path is "/path", accessing "/path/" will not much
+// this route and vice verse.
+//
+// When false, if the route path is "/path", accessing "/path" will redirect
+// to the former and vice verse. In other words, your application will always
+// see the path as specified in the route.
+func (r *Router) StrictRouting(value bool) *Router {
+	return r.StrictSlash(!value)
+}
+
 // SkipClean defines the path cleaning behaviour for new routes. The initial
 // value is false. Users should be careful about which routes are not cleaned
 //
