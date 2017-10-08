@@ -1722,15 +1722,15 @@ type TestA301ResponseWriter struct {
 	status int
 }
 
-func (ho TestA301ResponseWriter) Header() http.Header {
+func (ho *TestA301ResponseWriter) Header() http.Header {
 	return http.Header(ho.hh)
 }
 
-func (ho TestA301ResponseWriter) Write(b []byte) (int, error) {
+func (ho *TestA301ResponseWriter) Write(b []byte) (int, error) {
 	return 0, nil
 }
 
-func (ho TestA301ResponseWriter) WriteHeader(code int) {
+func (ho *TestA301ResponseWriter) WriteHeader(code int) {
 	ho.status = code
 }
 
