@@ -1343,6 +1343,80 @@ func TestStrictSlash(t *testing.T) {
 	}
 }
 
+func TestStrictRouting(t *testing.T) {
+	r := NewRouter()
+	r.StrictRouting(false)
+
+	tests := []routeTest{
+		{
+			title:          "Redirect path without slash",
+			route:          r.NewRoute().Path("/111/"),
+			request:        newRequest("GET", "http://localhost/111"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/111/",
+			shouldMatch:    true,
+			shouldRedirect: true,
+		},
+		{
+			title:          "Do not redirect path with slash",
+			route:          r.NewRoute().Path("/111/"),
+			request:        newRequest("GET", "http://localhost/111/"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/111/",
+			shouldMatch:    true,
+			shouldRedirect: false,
+		},
+		{
+			title:          "Redirect path with slash",
+			route:          r.NewRoute().Path("/111"),
+			request:        newRequest("GET", "http://localhost/111/"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/111",
+			shouldMatch:    true,
+			shouldRedirect: true,
+		},
+		{
+			title:          "Do not redirect path without slash",
+			route:          r.NewRoute().Path("/111"),
+			request:        newRequest("GET", "http://localhost/111"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/111",
+			shouldMatch:    true,
+			shouldRedirect: false,
+		},
+		{
+			title:          "Propagate StrictRouting to subrouters",
+			route:          r.NewRoute().PathPrefix("/static/").Subrouter().Path("/images/"),
+			request:        newRequest("GET", "http://localhost/static/images"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/static/images/",
+			shouldMatch:    true,
+			shouldRedirect: true,
+		},
+		{
+			title:          "Ignore StrictRouting for path prefix",
+			route:          r.NewRoute().PathPrefix("/static/"),
+			request:        newRequest("GET", "http://localhost/static/logo.png"),
+			vars:           map[string]string{},
+			host:           "",
+			path:           "/static/",
+			shouldMatch:    true,
+			shouldRedirect: false,
+		},
+	}
+
+	for _, test := range tests {
+		testRoute(t, test)
+		testTemplate(t, test)
+		testUseEscapedRoute(t, test)
+	}
+}
+
 func TestUseEncodedPath(t *testing.T) {
 	r := NewRouter()
 	r.UseEncodedPath()
