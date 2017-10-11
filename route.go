@@ -608,6 +608,44 @@ func (r *Route) GetPathRegexp() (string, error) {
 	return r.regexp.path.regexp.String(), nil
 }
 
+// GetQueriesRegexp returns the expanded regular expressions used to match the
+// route queries.
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An empty list will be returned if the route does not have queries.
+func (r *Route) GetQueriesRegexp() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.regexp == nil || r.regexp.queries == nil {
+		return nil, errors.New("mux: route doesn't have queries")
+	}
+	var queries []string
+	for _, query := range r.regexp.queries {
+		queries = append(queries, query.regexp.String())
+	}
+	return queries, nil
+}
+
+// GetQueriesTemplates returns the templates used to build the
+// query matching.
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An empty list will be returned if the route does not define queries.
+func (r *Route) GetQueriesTemplates() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.regexp == nil || r.regexp.queries == nil {
+		return nil, errors.New("mux: route doesn't have queries")
+	}
+	var queries []string
+	for _, query := range r.regexp.queries {
+		queries = append(queries, query.template)
+	}
+	return queries, nil
+}
+
 // GetMethods returns the methods the route matches against
 // This is useful for building simple REST API documentation and for instrumentation
 // against third-party services.
