@@ -412,12 +412,12 @@ func setCurrentRoute(r *http.Request, val interface{}) *http.Request {
 // getPath returns the escaped path if possible; doing what URL.EscapedPath()
 // which was added in go1.5 does
 func getPath(req *http.Request) string {
-	if req.RequestURI != "" {
+	if req.URL.RequestURI() != "" {
 		// Extract the path from RequestURI (which is escaped unlike URL.Path)
 		// as detailed here as detailed in https://golang.org/pkg/net/url/#URL
 		// for < 1.5 server side workaround
 		// http://localhost/path/here?v=1 -> /path/here
-		path := req.RequestURI
+		path := req.URL.RequestURI()
 		path = strings.TrimPrefix(path, req.URL.Scheme+`://`)
 		path = strings.TrimPrefix(path, req.URL.Host)
 		if i := strings.LastIndex(path, "?"); i > -1 {
