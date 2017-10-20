@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"path"
 	"regexp"
-	"strings"
 )
 
 var (
@@ -94,7 +93,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.skipClean {
 		path := req.URL.Path
 		if r.useEncodedPath {
-			path = getPath(req)
+			path = req.URL.EscapedPath()
 		}
 		// Clean path to canonical form and redirect.
 		if p := cleanPath(path); p != path {
@@ -408,28 +407,6 @@ func setCurrentRoute(r *http.Request, val interface{}) *http.Request {
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
-
-// getPath returns the escaped path if possible; doing what URL.EscapedPath()
-// which was added in go1.5 does
-func getPath(req *http.Request) string {
-	if req.RequestURI != "" {
-		// Extract the path from RequestURI (which is escaped unlike URL.Path)
-		// as detailed here as detailed in https://golang.org/pkg/net/url/#URL
-		// for < 1.5 server side workaround
-		// http://localhost/path/here?v=1 -> /path/here
-		path := req.RequestURI
-		path = strings.TrimPrefix(path, req.URL.Scheme+`://`)
-		path = strings.TrimPrefix(path, req.URL.Host)
-		if i := strings.LastIndex(path, "?"); i > -1 {
-			path = path[:i]
-		}
-		if i := strings.LastIndex(path, "#"); i > -1 {
-			path = path[:i]
-		}
-		return path
-	}
-	return req.URL.Path
-}
 
 // cleanPath returns the canonical path for p, eliminating . and .. elements.
 // Borrowed from the net/http package.
