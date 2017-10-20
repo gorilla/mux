@@ -1877,6 +1877,30 @@ func TestSubrouterHeader(t *testing.T) {
 	}
 }
 
+func TestGetInformation(t *testing.T) {
+	infoTests := []struct {
+		route    *Route
+		info     string
+		expected string
+		err      error
+	}{
+		{new(Route), InformationMethods, "", nil},
+		{new(Route).Methods("GET"), InformationMethods, "GET", nil},
+		{new(Route).Methods("GET", "POST"), InformationMethods, "GET,POST", nil},
+		{new(Route).Methods("GET").Methods("POST"), InformationMethods, "GET,POST", nil},
+	}
+
+	for _, test := range infoTests {
+		actual, err := test.route.GetInformation(test.info)
+		if actual != test.expected {
+			t.Errorf("Expected result '%s', got '%s' when retrieving '%s'", test.expected, actual, test.info)
+		}
+		if err != test.err {
+			t.Errorf("Expected error '%v', got '%v' when retrieving '%s'", test.err, err.Error(), test.info)
+		}
+	}
+}
+
 // mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int

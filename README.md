@@ -28,6 +28,7 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * [Registered URLs](#registered-urls)
 * [Walking Routes](#walking-routes)
 * [Full Example](#full-example)
+* [Retrieving Information](#retrieving-information)
 
 ---
 
@@ -407,6 +408,31 @@ func main() {
 
 	// Bind to a port and pass our router in
 	log.Fatal(http.ListenAndServe(":8000", r))
+}
+```
+
+## Retrieving Information
+
+Using Walk and GetInformation it is possible to build a list of all the routes for a Router:
+
+```go
+r := mux.NewRouter()
+r.HandleFunc("/", HomeHandler).Methods("GET")
+r.HandleFunc("/products", ProductsHandler).Methods("GET", "POST")
+r.HandleFunc("/articles", ArticlesHandler).Methods("GET")
+if err := r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+    template, err := route.GetPathTemplate()
+    if err != nil {
+        return err
+    }
+    method, err := route.GetInformation(mux.InformationMethods)
+    if err != nil {
+        return err
+    }
+    fmt.Println("[" + method + "]: " + template)
+    return nil
+}); err != nil {
+    // Handle error
 }
 ```
 
