@@ -14,6 +14,7 @@ import (
 
 var (
 	ErrMethodMismatch = errors.New("method is not allowed")
+	ErrNotFound       = errors.New("no matching route was found")
 )
 
 // NewRouter returns a new router instance.
@@ -72,16 +73,23 @@ func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 		}
 	}
 
-	if match.MatchErr == ErrMethodMismatch && r.MethodNotAllowedHandler != nil {
-		match.Handler = r.MethodNotAllowedHandler
-		return true
+	if match.MatchErr == ErrMethodMismatch {
+		if r.MethodNotAllowedHandler != nil {
+			match.Handler = r.MethodNotAllowedHandler
+			return true
+		} else {
+			return false
+		}
 	}
 
 	// Closest match for a router (includes sub-routers)
 	if r.NotFoundHandler != nil {
 		match.Handler = r.NotFoundHandler
+		match.MatchErr = ErrNotFound
 		return true
 	}
+
+	match.MatchErr = ErrNotFound
 	return false
 }
 
