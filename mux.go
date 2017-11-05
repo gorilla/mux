@@ -74,7 +74,7 @@ type Router struct {
 // then this function returns false. If available, a reason for the match failure
 // will be filled in the match argument's MatchErr field. If the match failure type
 // (eg: not found) has a registered handler, the handler is assigned to the Handler
-// field of the the match argument.
+// field of the match argument.
 func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 	for _, route := range r.routes {
 		if route.Match(req, match) {
