@@ -73,7 +73,7 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	}
 
 	if match.MatchErr == ErrMethodMismatch {
-		// We found a non-mismatching route, clear MatchErr
+		// We found a route which matches request method, clear MatchErr
 		match.MatchErr = nil
 	}
 
