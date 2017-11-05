@@ -1877,6 +1877,96 @@ func TestSubrouterHeader(t *testing.T) {
 	}
 }
 
+func TestNoMatchMethodErrorHandler(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	r.HandleFunc("/", func1).Methods("GET", "POST")
+
+	req, _ := http.NewRequest("PUT", "http://localhost/", nil)
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+
+	if matched {
+		t.Error("Should not have matched route for methods")
+	}
+
+	if match.MatchErr != ErrMethodMismatch {
+		t.Error("Should get ErrMethodMismatch error")
+	}
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != 405 {
+		t.Errorf("Expecting code %v", 405)
+	}
+
+	// Add matching route
+	r.HandleFunc("/", func1).Methods("PUT")
+
+	match = new(RouteMatch)
+	matched = r.Match(req, match)
+
+	if !matched {
+		t.Error("Should have matched route for methods")
+	}
+
+	if match.MatchErr != nil {
+		t.Error("Should not have any matching error. Found:", match.MatchErr)
+	}
+}
+
+func TestErrMatchNotFound(t *testing.T) {
+	emptyHandler := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	r.HandleFunc("/", emptyHandler)
+	s := r.PathPrefix("/sub/").Subrouter()
+	s.HandleFunc("/", emptyHandler)
+
+	// Regular 404 not found
+	req, _ := http.NewRequest("GET", "/sub/whatever", nil)
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+
+	if matched {
+		t.Errorf("Subrouter should not have matched that, got %v", match.Route)
+	}
+	// Even without a custom handler, MatchErr is set to ErrNotFound
+	if match.MatchErr != ErrNotFound {
+		t.Errorf("Expected ErrNotFound MatchErr, but was %v", match.MatchErr)
+	}
+
+	// Now lets add a 404 handler to subrouter
+	s.NotFoundHandler = http.NotFoundHandler()
+	req, _ = http.NewRequest("GET", "/sub/whatever", nil)
+
+	// Test the subrouter first
+	match = new(RouteMatch)
+	matched = s.Match(req, match)
+	// Now we should get a match
+	if !matched {
+		t.Errorf("Subrouter should have matched %s", req.RequestURI)
+	}
+	// But MatchErr should be set to ErrNotFound anyway
+	if match.MatchErr != ErrNotFound {
+		t.Errorf("Expected ErrNotFound MatchErr, but was %v", match.MatchErr)
+	}
+
+	// Now test the parent (MatchErr should propagate)
+	match = new(RouteMatch)
+	matched = r.Match(req, match)
+
+	// Now we should get a match
+	if !matched {
+		t.Errorf("Router should have matched %s via subrouter", req.RequestURI)
+	}
+	// But MatchErr should be set to ErrNotFound anyway
+	if match.MatchErr != ErrNotFound {
+		t.Errorf("Expected ErrNotFound MatchErr, but was %v", match.MatchErr)
+	}
+}
+
 // mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int
@@ -1942,43 +2032,4 @@ func newRequest(method, url string) *http.Request {
 		panic(err)
 	}
 	return req
-}
-
-func TestNoMatchMethodErrorHandler(t *testing.T) {
-	func1 := func(w http.ResponseWriter, r *http.Request) {}
-
-	r := NewRouter()
-	r.HandleFunc("/", func1).Methods("GET", "POST")
-
-	req, _ := http.NewRequest("PUT", "http://localhost/", nil)
-	match := new(RouteMatch)
-	matched := r.Match(req, match)
-
-	if matched {
-		t.Error("Should not have matched route for methods")
-	}
-
-	if match.MatchErr != ErrMethodMismatch {
-		t.Error("Should get ErrMethodMismatch error")
-	}
-
-	resp := NewRecorder()
-	r.ServeHTTP(resp, req)
-	if resp.Code != 405 {
-		t.Errorf("Expecting code %v", 405)
-	}
-
-	// Add matching route
-	r.HandleFunc("/", func1).Methods("PUT")
-
-	match = new(RouteMatch)
-	matched = r.Match(req, match)
-
-	if !matched {
-		t.Error("Should have matched route for methods")
-	}
-
-	if match.MatchErr != nil {
-		t.Error("Should not have any matching error. Found:", match.MatchErr)
-	}
 }
