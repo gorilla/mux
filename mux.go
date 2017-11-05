@@ -64,7 +64,17 @@ type Router struct {
 	useEncodedPath bool
 }
 
-// Match matches registered routes against the request.
+// Match attempts to match the given request against the router's registered routes.
+//
+// If the request matches a route of this router or one of its subrouters the Route,
+// Handler, and Vars fields of the the match argument are filled and this function
+// returns true.
+//
+// If the request does not match any of this router's or its subrouters' routes
+// then this function returns false. If available, a reason for the match failure
+// will be filled in the match argument's MatchErr field. If the match failure type
+// (eg: not found) has a registered handler, the handler is assigned to the Handler
+// field of the match argument.
 func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 	for _, route := range r.routes {
 		if route.Match(req, match) {
