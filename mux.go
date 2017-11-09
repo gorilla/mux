@@ -196,10 +196,6 @@ func (r *Router) SkipClean(value bool) *Router {
 // UseEncodedPath tells the router to match the encoded original path
 // to the routes.
 // For eg. "/path/foo%2Fbar/to" will match the path "/path/{var}/to".
-// This behavior has the drawback of needing to match routes against
-// r.RequestURI instead of r.URL.Path. Any modifications (such as http.StripPrefix)
-// to r.URL.Path will not affect routing when this flag is on and thus may
-// induce unintended behavior.
 //
 // If not called, the router will match the unencoded path to the routes.
 // For eg. "/path/foo%2Fbar/to" will match the path "/path/foo/bar/to"
