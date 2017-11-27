@@ -1985,22 +1985,22 @@ type methodsSubrouterTest struct {
 func TestMethodsSubrouter(t *testing.T) {
 	flags1 := make([]bool, 3)
 	router1 := NewRouter()
-	methods1 := []string{http.MethodGet, http.MethodPost, http.MethodDelete}
-	router1.Methods(http.MethodGet, http.MethodHead).Subrouter().HandleFunc("/foo", func(http.ResponseWriter, *http.Request) { flags1[0] = true })
-	router1.Methods(http.MethodPost).Subrouter().HandleFunc("/foo", func(http.ResponseWriter, *http.Request) { flags1[1] = true })
-	router1.Methods(http.MethodDelete).Subrouter().HandleFunc("/foo", func(http.ResponseWriter, *http.Request) { flags1[2] = true })
+	methods1 := []string{"GET", "POST", "DELETE"}
+	router1.Methods("GET", "HEAD").Subrouter().HandleFunc("/foo", func(http.ResponseWriter, *http.Request) { flags1[0] = true })
+	router1.Methods("POST").Subrouter().HandleFunc("/foo", func(http.ResponseWriter, *http.Request) { flags1[1] = true })
+	router1.Methods("DELETE").Subrouter().HandleFunc("/foo", func(http.ResponseWriter, *http.Request) { flags1[2] = true })
 
 	flags2 := make([]bool, 3)
 	router2 := NewRouter()
-	methods2 := []string{http.MethodGet, http.MethodPost, http.MethodPut}
+	methods2 := []string{"GET", "POST", "PUT"}
 	sub2 := router2.PathPrefix("/").Subrouter()
-	sub2.StrictSlash(true).Path("/foo").Methods(http.MethodGet).HandlerFunc(func(http.ResponseWriter, *http.Request) { flags2[0] = true })
-	sub2.StrictSlash(true).Path("/foo/").Methods(http.MethodPost).HandlerFunc(func(http.ResponseWriter, *http.Request) { flags2[1] = true })
-	sub2.StrictSlash(true).Path("/foo/").Methods(http.MethodPut).HandlerFunc(func(http.ResponseWriter, *http.Request) { flags2[2] = true })
+	sub2.StrictSlash(true).Path("/foo").Methods("GET").HandlerFunc(func(http.ResponseWriter, *http.Request) { flags2[0] = true })
+	sub2.StrictSlash(true).Path("/foo/").Methods("POST").HandlerFunc(func(http.ResponseWriter, *http.Request) { flags2[1] = true })
+	sub2.StrictSlash(true).Path("/foo/").Methods("PUT").HandlerFunc(func(http.ResponseWriter, *http.Request) { flags2[2] = true })
 
 	flags3 := make([]bool, 4)
 	router3 := NewRouter()
-	methods3 := []string{http.MethodPost, http.MethodDelete, http.MethodPut, http.MethodPost}
+	methods3 := []string{"POST", "DELETE", "PUT", "POST"}
 	router3.PathPrefix("/1").Methods(methods3[0]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags3[0] = true })
 	router3.PathPrefix("/1").Methods(methods3[1]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags3[1] = true })
 	router3.PathPrefix("/1").Methods(methods3[2]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags3[2] = true })
@@ -2008,7 +2008,7 @@ func TestMethodsSubrouter(t *testing.T) {
 
 	flags4 := make([]bool, 5)
 	router4 := NewRouter()
-	methods4 := []string{http.MethodPost, http.MethodGet, http.MethodPatch, http.MethodPut, http.MethodPost}
+	methods4 := []string{"POST", "GET", "PATCH", "PUT", "POST"}
 	sub4 := router4.PathPrefix("/1").Subrouter()
 	sub4.Methods(methods4[0]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags4[0] = true })
 	sub4.Methods(methods4[1]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags4[1] = true })
@@ -2018,7 +2018,7 @@ func TestMethodsSubrouter(t *testing.T) {
 
 	flags5 := make([]bool, 4)
 	router5 := NewRouter()
-	methods5 := []string{http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodPut}
+	methods5 := []string{"GET", "POST", "DELETE", "PUT"}
 	router5.Methods(methods5[0]).Subrouter().HandleFunc("/foo", func(http.ResponseWriter, *http.Request) { flags5[0] = true })
 	router5.Methods(methods5[1]).Subrouter().HandleFunc("/{any}", func(http.ResponseWriter, *http.Request) { flags5[1] = true })
 	router5.Methods(methods5[2]).Subrouter().HandleFunc("/1/{any}", func(http.ResponseWriter, *http.Request) { flags5[2] = true })
@@ -2030,7 +2030,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router1,
 			flags:   flags1,
 			methods: methods1,
-			method:  http.MethodGet,
+			method:  "GET",
 			path:    "http://localhost/foo",
 		},
 		{
@@ -2038,7 +2038,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router1,
 			flags:   flags1,
 			methods: methods1,
-			method:  http.MethodPost,
+			method:  "POST",
 			path:    "http://localhost/foo",
 		},
 		{
@@ -2046,7 +2046,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router1,
 			flags:   flags1,
 			methods: methods1,
-			method:  http.MethodDelete,
+			method:  "DELETE",
 			path:    "http://localhost/foo",
 		},
 		{
@@ -2054,7 +2054,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:   router1,
 			flags:    flags1,
 			methods:  methods1,
-			method:   http.MethodPut,
+			method:   "PUT",
 			path:     "http://localhost/foo",
 			wantCode: http.StatusMethodNotAllowed,
 		},
@@ -2063,7 +2063,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router2,
 			flags:   flags2,
 			methods: methods2,
-			method:  http.MethodPost,
+			method:  "POST",
 			path:    "http://localhost/foo/",
 		},
 		{
@@ -2071,7 +2071,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router2,
 			flags:   flags2,
 			methods: methods2,
-			method:  http.MethodGet,
+			method:  "GET",
 			path:    "http://localhost/foo",
 		},
 		{
@@ -2079,7 +2079,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:     router2,
 			flags:      flags2,
 			methods:    methods2,
-			method:     http.MethodPost,
+			method:     "POST",
 			path:       "http://localhost/foo",
 			redirectTo: "http://localhost/foo/",
 		},
@@ -2088,7 +2088,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:     router2,
 			flags:      flags2,
 			methods:    methods2,
-			method:     http.MethodGet,
+			method:     "GET",
 			path:       "http://localhost/foo/",
 			redirectTo: "http://localhost/foo",
 		},
@@ -2097,7 +2097,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:   router2,
 			flags:    flags2,
 			methods:  methods2,
-			method:   http.MethodDelete,
+			method:   "DELETE",
 			path:     "http://localhost/foo",
 			wantCode: http.StatusMethodNotAllowed,
 		},
@@ -2106,7 +2106,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router3,
 			flags:   flags3,
 			methods: methods3,
-			method:  http.MethodPost,
+			method:  "POST",
 			path:    "http://localhost/1/2",
 		},
 		{
@@ -2114,7 +2114,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router3,
 			flags:   flags3,
 			methods: methods3,
-			method:  http.MethodDelete,
+			method:  "DELETE",
 			path:    "http://localhost/1/2",
 		},
 		{
@@ -2122,7 +2122,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router3,
 			flags:   flags3,
 			methods: methods3,
-			method:  http.MethodPut,
+			method:  "PUT",
 			path:    "http://localhost/1/2",
 		},
 		{
@@ -2130,7 +2130,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:   router3,
 			flags:    flags3,
 			methods:  methods3,
-			method:   http.MethodPatch,
+			method:   "PATCH",
 			path:     "http://localhost/1/2",
 			wantCode: http.StatusMethodNotAllowed,
 		},
@@ -2139,7 +2139,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router4,
 			flags:   flags4,
 			methods: methods4,
-			method:  http.MethodPost,
+			method:  "POST",
 			path:    "http://localhost/1/2",
 		},
 		{
@@ -2147,7 +2147,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router4,
 			flags:   flags4,
 			methods: methods4,
-			method:  http.MethodGet,
+			method:  "GET",
 			path:    "http://localhost/1/2",
 		},
 		{
@@ -2155,7 +2155,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router4,
 			flags:   flags4,
 			methods: methods4,
-			method:  http.MethodPatch,
+			method:  "PATCH",
 			path:    "http://localhost/1/2",
 		},
 		{
@@ -2163,7 +2163,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router4,
 			flags:   flags4,
 			methods: methods4,
-			method:  http.MethodPut,
+			method:  "PUT",
 			path:    "http://localhost/1/2",
 		},
 		{
@@ -2171,7 +2171,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:   router4,
 			flags:    flags4,
 			methods:  methods4,
-			method:   http.MethodDelete,
+			method:   "DELETE",
 			path:     "http://localhost/1/2",
 			wantCode: http.StatusMethodNotAllowed,
 		},
@@ -2180,7 +2180,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router5,
 			flags:   flags5,
 			methods: methods5,
-			method:  http.MethodGet,
+			method:  "GET",
 			path:    "http://localhost/foo",
 		},
 		{
@@ -2188,7 +2188,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router5,
 			flags:   flags5,
 			methods: methods5,
-			method:  http.MethodPost,
+			method:  "POST",
 			path:    "http://localhost/foo",
 		},
 		{
@@ -2196,7 +2196,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router5,
 			flags:   flags5,
 			methods: methods5,
-			method:  http.MethodDelete,
+			method:  "DELETE",
 			path:    "http://localhost/1/foo",
 		},
 		{
@@ -2204,7 +2204,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:  router5,
 			flags:   flags5,
 			methods: methods5,
-			method:  http.MethodPut,
+			method:  "PUT",
 			path:    "http://localhost/1/foo",
 		},
 		{
@@ -2212,7 +2212,7 @@ func TestMethodsSubrouter(t *testing.T) {
 			router:   router5,
 			flags:    flags5,
 			methods:  methods5,
-			method:   http.MethodPatch,
+			method:   "PATCH",
 			path:     "http://localhost/1/foo",
 			wantCode: http.StatusMethodNotAllowed,
 		},
