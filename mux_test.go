@@ -1967,6 +1967,314 @@ func TestErrMatchNotFound(t *testing.T) {
 	}
 }
 
+// methodsSubrouterTest models the data necessary for testing handler
+// matching for subrouters created with set HTTP methods.
+type methodsSubrouterTest struct {
+	title      string
+	router     *Router
+	flags      []bool
+	methods    []string
+	method     string
+	path       string
+	redirectTo string
+	wantCode   int
+}
+
+// TestMethodsSubrouter tests the correct matching of handlers for
+// subrouters registered after a route's method-matcher is set.
+func TestMethodsSubrouter(t *testing.T) {
+	flags1 := make([]bool, 3)
+	router1 := NewRouter()
+	methods1 := []string{http.MethodGet, http.MethodPost, http.MethodDelete}
+	router1.Methods(http.MethodGet, http.MethodHead).Subrouter().HandleFunc("/foo", func(http.ResponseWriter, *http.Request) { flags1[0] = true })
+	router1.Methods(http.MethodPost).Subrouter().HandleFunc("/foo", func(http.ResponseWriter, *http.Request) { flags1[1] = true })
+	router1.Methods(http.MethodDelete).Subrouter().HandleFunc("/foo", func(http.ResponseWriter, *http.Request) { flags1[2] = true })
+
+	flags2 := make([]bool, 3)
+	router2 := NewRouter()
+	methods2 := []string{http.MethodGet, http.MethodPost, http.MethodPut}
+	sub2 := router2.PathPrefix("/").Subrouter()
+	sub2.StrictSlash(true).Path("/foo").Methods(http.MethodGet).HandlerFunc(func(http.ResponseWriter, *http.Request) { flags2[0] = true })
+	sub2.StrictSlash(true).Path("/foo/").Methods(http.MethodPost).HandlerFunc(func(http.ResponseWriter, *http.Request) { flags2[1] = true })
+	sub2.StrictSlash(true).Path("/foo/").Methods(http.MethodPut).HandlerFunc(func(http.ResponseWriter, *http.Request) { flags2[2] = true })
+
+	flags3 := make([]bool, 4)
+	router3 := NewRouter()
+	methods3 := []string{http.MethodPost, http.MethodDelete, http.MethodPut, http.MethodPost}
+	router3.PathPrefix("/1").Methods(methods3[0]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags3[0] = true })
+	router3.PathPrefix("/1").Methods(methods3[1]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags3[1] = true })
+	router3.PathPrefix("/1").Methods(methods3[2]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags3[2] = true })
+	router3.PathPrefix("/1").Methods(methods3[3]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags3[3] = true })
+
+	flags4 := make([]bool, 5)
+	router4 := NewRouter()
+	methods4 := []string{http.MethodPost, http.MethodGet, http.MethodPatch, http.MethodPut, http.MethodPost}
+	sub4 := router4.PathPrefix("/1").Subrouter()
+	sub4.Methods(methods4[0]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags4[0] = true })
+	sub4.Methods(methods4[1]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags4[1] = true })
+	sub4.Methods(methods4[2]).Subrouter().HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags4[2] = true })
+	sub4.HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags4[3] = true }).Subrouter().Methods(methods4[3])
+	sub4.HandleFunc("/2", func(http.ResponseWriter, *http.Request) { flags4[4] = true }).Subrouter().Methods(methods4[4])
+
+	flags5 := make([]bool, 4)
+	router5 := NewRouter()
+	methods5 := []string{http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodPut}
+	router5.Methods(methods5[0]).Subrouter().HandleFunc("/foo", func(http.ResponseWriter, *http.Request) { flags5[0] = true })
+	router5.Methods(methods5[1]).Subrouter().HandleFunc("/{any}", func(http.ResponseWriter, *http.Request) { flags5[1] = true })
+	router5.Methods(methods5[2]).Subrouter().HandleFunc("/1/{any}", func(http.ResponseWriter, *http.Request) { flags5[2] = true })
+	router5.Methods(methods5[3]).Subrouter().HandleFunc("/1/{any}", func(http.ResponseWriter, *http.Request) { flags5[3] = true })
+
+	tests := []methodsSubrouterTest{
+		{
+			title:   "router1, match GET handler",
+			router:  router1,
+			flags:   flags1,
+			methods: methods1,
+			method:  http.MethodGet,
+			path:    "http://localhost/foo",
+		},
+		{
+			title:   "router1, match POST handler",
+			router:  router1,
+			flags:   flags1,
+			methods: methods1,
+			method:  http.MethodPost,
+			path:    "http://localhost/foo",
+		},
+		{
+			title:   "router1, match DELETE handler",
+			router:  router1,
+			flags:   flags1,
+			methods: methods1,
+			method:  http.MethodDelete,
+			path:    "http://localhost/foo",
+		},
+		{
+			title:    "router1, disallow PUT method",
+			router:   router1,
+			flags:    flags1,
+			methods:  methods1,
+			method:   http.MethodPut,
+			path:     "http://localhost/foo",
+			wantCode: http.StatusMethodNotAllowed,
+		},
+		{
+			title:   "router2, match POST handler",
+			router:  router2,
+			flags:   flags2,
+			methods: methods2,
+			method:  http.MethodPost,
+			path:    "http://localhost/foo/",
+		},
+		{
+			title:   "router2, match GET handler",
+			router:  router2,
+			flags:   flags2,
+			methods: methods2,
+			method:  http.MethodGet,
+			path:    "http://localhost/foo",
+		},
+		{
+			title:      "router2, match POST handler, redirect strict-slash",
+			router:     router2,
+			flags:      flags2,
+			methods:    methods2,
+			method:     http.MethodPost,
+			path:       "http://localhost/foo",
+			redirectTo: "http://localhost/foo/",
+		},
+		{
+			title:      "router2, match GET handler, redirect strict-slash",
+			router:     router2,
+			flags:      flags2,
+			methods:    methods2,
+			method:     http.MethodGet,
+			path:       "http://localhost/foo/",
+			redirectTo: "http://localhost/foo",
+		},
+		{
+			title:    "router2, disallow DELETE method",
+			router:   router2,
+			flags:    flags2,
+			methods:  methods2,
+			method:   http.MethodDelete,
+			path:     "http://localhost/foo",
+			wantCode: http.StatusMethodNotAllowed,
+		},
+		{
+			title:   "router3, match first POST handler",
+			router:  router3,
+			flags:   flags3,
+			methods: methods3,
+			method:  http.MethodPost,
+			path:    "http://localhost/1/2",
+		},
+		{
+			title:   "router3, match DELETE handler",
+			router:  router3,
+			flags:   flags3,
+			methods: methods3,
+			method:  http.MethodDelete,
+			path:    "http://localhost/1/2",
+		},
+		{
+			title:   "router3, match PUT handler",
+			router:  router3,
+			flags:   flags3,
+			methods: methods3,
+			method:  http.MethodPut,
+			path:    "http://localhost/1/2",
+		},
+		{
+			title:    "router3, disallow PATCH method",
+			router:   router3,
+			flags:    flags3,
+			methods:  methods3,
+			method:   http.MethodPatch,
+			path:     "http://localhost/1/2",
+			wantCode: http.StatusMethodNotAllowed,
+		},
+		{
+			title:   "router4, match first POST handler",
+			router:  router4,
+			flags:   flags4,
+			methods: methods4,
+			method:  http.MethodPost,
+			path:    "http://localhost/1/2",
+		},
+		{
+			title:   "router4, match GET handler",
+			router:  router4,
+			flags:   flags4,
+			methods: methods4,
+			method:  http.MethodGet,
+			path:    "http://localhost/1/2",
+		},
+		{
+			title:   "router4, match PATCH handler",
+			router:  router4,
+			flags:   flags4,
+			methods: methods4,
+			method:  http.MethodPatch,
+			path:    "http://localhost/1/2",
+		},
+		{
+			title:   "router4, match PUT handler",
+			router:  router4,
+			flags:   flags4,
+			methods: methods4,
+			method:  http.MethodPut,
+			path:    "http://localhost/1/2",
+		},
+		{
+			title:    "router4, disallow DELETE method",
+			router:   router4,
+			flags:    flags4,
+			methods:  methods4,
+			method:   http.MethodDelete,
+			path:     "http://localhost/1/2",
+			wantCode: http.StatusMethodNotAllowed,
+		},
+		{
+			title:   "router5, match GET handler",
+			router:  router5,
+			flags:   flags5,
+			methods: methods5,
+			method:  http.MethodGet,
+			path:    "http://localhost/foo",
+		},
+		{
+			title:   "router5, match POST handler",
+			router:  router5,
+			flags:   flags5,
+			methods: methods5,
+			method:  http.MethodPost,
+			path:    "http://localhost/foo",
+		},
+		{
+			title:   "router5, match DELETE handler",
+			router:  router5,
+			flags:   flags5,
+			methods: methods5,
+			method:  http.MethodDelete,
+			path:    "http://localhost/1/foo",
+		},
+		{
+			title:   "router5, match PUT handler",
+			router:  router5,
+			flags:   flags5,
+			methods: methods5,
+			method:  http.MethodPut,
+			path:    "http://localhost/1/foo",
+		},
+		{
+			title:    "router5, disallow PATCH method",
+			router:   router5,
+			flags:    flags5,
+			methods:  methods5,
+			method:   http.MethodPatch,
+			path:     "http://localhost/1/foo",
+			wantCode: http.StatusMethodNotAllowed,
+		},
+	}
+
+	for _, test := range tests {
+		testMethodsSubrouter(t, test)
+	}
+}
+
+// testMethodsSubrouter runs an individual methodsSubrouterTest.
+func testMethodsSubrouter(t *testing.T, test methodsSubrouterTest) {
+	// Reset handler flags
+	for i := 0; i < len(test.flags); i++ {
+		test.flags[i] = false
+	}
+
+	// Execute request
+	req, _ := http.NewRequest(test.method, test.path, nil)
+	resp := NewRecorder()
+	test.router.ServeHTTP(resp, req)
+
+	// Get details on request
+	calledIndex := -1
+	targetIndex := -1
+	for i, flag := range test.flags {
+		if flag {
+			calledIndex = i
+			break
+		}
+	}
+	// Set first appearance of method
+	for i, method := range test.methods {
+		if method == test.method {
+			targetIndex = i
+			break
+		}
+	}
+
+	// Check for negative cases
+	isRedirect := resp.Code == http.StatusMovedPermanently || resp.Code == http.StatusFound
+	isNotAllowedMethod := test.wantCode == http.StatusMethodNotAllowed
+	isCalled := calledIndex != -1
+
+	switch {
+	case isRedirect:
+		if resp.HeaderMap.Get("Location") != test.redirectTo {
+			t.Errorf("(%v) Expected %s route-match to redirect to %s, but got %s", test.title, test.method, test.redirectTo, resp.HeaderMap.Get("Location"))
+		}
+	case isNotAllowedMethod:
+		if isCalled {
+			t.Errorf("(%v) Expected \"405 Method Not Allowed\", but %s handler was called", test.title, test.methods[calledIndex])
+		}
+	default:
+		if calledIndex < 0 {
+			t.Errorf("(%v) Expected %s handler to be called, but no handler was called", test.title, test.method)
+		} else if calledIndex != targetIndex {
+			t.Errorf("(%v) Expected %s handler to be called, but %s handler was called", test.title, test.method, test.methods[calledIndex])
+		}
+	}
+}
+
 // mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int
