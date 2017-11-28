@@ -75,6 +75,8 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	if match.MatchErr == ErrMethodMismatch {
 		// We found a route which matches request method, clear MatchErr
 		match.MatchErr = nil
+		// Then override the mis-matched handler
+		match.Handler = r.handler
 	}
 
 	// Yay, we have a match. Let's collect some info about it.
