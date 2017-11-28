@@ -2270,9 +2270,9 @@ func testMethodsSubrouter(t *testing.T, test methodsSubrouterTest) {
 	switch test.wantCode {
 	case http.StatusMethodNotAllowed:
 		if resp.Code != http.StatusMethodNotAllowed {
-			t.Errorf("(%s) Expected \"405 Method Not Allowed\", but got %d code", test.title, resp.Code)
+			t.Errorf(`(%s) Expected "405 Method Not Allowed", but got %d code`, test.title, resp.Code)
 		} else if matchedMethod := resp.Body.String(); matchedMethod != "" {
-			t.Errorf("(%s) Expected \"405 Method Not Allowed\", but %q handler was called", test.title, matchedMethod)
+			t.Errorf(`(%s) Expected "405 Method Not Allowed", but %q handler was called`, test.title, matchedMethod)
 		}
 
 	case http.StatusMovedPermanently:
