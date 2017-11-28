@@ -1981,230 +1981,287 @@ type methodsSubrouterTest struct {
 	redirectTo string
 }
 
-// TestMethodsSubrouter tests the correct matching of handlers for
-// subrouters registered after a route's method-matcher is set.
-func TestMethodsSubrouter(t *testing.T) {
-	MethodGet := "GET"
-	MethodPost := "POST"
-	MethodPut := "PUT"
-	MethodPatch := "PATCH"
-	MethodDelete := "DELETE"
+// Methods subrouter fixture HTTP methods.
+const (
+	methodGet    = "GET"
+	methodPost   = "POST"
+	methodPut    = "PUT"
+	methodPatch  = "PATCH"
+	methodDelete = "DELETE"
+)
 
-	getHandler := func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(MethodGet)) }
-	postHandler := func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(MethodPost)) }
-	postHandler2 := func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(MethodPost + "2")) }
-	putHandler := func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(MethodPut)) }
-	patchHandler := func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(MethodPatch)) }
-	deleteHandler := func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(MethodDelete)) }
+// Method handlers return the method string.
+var (
+	getHandler    = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(methodGet)) }
+	postHandler   = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(methodPost)) }
+	postHandler2  = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(methodPost + "2")) }
+	putHandler    = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(methodPut)) }
+	patchHandler  = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(methodPatch)) }
+	deleteHandler = func(w http.ResponseWriter, r *http.Request) { w.Write([]byte(methodDelete)) }
+)
 
-	router1 := NewRouter()
-	router1.Methods(MethodGet).Subrouter().HandleFunc("/foo", getHandler)
-	router1.Methods(MethodPost).Subrouter().HandleFunc("/foo", postHandler)
-	router1.Methods(MethodDelete).Subrouter().HandleFunc("/foo", deleteHandler)
+// TestMethodsSubrouterCatchall matches handlers for subrouters where a
+// catchall handler is set for a mis-matching method.
+func TestMethodsSubrouterCatchall(t *testing.T) {
+	t.Parallel()
 
-	router2 := NewRouter()
-	sub2 := router2.PathPrefix("/").Subrouter()
-	sub2.StrictSlash(true).Path("/foo").Methods(MethodGet).HandlerFunc(getHandler)
-	sub2.StrictSlash(true).Path("/foo/").Methods(MethodPost).HandlerFunc(postHandler)
-	sub2.StrictSlash(true).Path("/foo/").Methods(MethodPut).HandlerFunc(putHandler)
-
-	router3 := NewRouter()
-	router3.PathPrefix("/1").Methods(MethodPost).Subrouter().HandleFunc("/2", postHandler)
-	router3.PathPrefix("/1").Methods(MethodDelete).Subrouter().HandleFunc("/2", deleteHandler)
-	router3.PathPrefix("/1").Methods(MethodPut).Subrouter().HandleFunc("/2", putHandler)
-	router3.PathPrefix("/1").Methods(MethodPost).Subrouter().HandleFunc("/2", postHandler2)
-
-	router4 := NewRouter()
-	sub4 := router4.PathPrefix("/1").Subrouter()
-	sub4.Methods(MethodPost).Subrouter().HandleFunc("/2", postHandler)
-	sub4.Methods(MethodGet).Subrouter().HandleFunc("/2", getHandler)
-	sub4.Methods(MethodPatch).Subrouter().HandleFunc("/2", patchHandler)
-	sub4.HandleFunc("/2", putHandler).Subrouter().Methods(MethodPut)
-	sub4.HandleFunc("/2", postHandler2).Subrouter().Methods(MethodPost)
-
-	router5 := NewRouter()
-	router5.Methods(MethodGet).Subrouter().HandleFunc("/foo", getHandler)
-	router5.Methods(MethodPost).Subrouter().HandleFunc("/{any}", postHandler)
-	router5.Methods(MethodDelete).Subrouter().HandleFunc("/1/{any}", deleteHandler)
-	router5.Methods(MethodPut).Subrouter().HandleFunc("/1/{any}", putHandler)
+	router := NewRouter()
+	router.Methods(methodPatch).Subrouter().PathPrefix("/").HandlerFunc(patchHandler)
+	router.Methods(methodGet).Subrouter().HandleFunc("/foo", getHandler)
+	router.Methods(methodPost).Subrouter().HandleFunc("/foo", postHandler)
+	router.Methods(methodDelete).Subrouter().HandleFunc("/foo", deleteHandler)
 
 	tests := []methodsSubrouterTest{
 		{
-			title:    "router1, match GET handler",
-			router:   router1,
+			title:    "match GET handler",
+			router:   router,
 			path:     "http://localhost/foo",
-			method:   MethodGet,
+			method:   methodGet,
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router1, match POST handler",
-			router:   router1,
-			method:   MethodPost,
-			path:     "http://localhost/foo",
-			wantCode: http.StatusOK,
-		},
-		{
-			title:    "router1, match DELETE handler",
-			router:   router1,
-			method:   MethodDelete,
+			title:    "match POST handler",
+			router:   router,
+			method:   methodPost,
 			path:     "http://localhost/foo",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router1, disallow PUT method",
-			router:   router1,
-			method:   MethodPut,
+			title:    "match DELETE handler",
+			router:   router,
+			method:   methodDelete,
+			path:     "http://localhost/foo",
+			wantCode: http.StatusOK,
+		},
+		{
+			title:    "disallow PUT method",
+			router:   router,
+			method:   methodPut,
 			path:     "http://localhost/foo",
 			wantCode: http.StatusMethodNotAllowed,
 		},
+	}
+
+	for _, test := range tests {
+		testMethodsSubrouter(t, test)
+	}
+}
+
+// TestMethodsSubrouterStrictSlash matches handlers on subrouters with
+// strict-slash matchers.
+func TestMethodsSubrouterStrictSlash(t *testing.T) {
+	t.Parallel()
+
+	router := NewRouter()
+	sub := router.PathPrefix("/").Subrouter()
+	sub.StrictSlash(true).Path("/foo").Methods(methodGet).Subrouter().HandleFunc("", getHandler)
+	sub.StrictSlash(true).Path("/foo/").Methods(methodPut).Subrouter().HandleFunc("/", putHandler)
+	sub.StrictSlash(true).Path("/foo/").Methods(methodPost).Subrouter().HandleFunc("/", postHandler)
+
+	tests := []methodsSubrouterTest{
 		{
-			title:    "router2, match POST handler",
-			router:   router2,
-			method:   MethodPost,
+			title:    "match POST handler",
+			router:   router,
+			method:   methodPost,
 			path:     "http://localhost/foo/",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router2, match GET handler",
-			router:   router2,
-			method:   MethodGet,
+			title:    "match GET handler",
+			router:   router,
+			method:   methodGet,
 			path:     "http://localhost/foo",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:      "router2, match POST handler, redirect strict-slash",
-			router:     router2,
-			method:     MethodPost,
+			title:      "match POST handler, redirect strict-slash",
+			router:     router,
+			method:     methodPost,
 			path:       "http://localhost/foo",
 			redirectTo: "http://localhost/foo/",
 			wantCode:   http.StatusMovedPermanently,
 		},
 		{
-			title:      "router2, match GET handler, redirect strict-slash",
-			router:     router2,
-			method:     MethodGet,
+			title:      "match GET handler, redirect strict-slash",
+			router:     router,
+			method:     methodGet,
 			path:       "http://localhost/foo/",
 			redirectTo: "http://localhost/foo",
 			wantCode:   http.StatusMovedPermanently,
 		},
 		{
-			title:    "router2, disallow DELETE method",
-			router:   router2,
-			method:   MethodDelete,
+			title:    "disallow DELETE method",
+			router:   router,
+			method:   methodDelete,
 			path:     "http://localhost/foo",
 			wantCode: http.StatusMethodNotAllowed,
 		},
+	}
+
+	for _, test := range tests {
+		testMethodsSubrouter(t, test)
+	}
+}
+
+// TestMethodsSubrouterPathPrefix matches handlers on subrouters created
+// on a router with a path prefix matcher and method matcher.
+func TestMethodsSubrouterPathPrefix(t *testing.T) {
+	t.Parallel()
+
+	router := NewRouter()
+	router.PathPrefix("/1").Methods(methodPost).Subrouter().HandleFunc("/2", postHandler)
+	router.PathPrefix("/1").Methods(methodDelete).Subrouter().HandleFunc("/2", deleteHandler)
+	router.PathPrefix("/1").Methods(methodPut).Subrouter().HandleFunc("/2", putHandler)
+	router.PathPrefix("/1").Methods(methodPost).Subrouter().HandleFunc("/2", postHandler2)
+
+	tests := []methodsSubrouterTest{
 		{
-			title:    "router3, match first POST handler",
-			router:   router3,
-			method:   MethodPost,
+			title:    "match first POST handler",
+			router:   router,
+			method:   methodPost,
 			path:     "http://localhost/1/2",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router3, match DELETE handler",
-			router:   router3,
-			method:   MethodDelete,
+			title:    "match DELETE handler",
+			router:   router,
+			method:   methodDelete,
 			path:     "http://localhost/1/2",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router3, match PUT handler",
-			router:   router3,
-			method:   MethodPut,
+			title:    "match PUT handler",
+			router:   router,
+			method:   methodPut,
 			path:     "http://localhost/1/2",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router3, disallow PATCH method",
-			router:   router3,
-			method:   MethodPatch,
+			title:    "disallow PATCH method",
+			router:   router,
+			method:   methodPatch,
 			path:     "http://localhost/1/2",
 			wantCode: http.StatusMethodNotAllowed,
 		},
+	}
+
+	for _, test := range tests {
+		testMethodsSubrouter(t, test)
+	}
+}
+
+// TestMethodsSubrouterSubrouter matches handlers on subrouters produced
+// from method matchers registered on a root subrouter.
+func TestMethodsSubrouterSubrouter(t *testing.T) {
+	t.Parallel()
+
+	router := NewRouter()
+	sub := router.PathPrefix("/1").Subrouter()
+	sub.Methods(methodPost).Subrouter().HandleFunc("/2", postHandler)
+	sub.Methods(methodGet).Subrouter().HandleFunc("/2", getHandler)
+	sub.Methods(methodPatch).Subrouter().HandleFunc("/2", patchHandler)
+	sub.HandleFunc("/2", putHandler).Subrouter().Methods(methodPut)
+	sub.HandleFunc("/2", postHandler2).Subrouter().Methods(methodPost)
+
+	tests := []methodsSubrouterTest{
 		{
-			title:    "router4, match first POST handler",
-			router:   router4,
-			method:   MethodPost,
+			title:    "match first POST handler",
+			router:   router,
+			method:   methodPost,
 			path:     "http://localhost/1/2",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router4, match GET handler",
-			router:   router4,
-			method:   MethodGet,
+			title:    "match GET handler",
+			router:   router,
+			method:   methodGet,
 			path:     "http://localhost/1/2",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router4, match PATCH handler",
-			router:   router4,
-			method:   MethodPatch,
+			title:    "match PATCH handler",
+			router:   router,
+			method:   methodPatch,
 			path:     "http://localhost/1/2",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router4, match PUT handler",
-			router:   router4,
-			method:   MethodPut,
+			title:    "match PUT handler",
+			router:   router,
+			method:   methodPut,
 			path:     "http://localhost/1/2",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router4, disallow DELETE method",
-			router:   router4,
-			method:   MethodDelete,
+			title:    "disallow DELETE method",
+			router:   router,
+			method:   methodDelete,
 			path:     "http://localhost/1/2",
 			wantCode: http.StatusMethodNotAllowed,
 		},
+	}
+
+	for _, test := range tests {
+		testMethodsSubrouter(t, test)
+	}
+}
+
+// TestMethodsSubrouterPathVariable matches handlers on matching paths
+// with path variables in them.
+func TestMethodsSubrouterPathVariable(t *testing.T) {
+	t.Parallel()
+
+	router := NewRouter()
+	router.Methods(methodGet).Subrouter().HandleFunc("/foo", getHandler)
+	router.Methods(methodPost).Subrouter().HandleFunc("/{any}", postHandler)
+	router.Methods(methodDelete).Subrouter().HandleFunc("/1/{any}", deleteHandler)
+	router.Methods(methodPut).Subrouter().HandleFunc("/1/{any}", putHandler)
+
+	tests := []methodsSubrouterTest{
 		{
-			title:    "router5, match GET handler",
-			router:   router5,
-			method:   MethodGet,
+			title:    "match GET handler",
+			router:   router,
+			method:   methodGet,
 			path:     "http://localhost/foo",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router5, match POST handler",
-			router:   router5,
-			method:   MethodPost,
+			title:    "match POST handler",
+			router:   router,
+			method:   methodPost,
 			path:     "http://localhost/foo",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router5, match DELETE handler",
-			router:   router5,
-			method:   MethodDelete,
+			title:    "match DELETE handler",
+			router:   router,
+			method:   methodDelete,
 			path:     "http://localhost/1/foo",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router5, match PUT handler",
-			router:   router5,
-			method:   MethodPut,
+			title:    "match PUT handler",
+			router:   router,
+			method:   methodPut,
 			path:     "http://localhost/1/foo",
 			wantCode: http.StatusOK,
 		},
 		{
-			title:    "router5, disallow PATCH method",
-			router:   router5,
-			method:   MethodPatch,
+			title:    "disallow PATCH method",
+			router:   router,
+			method:   methodPatch,
 			path:     "http://localhost/1/foo",
 			wantCode: http.StatusMethodNotAllowed,
 		},
 	}
 
 	for _, test := range tests {
-		t.Run(test.title, func(t *testing.T) {
-			testMethodsSubrouter(t, test)
-		})
+		testMethodsSubrouter(t, test)
 	}
 }
 
 // testMethodsSubrouter runs an individual methodsSubrouterTest.
 func testMethodsSubrouter(t *testing.T, test methodsSubrouterTest) {
-	t.Parallel()
-
 	// Execute request
 	req, _ := http.NewRequest(test.method, test.path, nil)
 	resp := NewRecorder()
@@ -2215,17 +2272,17 @@ func testMethodsSubrouter(t *testing.T, test methodsSubrouterTest) {
 		if resp.Code != http.StatusMethodNotAllowed {
 			t.Errorf("(%s) Expected \"405 Method Not Allowed\", but got %d code", test.title, resp.Code)
 		} else if matchedMethod := resp.Body.String(); matchedMethod != "" {
-			t.Errorf("(%s) Expected \"405 Method Not Allowed\", but %s handler was called", test.title, matchedMethod)
+			t.Errorf("(%s) Expected \"405 Method Not Allowed\", but %q handler was called", test.title, matchedMethod)
 		}
 
 	case http.StatusMovedPermanently:
 		if gotLocation := resp.HeaderMap.Get("Location"); gotLocation != test.redirectTo {
-			t.Errorf("(%s) Expected %s route-match to redirect to %q, but got %q", test.title, test.method, test.redirectTo, gotLocation)
+			t.Errorf("(%s) Expected %q route-match to redirect to %q, but got %q", test.title, test.method, test.redirectTo, gotLocation)
 		}
 
 	case http.StatusOK:
 		if matchedMethod := resp.Body.String(); matchedMethod != test.method {
-			t.Errorf("(%s) Expected %s handler to be called, but %s handler was called", test.title, test.method, matchedMethod)
+			t.Errorf("(%s) Expected %q handler to be called, but %q handler was called", test.title, test.method, matchedMethod)
 		}
 
 	default:
