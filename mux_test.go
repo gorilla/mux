@@ -1609,6 +1609,24 @@ func TestSubrouterErrorHandling(t *testing.T) {
 	}
 }
 
+func TestAddRoute(t *testing.T) {
+	handled := false
+	route := &Route{}
+	route = route.Name("one").Path("/111")
+	route = route.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handled = true
+	})
+
+	router := NewRouter()
+	router.AddRoute(route)
+
+	req, _ := http.NewRequest("GET", "http://localhost/111", nil)
+	router.ServeHTTP(NewRecorder(), req)
+	if !handled {
+		t.Error("Route was not added to the Router.")
+	}
+}
+
 // See: https://github.com/gorilla/mux/issues/200
 func TestPanicOnCapturingGroups(t *testing.T) {
 	defer func() {

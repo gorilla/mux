@@ -253,9 +253,18 @@ func (r *Router) buildVars(m map[string]string) map[string]string {
 
 // NewRoute registers an empty route.
 func (r *Router) NewRoute() *Route {
-	route := &Route{parent: r, strictSlash: r.strictSlash, skipClean: r.skipClean, useEncodedPath: r.useEncodedPath}
-	r.routes = append(r.routes, route)
+	route := &Route{}
+	r.AddRoute(route)
 	return route
+}
+
+// AddRoute registers a route
+func (r *Router) AddRoute(route *Route) {
+	route.parent = r
+	route.strictSlash = r.strictSlash
+	route.skipClean = r.skipClean
+	route.useEncodedPath = r.useEncodedPath
+	r.routes = append(r.routes, route)
 }
 
 // Handle registers a new route with a matcher for the URL path.
