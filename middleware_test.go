@@ -25,12 +25,12 @@ func TestMiddlewareAdd(t *testing.T) {
 
 	mw := &testMiddleware{}
 
-	router.addMiddleware(mw)
+	router.useInterface(mw)
 	if len(router.middlewares) != 1 || router.middlewares[0] != mw {
 		t.Fatal("Middleware was not added correctly")
 	}
 
-	router.AddMiddlewareFunc(mw.Middleware)
+	router.Use(mw.Middleware)
 	if len(router.middlewares) != 2 {
 		t.Fatal("MiddlewareFunc method was not added correctly")
 	}
@@ -38,7 +38,7 @@ func TestMiddlewareAdd(t *testing.T) {
 	banalMw := func(handler http.Handler) http.Handler {
 		return handler
 	}
-	router.AddMiddlewareFunc(banalMw)
+	router.Use(banalMw)
 	if len(router.middlewares) != 3 {
 		t.Fatal("MiddlewareFunc method was not added correctly")
 	}
@@ -49,7 +49,7 @@ func TestMiddleware(t *testing.T) {
 	router.HandleFunc("/", dummyHandler).Methods("GET")
 
 	mw := &testMiddleware{}
-	router.addMiddleware(mw)
+	router.useInterface(mw)
 
 	rw := NewRecorder()
 	req := newRequest("GET", "/")
@@ -75,7 +75,7 @@ func TestMiddleware(t *testing.T) {
 	}
 
 	// Add the middleware again as function
-	router.AddMiddlewareFunc(mw.Middleware)
+	router.Use(mw.Middleware)
 	req = newRequest("GET", "/")
 	router.ServeHTTP(rw, req)
 	if mw.timesCalled != 3 {
@@ -92,7 +92,7 @@ func TestMiddlewareSubrouter(t *testing.T) {
 	subrouter.HandleFunc("/x", dummyHandler).Methods("GET")
 
 	mw := &testMiddleware{}
-	subrouter.addMiddleware(mw)
+	subrouter.useInterface(mw)
 
 	rw := NewRecorder()
 	req := newRequest("GET", "/")
@@ -120,7 +120,7 @@ func TestMiddlewareSubrouter(t *testing.T) {
 		t.Fatalf("Expected %d calls, but got only %d", 1, mw.timesCalled)
 	}
 
-	router.addMiddleware(mw)
+	router.useInterface(mw)
 
 	req = newRequest("GET", "/")
 	router.ServeHTTP(rw, req)
@@ -157,7 +157,7 @@ func TestMiddlewareExecution(t *testing.T) {
 	// Test middleware call
 	rw = NewRecorder()
 
-	router.AddMiddlewareFunc(func(h http.Handler) http.Handler {
+	router.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Write(mwStr)
 			h.ServeHTTP(w, r)
@@ -178,7 +178,7 @@ func TestMiddlewareNotFound(t *testing.T) {
 	router.HandleFunc("/", func(w http.ResponseWriter, e *http.Request) {
 		w.Write(handlerStr)
 	})
-	router.AddMiddlewareFunc(func(h http.Handler) http.Handler {
+	router.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Write(mwStr)
 			h.ServeHTTP(w, r)
@@ -217,7 +217,7 @@ func TestMiddlewareMethodMismatch(t *testing.T) {
 		w.Write(handlerStr)
 	}).Methods("GET")
 
-	router.AddMiddlewareFunc(func(h http.Handler) http.Handler {
+	router.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Write(mwStr)
 			h.ServeHTTP(w, r)
@@ -261,7 +261,7 @@ func TestMiddlewareNotFoundSubrouter(t *testing.T) {
 		w.Write(handlerStr)
 	})
 
-	router.AddMiddlewareFunc(func(h http.Handler) http.Handler {
+	router.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Write(mwStr)
 			h.ServeHTTP(w, r)
@@ -305,7 +305,7 @@ func TestMiddlewareMethodMismatchSubrouter(t *testing.T) {
 		w.Write(handlerStr)
 	}).Methods("GET")
 
-	router.AddMiddlewareFunc(func(h http.Handler) http.Handler {
+	router.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Write(mwStr)
 			h.ServeHTTP(w, r)

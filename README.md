@@ -450,8 +450,10 @@ func main() {
 
 ### Middleware
 
-Since **vX.Y.Z**, mux supports the addition of middlewares to a [Router](https://godoc.org/github.com/gorilla/mux#Router), which are executed if a
-match is found (including subrouters). Middlewares are defined using the de facto standard type:
+Mux supports the addition of middlewares to a [Router](https://godoc.org/github.com/gorilla/mux#Router), which are executed in the order they are added if a match is found (including subrouters).
+Middlewares are (typically) small pieces of code which take one request, do something with it (e.g. log some fields, add/remove some headers), and pass it down to another middleware or the final handler.
+
+Mux middlewares are defined using the de facto standard type:
 
 ```go
 type MiddlewareFunc func(http.Handler) http.Handler
@@ -504,8 +506,10 @@ func (amw *authenticationMiddleware) Middleware(next http.Handler) http.Handler 
         if user, found := amw.tokenUsers[token]; found {
         	// We found the token in our map
         	log.Printf("Authenticated user %s\n", user)
+        	// Pass down the request to the next middleware (or final handler)
         	next.ServeHTTP(w, r)
         } else {
+        	// Write an error and stop the handler chain
         	http.Error(w, "Forbidden", 403)
         }
     })
@@ -522,7 +526,7 @@ amw.Populate()
 r.AddMiddlewareFunc(amw.Middleware)
 ```
 
-Note: The handler chain will be stopped if your middleware doesn't call `next.ServeHTTP()` with the corresponding parameters. This can be used to abort a request if the middleware writer wants to.
+Note: The handler chain will be stopped if your middleware doesn't call `next.ServeHTTP()` with the corresponding parameters. This can be used to abort a request if the middleware writer wants to. Middlewares *should* write to `ResponseWriter` if they *are* going to terminate the request, and they *should not* write to `ResponseWriter` if they *are not* going to terminate it.
 
 ## Full Example
 

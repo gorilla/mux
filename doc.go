@@ -257,7 +257,7 @@ A very basic middleware which logs the URI of the request being handled could be
 		})
 	}
 
-Middlewares can be added to a router using `Router.AddMiddlewareFunc()`:
+Middlewares can be added to a router using `Router.Use()`:
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", handler)
@@ -299,7 +299,7 @@ A more complex authentication middleware, which maps session token to users, cou
 	amw := authenticationMiddleware{}
 	amw.Populate()
 
-	r.AddMiddlewareFunc(amw.Middleware)
+	r.Use(amw.Middleware)
 
 Note: The handler chain will be stopped if your middleware doesn't call `next.ServeHTTP()` with the corresponding parameters. This can be used to abort a request if the middleware writer wants to.
 

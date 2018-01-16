@@ -12,17 +12,17 @@ type middleware interface {
 	Middleware(handler http.Handler) http.Handler
 }
 
-// MiddlewareFunc also implements the Middleware interface.
+// MiddlewareFunc also implements the middleware interface.
 func (mw MiddlewareFunc) Middleware(handler http.Handler) http.Handler {
 	return mw(handler)
 }
 
-// AddMiddlewareFunc appends a MiddlewareFunc to the chain.
-func (r *Router) AddMiddlewareFunc(mwf MiddlewareFunc) {
+// Use appends a MiddlewareFunc to the chain. Middleware can be used to intercept or otherwise modify requests and/or responses, and are executed in the order that they are applied to the Router.
+func (r *Router) Use(mwf MiddlewareFunc) {
 	r.middlewares = append(r.middlewares, mwf)
 }
 
-// addMiddleware appends a middleware to the chain.
-func (r *Router) addMiddleware(mw middleware) {
+// useInterface appends a middleware to the chain. Middleware can be used to intercept or otherwise modify requests and/or responses, and are executed in the order that they are applied to the Router.
+func (r *Router) useInterface(mw middleware) {
 	r.middlewares = append(r.middlewares, mw)
 }
