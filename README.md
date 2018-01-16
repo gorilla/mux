@@ -450,8 +450,8 @@ func main() {
 
 ### Middleware
 
-Mux supports the addition of middlewares to a [Router](https://godoc.org/github.com/gorilla/mux#Router), which are executed in the order they are added if a match is found (including subrouters).
-Middlewares are (typically) small pieces of code which take one request, do something with it (e.g. log some fields, add/remove some headers), and pass it down to another middleware or the final handler.
+Mux supports the addition of middlewares to a [Router](https://godoc.org/github.com/gorilla/mux#Router), which are executed in the order they are added if a match is found, including its subrouters.
+Middlewares are (typically) small pieces of code which take one request, do something with it, and pass it down to another middleware or the final handler. Some common use cases for middleware are request logging, header manipulation, or `ResponseWriter` hijacking.
 
 Mux middlewares are defined using the de facto standard type:
 
@@ -459,7 +459,7 @@ Mux middlewares are defined using the de facto standard type:
 type MiddlewareFunc func(http.Handler) http.Handler
 ```
 
-Typically, the returned handler is a closure which does something with the http.ResponseWriter and http.Request passed to it, and then calls the handler passed as parameter to the MiddlewareFunc (closures can access variables from the context where they are created).
+Typically, the returned handler is a closure which does something with the http.ResponseWriter and http.Request passed to it, and then calls the handler passed as parameter to the MiddlewareFunc. This takes advantage of closures being able access variables from the context where they are created, while retaining the signature enforced by the receivers.
 
 A very basic middleware which logs the URI of the request being handled could be written as:
 
