@@ -410,7 +410,7 @@ func main() {
 
     r := mux.NewRouter()
     // Add your routes as needed
-    
+
     srv := &http.Server{
         Addr:         "0.0.0.0:8080",
         // Good practice to set timeouts to avoid Slowloris attacks.
@@ -426,7 +426,7 @@ func main() {
             log.Println(err)
         }
     }()
-    
+
     c := make(chan os.Signal, 1)
     // We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
     // SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
@@ -436,7 +436,8 @@ func main() {
     <-c
 
     // Create a deadline to wait for.
-    ctx, cancel := context.WithTimeout(ctx, wait)
+    ctx, cancel := context.WithTimeout(context.Background(), wait)
+    defer cancel()
     // Doesn't block if no connections, but will otherwise wait
     // until the timeout deadline.
     srv.Shutdown(ctx)
@@ -502,7 +503,7 @@ func (amw *authenticationMiddleware) Populate() {
 func (amw *authenticationMiddleware) Middleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         token := r.Header.Get("X-Session-Token")
-        
+
         if user, found := amw.tokenUsers[token]; found {
         	// We found the token in our map
         	log.Printf("Authenticated user %s\n", user)
