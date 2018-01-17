@@ -1,5 +1,5 @@
-gorilla/mux
-===
+# gorilla/mux
+
 [![GoDoc](https://godoc.org/github.com/gorilla/mux?status.svg)](https://godoc.org/github.com/gorilla/mux)
 [![Build Status](https://travis-ci.org/gorilla/mux.svg?branch=master)](https://travis-ci.org/gorilla/mux)
 [![Sourcegraph](https://sourcegraph.com/github.com/gorilla/mux/-/badge.svg)](https://sourcegraph.com/github.com/gorilla/mux?badge)
@@ -29,6 +29,7 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * [Walking Routes](#walking-routes)
 * [Graceful Shutdown](#graceful-shutdown)
 * [Middleware](#middleware)
+* [Testing Handlers](#testing-handlers)
 * [Full Example](#full-example)
 
 ---
@@ -178,6 +179,7 @@ s.HandleFunc("/{key}/", ProductHandler)
 // "/products/{key}/details"
 s.HandleFunc("/{key}/details", ProductDetailsHandler)
 ```
+
 ### Listing Routes
 
 Routes on a mux can be listed using the Router.Walk method—useful for generating documentation:
@@ -241,7 +243,7 @@ func main() {
 
 Note that the path provided to `PathPrefix()` represents a "wildcard": calling
 `PathPrefix("/static/").Handler(...)` means that the handler will be passed any
-request that matches "/static/*". This makes it easy to serve static files with mux:
+request that matches "/static/\*". This makes it easy to serve static files with mux:
 
 ```go
 func main() {
@@ -410,7 +412,7 @@ func main() {
 
     r := mux.NewRouter()
     // Add your routes as needed
-    
+
     srv := &http.Server{
         Addr:         "0.0.0.0:8080",
         // Good practice to set timeouts to avoid Slowloris attacks.
@@ -426,7 +428,7 @@ func main() {
             log.Println(err)
         }
     }()
-    
+
     c := make(chan os.Signal, 1)
     // We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
     // SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
@@ -502,7 +504,7 @@ func (amw *authenticationMiddleware) Populate() {
 func (amw *authenticationMiddleware) Middleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         token := r.Header.Get("X-Session-Token")
-        
+
         if user, found := amw.tokenUsers[token]; found {
         	// We found the token in our map
         	log.Printf("Authenticated user %s\n", user)
@@ -526,7 +528,130 @@ amw.Populate()
 r.AddMiddlewareFunc(amw.Middleware)
 ```
 
-Note: The handler chain will be stopped if your middleware doesn't call `next.ServeHTTP()` with the corresponding parameters. This can be used to abort a request if the middleware writer wants to. Middlewares *should* write to `ResponseWriter` if they *are* going to terminate the request, and they *should not* write to `ResponseWriter` if they *are not* going to terminate it.
+Note: The handler chain will be stopped if your middleware doesn't call `next.ServeHTTP()` with the corresponding parameters. This can be used to abort a request if the middleware writer wants to. Middlewares _should_ write to `ResponseWriter` if they _are_ going to terminate the request, and they _should not_ write to `ResponseWriter` if they _are not_ going to terminate it.
+
+### Testing Handlers
+
+Testing handlers in a Go web application is straightforward, and _mux_ doesn't complicate this any further. Given two files: `endpoints.go` and `endpoints_test.go`, here's how we'd test an application using _mux_.
+
+First, our simple HTTP handler:
+
+```go
+// endpoints.go
+package main
+
+func HealthCheckHandler(w http.ResponseWriter, r *http.Request) {
+    // A very simple health check.
+    w.WriteHeader(http.StatusOK)
+    w.Header().Set("Content-Type", "application/json")
+
+    // In the future we could report back on the status of our DB, or our cache
+    // (e.g. Redis) by performing a simple PING, and include them in the response.
+    io.WriteString(w, `{"alive": true}`)
+}
+
+func main() {
+    r := mux.NewRouter()
+    r.HandleFunc("/health", HealthCheckHandler)
+
+    log.Fatal(http.ListenAndServe("localhost:8080", r))
+}
+```
+
+Our test code:
+
+```go
+// endpoints_test.go
+package main
+
+import (
+    "net/http"
+    "net/http/httptest"
+    "testing"
+)
+
+func TestHealthCheckHandler(t *testing.T) {
+    // Create a request to pass to our handler. We don't have any query parameters for now, so we'll
+    // pass 'nil' as the third parameter.
+    req, err := http.NewRequest("GET", "/health", nil)
+    if err != nil {
+        t.Fatal(err)
+    }
+
+    // We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+    rr := httptest.NewRecorder()
+    handler := http.HandlerFunc(HealthCheckHandler)
+
+    // Our handlers satisfy http.Handler, so we can call their ServeHTTP method
+    // directly and pass in our Request and ResponseRecorder.
+    handler.ServeHTTP(rr, req)
+
+    // Check the status code is what we expect.
+    if status := rr.Code; status != http.StatusOK {
+        t.Errorf("handler returned wrong status code: got %v want %v",
+            status, http.StatusOK)
+    }
+
+    // Check the response body is what we expect.
+    expected := `{"alive": true}`
+    if rr.Body.String() != expected {
+        t.Errorf("handler returned unexpected body: got %v want %v",
+            rr.Body.String(), expected)
+    }
+}
+```
+
+In the case that our routes have [variables](#examples), we can pass those in the request. We could write
+[table-driven tests](https://dave.cheney.net/2013/06/09/writing-table-driven-tests-in-go) to test multiple
+possible route variables as needed.
+
+```go
+// endpoints.go
+func main() {
+    r := mux.NewRouter()
+    // A route with a route variable:
+    r.HandleFunc("/metrics/{type}", MetricsHandler)
+
+    log.Fatal(http.ListenAndServe("localhost:8080", r))
+}
+```
+
+Our test file, with a table-driven test of `routeVariables`:
+
+```go
+// endpoints_test.go
+func TestMetricsHandler(t *testing.T) {
+    tt := []struct{
+        routeVariable string
+        shouldPass bool
+    }{
+        {"goroutines", true},
+        {"heap", true},
+        {"counters", true},
+        {"queries", true},
+        {"adhadaeqm3k", false},
+    }
+
+    for _, t := tt {
+        path := fmt.Sprintf("/metrics/%s", t.routeVariable)
+        req, err := http.NewRequest("GET", path, nil)
+        if err != nil {
+            t.Fatal(err)
+        }
+
+        rr := httptest.NewRecorder()
+        handler := http.HandlerFunc(MetricsHandler)
+        handler.ServeHTTP(rr, req)
+
+        // In this case, our MetricsHandler returns a non-200 response
+        // for a route variable it doesn't know about.
+        if rr.Code == http.StatusOK && !t.shouldPass {
+            t.Errorf("handler should have failed on routeVariable %s: got %v want %v",
+                t.routeVariable, rr.Code, http.StatusOK)
+        }
+    }
+}
+```
 
 ## Full Example
 
