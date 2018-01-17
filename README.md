@@ -465,7 +465,7 @@ Typically, the returned handler is a closure which does something with the http.
 A very basic middleware which logs the URI of the request being handled could be written as:
 
 ```go
-func simpleMw(next http.Handler) http.Handler {
+func loggingMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         // Do stuff here
         log.Println(r.RequestURI)
@@ -475,12 +475,12 @@ func simpleMw(next http.Handler) http.Handler {
 }
 ```
 
-Middlewares can be added to a router using `Router.AddMiddlewareFunc()`:
+Middlewares can be added to a router using `Router.Use()`:
 
 ```go
 r := mux.NewRouter()
 r.HandleFunc("/", handler)
-r.AddMiddleware(simpleMw)
+r.Use(loggingMiddleware)
 ```
 
 A more complex authentication middleware, which maps session token to users, could be written as:
@@ -524,7 +524,7 @@ r.HandleFunc("/", handler)
 amw := authenticationMiddleware{}
 amw.Populate()
 
-r.AddMiddlewareFunc(amw.Middleware)
+r.Use(amw.Middleware)
 ```
 
 Note: The handler chain will be stopped if your middleware doesn't call `next.ServeHTTP()` with the corresponding parameters. This can be used to abort a request if the middleware writer wants to. Middlewares *should* write to `ResponseWriter` if they *are* going to terminate the request, and they *should not* write to `ResponseWriter` if they *are not* going to terminate it.
