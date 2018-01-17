@@ -261,7 +261,7 @@ Middlewares can be added to a router using `Router.Use()`:
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", handler)
-	r.AddMiddleware(simpleMw)
+	r.Use(simpleMw)
 
 A more complex authentication middleware, which maps session token to users, could be written as:
 
