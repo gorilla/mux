@@ -622,7 +622,7 @@ func (r *Route) GetPathRegexp() (string, error) {
 // route queries.
 // This is useful for building simple REST API documentation and for instrumentation
 // against third-party services.
-// An empty list will be returned if the route does not have queries.
+// An error will be returned if the route does not have queries.
 func (r *Route) GetQueriesRegexp() ([]string, error) {
 	if r.err != nil {
 		return nil, r.err
@@ -641,7 +641,7 @@ func (r *Route) GetQueriesRegexp() ([]string, error) {
 // query matching.
 // This is useful for building simple REST API documentation and for instrumentation
 // against third-party services.
-// An empty list will be returned if the route does not define queries.
+// An error will be returned if the route does not define queries.
 func (r *Route) GetQueriesTemplates() ([]string, error) {
 	if r.err != nil {
 		return nil, r.err
@@ -659,7 +659,7 @@ func (r *Route) GetQueriesTemplates() ([]string, error) {
 // GetMethods returns the methods the route matches against
 // This is useful for building simple REST API documentation and for instrumentation
 // against third-party services.
-// An empty list will be returned if route does not have methods.
+// An error will be returned if route does not have methods.
 func (r *Route) GetMethods() ([]string, error) {
 	if r.err != nil {
 		return nil, r.err
@@ -669,7 +669,7 @@ func (r *Route) GetMethods() ([]string, error) {
 			return []string(methods), nil
 		}
 	}
-	return nil, nil
+	return nil, errors.New("mux: route doesn't have methods")
 }
 
 // GetHostTemplate returns the template used to build the
