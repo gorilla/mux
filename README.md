@@ -180,64 +180,6 @@ s.HandleFunc("/{key}/", ProductHandler)
 s.HandleFunc("/{key}/details", ProductDetailsHandler)
 ```
 
-### Listing Routes
-
-Routes on a mux can be listed using the Router.Walk method—useful for generating documentation:
-
-```go
-package main
-
-import (
-    "fmt"
-    "net/http"
-    "strings"
-
-    "github.com/gorilla/mux"
-)
-
-func handler(w http.ResponseWriter, r *http.Request) {
-    return
-}
-
-func main() {
-    r := mux.NewRouter()
-    r.HandleFunc("/", handler)
-    r.HandleFunc("/products", handler).Methods("POST")
-    r.HandleFunc("/articles", handler).Methods("GET")
-    r.HandleFunc("/articles/{id}", handler).Methods("GET", "PUT")
-    r.HandleFunc("/authors", handler).Queries("surname", "{surname}")
-    r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-        t, err := route.GetPathTemplate()
-        if err != nil {
-            return err
-        }
-        qt, err := route.GetQueriesTemplates()
-        if err != nil {
-            return err
-        }
-        // p will contain regular expression is compatible with regular expression in Perl, Python, and other languages.
-        // for instance the regular expression for path '/articles/{id}' will be '^/articles/(?P<v0>[^/]+)$'
-        p, err := route.GetPathRegexp()
-        if err != nil {
-            return err
-        }
-        // qr will contain a list of regular expressions with the same semantics as GetPathRegexp,
-        // just applied to the Queries pairs instead, e.g., 'Queries("surname", "{surname}") will return
-        // {"^surname=(?P<v0>.*)$}. Where each combined query pair will have an entry in the list.
-        qr, err := route.GetQueriesRegexp()
-        if err != nil {
-            return err
-        }
-        m, err := route.GetMethods()
-        if err != nil {
-            return err
-        }
-        fmt.Println(strings.Join(m, ","), strings.Join(qt, ","), strings.Join(qr, ","), t, p)
-        return nil
-    })
-    http.Handle("/", r)
-}
-```
 
 ### Static Files
 
@@ -350,41 +292,58 @@ The `Walk` function on `mux.Router` can be used to visit all of the routes that 
 the following prints all of the registered routes:
 
 ```go
-r := mux.NewRouter()
-r.HandleFunc("/", handler)
-r.HandleFunc("/products", handler).Methods("POST")
-r.HandleFunc("/articles", handler).Methods("GET")
-r.HandleFunc("/articles/{id}", handler).Methods("GET", "PUT")
-r.HandleFunc("/authors", handler).Queries("surname", "{surname}")
-r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-    t, err := route.GetPathTemplate()
-    if err != nil {
-        return err
-    }
-    qt, err := route.GetQueriesTemplates()
-    if err != nil {
-        return err
-    }
-    // p will contain a regular expression that is compatible with regular expressions in Perl, Python, and other languages.
-    // For example, the regular expression for path '/articles/{id}' will be '^/articles/(?P<v0>[^/]+)$'.
-    p, err := route.GetPathRegexp()
-    if err != nil {
-        return err
-    }
-    // qr will contain a list of regular expressions with the same semantics as GetPathRegexp,
-    // just applied to the Queries pairs instead, e.g., 'Queries("surname", "{surname}") will return
-    // {"^surname=(?P<v0>.*)$}. Where each combined query pair will have an entry in the list.
-    qr, err := route.GetQueriesRegexp()
-    if err != nil {
-        return err
-    }
-    m, err := route.GetMethods()
-    if err != nil {
-        return err
-    }
-    fmt.Println(strings.Join(m, ","), strings.Join(qt, ","), strings.Join(qr, ","), t, p)
-    return nil
-})
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/gorilla/mux"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	return
+}
+
+func main() {
+	r := mux.NewRouter()
+	r.HandleFunc("/", handler)
+	r.HandleFunc("/products", handler).Methods("POST")
+	r.HandleFunc("/articles", handler).Methods("GET")
+	r.HandleFunc("/articles/{id}", handler).Methods("GET", "PUT")
+	r.HandleFunc("/authors", handler).Queries("surname", "{surname}")
+	err := r.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		pathTemplate, err := route.GetPathTemplate()
+		if err == nil {
+			fmt.Println("ROUTE:", pathTemplate)
+		}
+		pathRegexp, err := route.GetPathRegexp()
+		if err == nil {
+			fmt.Println("Path regexp:", pathRegexp)
+		}
+		queriesTemplates, err := route.GetQueriesTemplates()
+		if err == nil {
+			fmt.Println("Queries templates:", strings.Join(queriesTemplates, ","))
+		}
+		queriesRegexps, err := route.GetQueriesRegexp()
+		if err == nil {
+			fmt.Println("Queries regexps:", strings.Join(queriesRegexps, ","))
+		}
+		methods, err := route.GetMethods()
+		if err == nil {
+			fmt.Println("Methods:", strings.Join(methods, ","))
+		}
+		fmt.Println()
+		return nil
+	})
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	http.Handle("/", r)
+}
 ```
 
 ### Graceful Shutdown
