@@ -129,6 +129,14 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			// http://code.google.com/p/go/issues/detail?id=5252
 			url := *req.URL
 			url.Path = p
+
+			// clean up URL (in case it's been modified for some reason)
+			// If there was a .User for example, url.String() would return user@/path,
+			// breaking the redirect
+			url.Schema = ""
+			url.Host = ""
+			url.User = nil
+
 			p = url.String()
 
 			w.Header().Set("Location", p)
