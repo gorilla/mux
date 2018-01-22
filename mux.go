@@ -129,6 +129,15 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			// http://code.google.com/p/go/issues/detail?id=5252
 			url := *req.URL
 			url.Path = p
+
+			if url.Host == "" {
+				// clean up non-absolute URLs (in case it's been modified, e.g. to have the username in the logs - see PR #341)
+				// If there was a .User for example, url.String() would return `//user@/path/to/file`,
+				// breaking the HTTP location header
+				url.Scheme = ""
+				url.User = nil
+			}
+
 			p = url.String()
 
 			w.Header().Set("Location", p)
