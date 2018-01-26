@@ -562,55 +562,61 @@ func TestHealthCheckHandler(t *testing.T) {
 }
 ```
 
-In the case that our routes have [variables](#examples), we can pass those in the request. We could write
-[table-driven tests](https://dave.cheney.net/2013/06/09/writing-table-driven-tests-in-go) to test multiple
-possible route variables as needed.
+In the case that our routes have [variables](#examples), we can pass those in the request.
 
 ```go
 // endpoints.go
-func main() {
-    r := mux.NewRouter()
-    // A route with a route variable:
-    r.HandleFunc("/metrics/{type}", MetricsHandler)
 
-    log.Fatal(http.ListenAndServe("localhost:8080", r))
+// startHttpServer starts a http server with a route with one path variable
+func startHttpServer() {
+	// Create a new router
+	r := mux.NewRouter()
+	// A route with a route variable:
+	r.HandleFunc("/metrics/{type}/details", VarLogger)
+
+	log.Fatal(http.ListenAndServe("localhost:8080", r))
+}
+
+// VarLogger returns the 'type' variable from the path of the request
+func VarLogger(w http.ResponseWriter, r *http.Request) {
+	// Get all the path variables
+	vars := mux.Vars(r)
+	// Check if there is an 'type' variable
+	typeVar, found := vars["type"]
+	if !found {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	fmt.Fprintf(w, typeVar)
 }
 ```
 
-Our test file, with a table-driven test of `routeVariables`:
+Our test file:
 
 ```go
 // endpoints_test.go
-func TestMetricsHandler(t *testing.T) {
-    tt := []struct{
-        routeVariable string
-        shouldPass bool
-    }{
-        {"goroutines", true},
-        {"heap", true},
-        {"counters", true},
-        {"queries", true},
-        {"adhadaeqm3k", false},
-    }
 
-    for _, t := tt {
-        path := fmt.Sprintf("/metrics/%s", t.routeVariable)
-        req, err := http.NewRequest("GET", path, nil)
-        if err != nil {
-            t.Fatal(err)
-        }
+func TestVarLogger(t *testing.T) {
+	// Setup request
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/path/variable/is/not/added/here/added/here",
+		nil)
+	// Here we add the path variable
+	req = mux.SetURLVars(req, map[string]string{
+		"type": "my value",
+	})
+	// Setup response recorder
+	resp := httptest.NewRecorder()
+	// Make a call to the handler
+	VarLogger(resp, req)
 
-        rr := httptest.NewRecorder()
-        handler := http.HandlerFunc(MetricsHandler)
-        handler.ServeHTTP(rr, req)
-
-        // In this case, our MetricsHandler returns a non-200 response
-        // for a route variable it doesn't know about.
-        if rr.Code == http.StatusOK && !t.shouldPass {
-            t.Errorf("handler should have failed on routeVariable %s: got %v want %v",
-                t.routeVariable, rr.Code, http.StatusOK)
-        }
-    }
+	if resp.Code != http.StatusOK {
+		t.Errorf("Expected status OK. Got: %d", resp.Code)
+	}
+	if resp.Body.String() != "my value" {
+		t.Errorf("Handler returned wrong value of 'type' path variable: %s", resp.Body.String())
+	}
 }
 ```
 
