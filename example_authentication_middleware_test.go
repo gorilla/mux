@@ -30,7 +30,7 @@ func (amw *authenticationMiddleware) Middleware(next http.Handler) http.Handler 
 			log.Printf("Authenticated user %s\n", user)
 			next.ServeHTTP(w, r)
 		} else {
-			http.Error(w, "Forbidden", 403)
+			http.Error(w, "Forbidden", http.StatusForbidden)
 		}
 	})
 }
