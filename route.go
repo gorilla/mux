@@ -618,6 +618,22 @@ func (r *Route) GetPathRegexp() (string, error) {
 	return r.regexp.path.regexp.String(), nil
 }
 
+// GetVarNames returns the route path variable names.
+// An error will be returned if the route does not define a path.
+func (r *Route) GetVarNames() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.regexp == nil || r.regexp.path == nil {
+		return nil, errors.New("mux: route does not have a path")
+	}
+	var varsN []string
+	for _, varN := range r.regexp.path.varsN {
+		varsN = append(varsN, varN)
+	}
+	return varsN, nil
+}
+
 // GetQueriesRegexp returns the expanded regular expressions used to match the
 // route queries.
 // This is useful for building simple REST API documentation and for instrumentation
