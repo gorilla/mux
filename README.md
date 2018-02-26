@@ -473,7 +473,7 @@ func (amw *authenticationMiddleware) Middleware(next http.Handler) http.Handler 
         	next.ServeHTTP(w, r)
         } else {
         	// Write an error and stop the handler chain
-        	http.Error(w, "Forbidden", 403)
+        	http.Error(w, "Forbidden", http.StatusForbidden)
         }
     })
 }
