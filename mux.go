@@ -286,6 +286,12 @@ func (r *Router) Headers(pairs ...string) *Route {
 	return r.NewRoute().Headers(pairs...)
 }
 
+// HeadersRegexp registers a new route with a matcher for request header values, where the value has regex.
+// See Route.HeadersRegexp().
+func (r *Router) HeadersRegexp(pairs ...string) *Route {
+	return r.NewRoute().HeadersRegexp(pairs...)
+}
+
 // Host registers a new route with a matcher for the URL host.
 // See Route.Host().
 func (r *Router) Host(tpl string) *Route {
