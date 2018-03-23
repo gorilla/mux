@@ -5,6 +5,7 @@
 package mux
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -410,6 +411,30 @@ func Vars(r *http.Request) map[string]string {
 		return rv.(map[string]string)
 	}
 	return nil
+}
+
+// AnyValues returns Body variables for the current request, if any. dev @okabbas
+func AnyValues(r *http.Request) (map[string]interface{}, error) {
+	var body map[string]interface{}
+	err := json.NewDecoder(r.Body).Decode(body)
+
+	if err != nil {
+		return body, nil
+	}
+
+	return nil, nil
+}
+
+// StringValues returns Body variables for the current request, if any. dev @okabbas
+func StringValues(r *http.Request) (map[string]string, error) {
+	var body map[string]string
+	err := json.NewDecoder(r.Body).Decode(body)
+
+	if err != nil {
+		return body, nil
+	}
+
+	return nil, nil
 }
 
 // CurrentRoute returns the matched route for the current request, if any.
