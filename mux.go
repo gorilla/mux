@@ -413,8 +413,8 @@ func Vars(r *http.Request) map[string]string {
 	return nil
 }
 
-// ValuesAny returns Body variables for the current request, if any.
-func ValuesAny(r *http.Request) (map[string]interface{}, error) {
+// AnyValues returns Body variables for the current request, if any. dev @okabbas
+func AnyValues(r *http.Request) (map[string]interface{}, error) {
 	var body map[string]interface{}
 	err := json.NewDecoder(r.Body).Decode(body)
 
@@ -425,8 +425,8 @@ func ValuesAny(r *http.Request) (map[string]interface{}, error) {
 	return nil, nil
 }
 
-// ValuesString returns Body variables for the current request, if any.
-func ValuesString(r *http.Request) (map[string]string, error) {
+// StringValues returns Body variables for the current request, if any. dev @okabbas
+func StringValues(r *http.Request) (map[string]string, error) {
 	var body map[string]string
 	err := json.NewDecoder(r.Body).Decode(body)
 
