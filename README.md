@@ -593,8 +593,8 @@ func TestMetricsHandler(t *testing.T) {
         {"adhadaeqm3k", false},
     }
 
-    for _, t := tt {
-        path := fmt.Sprintf("/metrics/%s", t.routeVariable)
+    for _, tc := range tt {
+        path := fmt.Sprintf("/metrics/%s", tc.routeVariable)
         req, err := http.NewRequest("GET", path, nil)
         if err != nil {
             t.Fatal(err)
@@ -606,9 +606,9 @@ func TestMetricsHandler(t *testing.T) {
 
         // In this case, our MetricsHandler returns a non-200 response
         // for a route variable it doesn't know about.
-        if rr.Code == http.StatusOK && !t.shouldPass {
+        if rr.Code == http.StatusOK && !tc.shouldPass {
             t.Errorf("handler should have failed on routeVariable %s: got %v want %v",
-                t.routeVariable, rr.Code, http.StatusOK)
+                tc.routeVariable, rr.Code, http.StatusOK)
         }
     }
 }
