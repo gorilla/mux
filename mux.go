@@ -351,7 +351,7 @@ func (r *Router) MethodMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		var allMethods []string
 
-		r.Walk(func(route *Route, _ *Router, _ []*Route) error {
+		err := r.Walk(func(route *Route, _ *Router, _ []*Route) error {
 			for _, m := range route.matchers {
 				if _, ok := m.(*routeRegexp); ok {
 					if m.Match(req, &RouteMatch{}) {
@@ -368,10 +368,12 @@ func (r *Router) MethodMiddleware(next http.Handler) http.Handler {
 			return nil
 		})
 
-		w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allMethods, "OPTIONS"), ","))
+		if err == nil {
+			w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allMethods, "OPTIONS"), ","))
 
-		if req.Method == "OPTIONS" {
-			return
+			if req.Method == "OPTIONS" {
+				return
+			}
 		}
 
 		next.ServeHTTP(w, req)
