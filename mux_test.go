@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"strings"
@@ -1585,6 +1586,38 @@ func TestWalkErrorHandler(t *testing.T) {
 	}
 }
 
+func TestMethodMiddleware(t *testing.T) {
+	router := NewRouter()
+
+	paths := []string{"/g/{o}", "/g/{o}", "/g/{r}"}
+	responses := []string{"a", "b", "c"}
+	methods := []string{"POST", "GET", "PUT"}
+
+	for i, path := range paths {
+		router.HandleFunc(path, stringHandler(responses[i])).Methods(methods[i])
+	}
+
+	router.Use(router.MethodMiddleware)
+
+	for i := range paths {
+		rr := httptest.NewRecorder()
+		req := newRequest(methods[i], "/g/test")
+
+		router.ServeHTTP(rr, req)
+
+		if rr.Body.String() != responses[i] {
+			t.Errorf("Expected body '%s', found '%s'", responses[i], rr.Body.String())
+		}
+
+		expectedAllowedMethods := strings.Join(append(methods, "OPTIONS"), ",")
+		allowedMethods := rr.HeaderMap.Get("Access-Control-Allow-Methods")
+
+		if allowedMethods != expectedAllowedMethods {
+			t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", expectedAllowedMethods, allowedMethods)
+		}
+	}
+}
+
 func TestSubrouterErrorHandling(t *testing.T) {
 	superRouterCalled := false
 	subRouterCalled := false
@@ -2313,6 +2346,14 @@ func stringMapEqual(m1, m2 map[string]string) bool {
 		}
 	}
 	return true
+}
+
+// stringHandler returns a handler func that writes a message 's' to the http
+// response writer.
+func stringHandler(s string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(s))
+	}
 }
 
 // newRequest is a helper function to create a new request with a method and url.
