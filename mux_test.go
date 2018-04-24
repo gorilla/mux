@@ -1589,31 +1589,39 @@ func TestWalkErrorHandler(t *testing.T) {
 func TestMethodMiddleware(t *testing.T) {
 	router := NewRouter()
 
-	paths := []string{"/g/{o}", "/g/{o}", "/g/{r}"}
-	responses := []string{"a", "b", "c"}
-	methods := []string{"POST", "GET", "PUT"}
+	cases := []struct {
+		path                   string
+		response               string
+		method                 string
+		testURL                string
+		expectedAllowedMethods string
+	}{
+		{"/g/{o}", "a", "POST", "/g/asdf", "POST,PUT,GET,OPTIONS"},
+		{"/g/{o}", "b", "PUT", "/g/bla", "POST,PUT,GET,OPTIONS"},
+		{"/g/{o}", "c", "GET", "/g/orilla", "POST,PUT,GET,OPTIONS"},
+		{"/g", "d", "POST", "/g", "POST,OPTIONS"},
+	}
 
-	for i, path := range paths {
-		router.HandleFunc(path, stringHandler(responses[i])).Methods(methods[i])
+	for _, tt := range cases {
+		router.HandleFunc(tt.path, stringHandler(tt.response)).Methods(tt.method)
 	}
 
 	router.Use(router.MethodMiddleware)
 
-	for i := range paths {
+	for _, tt := range cases {
 		rr := httptest.NewRecorder()
-		req := newRequest(methods[i], "/g/test")
+		req := newRequest(tt.method, tt.testURL)
 
 		router.ServeHTTP(rr, req)
 
-		if rr.Body.String() != responses[i] {
-			t.Errorf("Expected body '%s', found '%s'", responses[i], rr.Body.String())
+		if rr.Body.String() != tt.response {
+			t.Errorf("Expected body '%s', found '%s'", tt.response, rr.Body.String())
 		}
 
-		expectedAllowedMethods := strings.Join(append(methods, "OPTIONS"), ",")
 		allowedMethods := rr.HeaderMap.Get("Access-Control-Allow-Methods")
 
-		if allowedMethods != expectedAllowedMethods {
-			t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", expectedAllowedMethods, allowedMethods)
+		if allowedMethods != tt.expectedAllowedMethods {
+			t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", tt.expectedAllowedMethods, allowedMethods)
 		}
 	}
 }
