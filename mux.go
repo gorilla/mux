@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"path"
 	"regexp"
-	"strings"
 )
 
 var (
@@ -340,44 +339,6 @@ func (r *Router) BuildVarsFunc(f BuildVarsFunc) *Route {
 // are explored depth-first.
 func (r *Router) Walk(walkFn WalkFunc) error {
 	return r.walk(walkFn, []*Route{})
-}
-
-// MethodMiddleware is intended for setting the CORS Method header,
-// Access-Control-Allow-Methods. It sets Access-Control-Allow-Methods on a
-// request, by matching routes based only on paths. It also handles OPTIONS
-// requests, by settings Access-Control-Allow-Methods, and then returning
-// without calling the next http handler.
-func (r *Router) MethodMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		var allMethods []string
-
-		err := r.Walk(func(route *Route, _ *Router, _ []*Route) error {
-			for _, m := range route.matchers {
-				if _, ok := m.(*routeRegexp); ok {
-					if m.Match(req, &RouteMatch{}) {
-						methods, err := route.GetMethods()
-						if err != nil {
-							return err
-						}
-
-						allMethods = append(allMethods, methods...)
-					}
-					break
-				}
-			}
-			return nil
-		})
-
-		if err == nil {
-			w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allMethods, "OPTIONS"), ","))
-
-			if req.Method == "OPTIONS" {
-				return
-			}
-		}
-
-		next.ServeHTTP(w, req)
-	})
 }
 
 // SkipRouter is used as a return value from WalkFuncs to indicate that the
