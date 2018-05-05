@@ -2315,8 +2315,8 @@ func stringMapEqual(m1, m2 map[string]string) bool {
 	return true
 }
 
-// stringHandler returns a handler func that writes a message 's' to the http
-// response writer.
+// stringHandler returns a handler func that writes a message 's' to the
+// http.ResponseWriter.
 func stringHandler(s string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(s))
