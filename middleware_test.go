@@ -336,7 +336,7 @@ func TestMiddlewareMethodMismatchSubrouter(t *testing.T) {
 	}
 }
 
-func TestMethodMiddleware(t *testing.T) {
+func TestCORSMethodMiddleware(t *testing.T) {
 	router := NewRouter()
 
 	cases := []struct {
@@ -356,7 +356,7 @@ func TestMethodMiddleware(t *testing.T) {
 		router.HandleFunc(tt.path, stringHandler(tt.response)).Methods(tt.method)
 	}
 
-	router.Use(MethodMiddleware(router))
+	router.Use(CORSMethodMiddleware(router))
 
 	for _, tt := range cases {
 		rr := httptest.NewRecorder()
