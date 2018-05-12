@@ -2315,6 +2315,14 @@ func stringMapEqual(m1, m2 map[string]string) bool {
 	return true
 }
 
+// stringHandler returns a handler func that writes a message 's' to the
+// http.ResponseWriter.
+func stringHandler(s string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(s))
+	}
+}
+
 // newRequest is a helper function to create a new request with a method and url.
 // The request returned is a 'server' request as opposed to a 'client' one through
 // simulated write onto the wire and read off of the wire.
