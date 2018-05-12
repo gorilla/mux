@@ -32,9 +32,8 @@ func (r *Router) useInterface(mw middleware) {
 	r.middlewares = append(r.middlewares, mw)
 }
 
-// CORSMethodMiddleware returns a MiddlewareFunc intended for setting the CORS
-// Method header, Access-Control-Allow-Methods. It sets Access-Control-Allow-Methods
-// on a  request, by matching routes based only on paths. It also handles
+// CORSMethodMiddleware sets the Access-Control-Allow-Methods response header
+// on a request, by matching routes based only on paths. It also handles
 // OPTIONS requests, by settings Access-Control-Allow-Methods, and then
 // returning without calling the next http handler.
 func CORSMethodMiddleware(r *Router) MiddlewareFunc {
