@@ -601,8 +601,11 @@ func TestMetricsHandler(t *testing.T) {
         }
 
         rr := httptest.NewRecorder()
-        handler := http.HandlerFunc(MetricsHandler)
-        handler.ServeHTTP(rr, req)
+	
+	// Need to create a router that we can pass the request through so that the vars will be added to the context
+	router := mux.NewRouter()
+        router.HandleFunc("/metrics/{type}", MetricsHandler)
+        router.ServeHTTP(rr, req)
 
         // In this case, our MetricsHandler returns a non-200 response
         // for a route variable it doesn't know about.
