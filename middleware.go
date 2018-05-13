@@ -15,7 +15,7 @@ type middleware interface {
 	Middleware(handler http.Handler) http.Handler
 }
 
-// Middleware also implements the middleware interface.
+// Middleware allows MiddlewareFunc to implement the middleware interface.
 func (mw MiddlewareFunc) Middleware(handler http.Handler) http.Handler {
 	return mw(handler)
 }
