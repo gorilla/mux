@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	// ErrMethodMismatch is returned when the error in the request does not match
+	// ErrMethodMismatch is returned when the method in the request does not match
 	// the method defined against the route.
 	ErrMethodMismatch = errors.New("method is not allowed")
 	// ErrNotFound is returned when no route match is found.

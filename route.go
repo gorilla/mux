@@ -43,8 +43,8 @@ type Route struct {
 	buildVarsFunc BuildVarsFunc
 }
 
-// SkipClean bypasses cleaning the path, which includes removing duplicate
-// slashes and URL encoding.
+// SkipClean reports whether path cleaning is enabled for this route via
+// Router.SkipClean.
 func (r *Route) SkipClean() bool {
 	return r.skipClean
 }
