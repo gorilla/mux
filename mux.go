@@ -400,16 +400,12 @@ type RouteMatch struct {
 	MatchErr error
 }
 
-type contextKey int
-
-const (
-	varsKey contextKey = iota
-	routeKey
-)
+type varsKey struct{}
+type routeKey struct{}
 
 // Vars returns the route variables for the current request, if any.
 func Vars(r *http.Request) map[string]string {
-	if rv := contextGet(r, varsKey); rv != nil {
+	if rv := contextGet(r, varsKey{}); rv != nil {
 		return rv.(map[string]string)
 	}
 	return nil
@@ -421,18 +417,18 @@ func Vars(r *http.Request) map[string]string {
 // after the handler returns, unless the KeepContext option is set on the
 // Router.
 func CurrentRoute(r *http.Request) *Route {
-	if rv := contextGet(r, routeKey); rv != nil {
+	if rv := contextGet(r, routeKey{}); rv != nil {
 		return rv.(*Route)
 	}
 	return nil
 }
 
 func setVars(r *http.Request, val interface{}) *http.Request {
-	return contextSet(r, varsKey, val)
+	return contextSet(r, varsKey{}, val)
 }
 
 func setCurrentRoute(r *http.Request, val interface{}) *http.Request {
-	return contextSet(r, routeKey, val)
+	return contextSet(r, routeKey{}, val)
 }
 
 // ----------------------------------------------------------------------------
