@@ -43,6 +43,8 @@ type Route struct {
 	buildVarsFunc BuildVarsFunc
 }
 
+// SkipClean reports whether path cleaning is enabled for this route via
+// Router.SkipClean.
 func (r *Route) SkipClean() bool {
 	return r.skipClean
 }

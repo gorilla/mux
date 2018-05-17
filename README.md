@@ -593,22 +593,25 @@ func TestMetricsHandler(t *testing.T) {
         {"adhadaeqm3k", false},
     }
 
-    for _, t := tt {
-        path := fmt.Sprintf("/metrics/%s", t.routeVariable)
+    for _, tc := range tt {
+        path := fmt.Sprintf("/metrics/%s", tc.routeVariable)
         req, err := http.NewRequest("GET", path, nil)
         if err != nil {
             t.Fatal(err)
         }
 
         rr := httptest.NewRecorder()
-        handler := http.HandlerFunc(MetricsHandler)
-        handler.ServeHTTP(rr, req)
+	
+	// Need to create a router that we can pass the request through so that the vars will be added to the context
+	router := mux.NewRouter()
+        router.HandleFunc("/metrics/{type}", MetricsHandler)
+        router.ServeHTTP(rr, req)
 
         // In this case, our MetricsHandler returns a non-200 response
         // for a route variable it doesn't know about.
-        if rr.Code == http.StatusOK && !t.shouldPass {
+        if rr.Code == http.StatusOK && !tc.shouldPass {
             t.Errorf("handler should have failed on routeVariable %s: got %v want %v",
-                t.routeVariable, rr.Code, http.StatusOK)
+                tc.routeVariable, rr.Code, http.StatusOK)
         }
     }
 }

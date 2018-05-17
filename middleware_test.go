@@ -3,6 +3,7 @@ package mux
 import (
 	"bytes"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -332,5 +333,45 @@ func TestMiddlewareMethodMismatchSubrouter(t *testing.T) {
 
 	if bytes.Contains(rw.Body.Bytes(), mwStr) {
 		t.Fatal("Middleware was called for a method mismatch")
+	}
+}
+
+func TestCORSMethodMiddleware(t *testing.T) {
+	router := NewRouter()
+
+	cases := []struct {
+		path                   string
+		response               string
+		method                 string
+		testURL                string
+		expectedAllowedMethods string
+	}{
+		{"/g/{o}", "a", "POST", "/g/asdf", "POST,PUT,GET,OPTIONS"},
+		{"/g/{o}", "b", "PUT", "/g/bla", "POST,PUT,GET,OPTIONS"},
+		{"/g/{o}", "c", "GET", "/g/orilla", "POST,PUT,GET,OPTIONS"},
+		{"/g", "d", "POST", "/g", "POST,OPTIONS"},
+	}
+
+	for _, tt := range cases {
+		router.HandleFunc(tt.path, stringHandler(tt.response)).Methods(tt.method)
+	}
+
+	router.Use(CORSMethodMiddleware(router))
+
+	for _, tt := range cases {
+		rr := httptest.NewRecorder()
+		req := newRequest(tt.method, tt.testURL)
+
+		router.ServeHTTP(rr, req)
+
+		if rr.Body.String() != tt.response {
+			t.Errorf("Expected body '%s', found '%s'", tt.response, rr.Body.String())
+		}
+
+		allowedMethods := rr.HeaderMap.Get("Access-Control-Allow-Methods")
+
+		if allowedMethods != tt.expectedAllowedMethods {
+			t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", tt.expectedAllowedMethods, allowedMethods)
+		}
 	}
 }
