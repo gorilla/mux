@@ -1994,7 +1994,7 @@ func TestMethodsSubrouterCatchall(t *testing.T) {
 	t.Parallel()
 
 	router := NewRouter()
-	router.Methods("PATCH").Subrouter().PathPrefix("/").HandlerFunc(methodHandler("PUT"))
+	router.Methods("PATCH").Subrouter().PathPrefix("/").HandlerFunc(methodHandler("PATCH"))
 	router.Methods("GET").Subrouter().HandleFunc("/foo", methodHandler("GET"))
 	router.Methods("POST").Subrouter().HandleFunc("/foo", methodHandler("POST"))
 	router.Methods("DELETE").Subrouter().HandleFunc("/foo", methodHandler("DELETE"))

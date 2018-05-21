@@ -82,7 +82,10 @@ type Router struct {
 // (eg: not found) has a registered handler, the handler is assigned to the Handler
 // field of the match argument.
 func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
+	var matchErr error
+
 	for _, route := range r.routes {
+		match.MatchErr = nil // We'll replace this with our own error
 		if route.Match(req, match) {
 			// Build middleware chain if no error was found
 			if match.MatchErr == nil {
@@ -92,9 +95,13 @@ func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 			}
 			return true
 		}
+		if match.MatchErr != nil {
+			matchErr = match.MatchErr
+		}
 	}
 
-	if match.MatchErr == ErrMethodMismatch {
+	if matchErr == ErrMethodMismatch {
+		match.MatchErr = ErrMethodMismatch
 		if r.MethodNotAllowedHandler != nil {
 			match.Handler = r.MethodNotAllowedHandler
 			return true

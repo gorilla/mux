@@ -136,6 +136,23 @@ func TestMiddlewareSubrouter(t *testing.T) {
 	}
 }
 
+func TestMiddlewareDuplicateSubrouter(t *testing.T) {
+	router := NewRouter()
+	router.PathPrefix("/sub").Subrouter() // Deliberately create a duplicate router
+	subrouter := router.PathPrefix("/sub").Subrouter()
+	subrouter.HandleFunc("/x", dummyHandler).Methods("GET")
+
+	mw := &testMiddleware{}
+	subrouter.useInterface(mw)
+
+	rw := NewRecorder()
+	req := newRequest("GET", "/sub/x")
+	router.ServeHTTP(rw, req)
+	if mw.timesCalled != 1 {
+		t.Fatalf("Expected %d calls, but got only %d", 1, mw.timesCalled)
+	}
+}
+
 func TestMiddlewareExecution(t *testing.T) {
 	mwStr := []byte("Middleware\n")
 	handlerStr := []byte("Logic\n")

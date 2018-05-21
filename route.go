@@ -60,25 +60,20 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	// Match everything.
 	for _, m := range r.matchers {
 		if matched := m.Match(req, match); !matched {
+			// Only report method mismatch errors if everything else matches
 			if _, ok := m.(methodMatcher); ok {
 				matchErr = ErrMethodMismatch
 				continue
 			}
-			matchErr = nil
 			return false
 		}
 	}
 
+	// Return a method mismatch error if we saw a method mismatch and everything else matched
 	if matchErr != nil {
-		match.MatchErr = matchErr
+		// Wipe everything we may have recorded from a previous successful match with the wrong method
+		*match = RouteMatch{MatchErr: matchErr}
 		return false
-	}
-
-	if match.MatchErr == ErrMethodMismatch {
-		// We found a route which matches request method, clear MatchErr
-		match.MatchErr = nil
-		// Then override the mis-matched handler
-		match.Handler = r.handler
 	}
 
 	// Yay, we have a match. Let's collect some info about it.
