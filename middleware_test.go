@@ -348,10 +348,10 @@ func TestCORSMethodMiddleware(t *testing.T) {
 		testURL                string
 		expectedAllowedMethods string
 	}{
-		{"/g/{o}", "a", "POST", "/g/asdf", "POST,PUT,GET,OPTIONS"},
-		{"/g/{o}", "b", "PUT", "/g/bla", "POST,PUT,GET,OPTIONS"},
-		{"/g/{o}", "c", "GET", "/g/orilla", "POST,PUT,GET,OPTIONS"},
-		{"/g", "d", "POST", "/g", "POST,OPTIONS"},
+		{"/g/{o}", "a", "POST", "/g/asdf", "POST,PUT,GET"},
+		{"/g/{o}", "b", "PUT", "/g/bla", "POST,PUT,GET"},
+		{"/g/{o}", "c", "GET", "/g/orilla", "POST,PUT,GET"},
+		{"/g", "d", "POST", "/g", "POST"},
 	}
 
 	for _, tt := range cases {

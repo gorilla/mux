@@ -61,7 +61,7 @@ func CORSMethodMiddleware(r *Router) MiddlewareFunc {
 			})
 
 			if err == nil {
-				w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allMethods, "OPTIONS"), ","))
+				w.Header().Set("Access-Control-Allow-Methods", strings.Join(allMethods, ","))
 
 				if req.Method == "OPTIONS" {
 					return
