@@ -378,82 +378,80 @@ func TestCORSMethodMiddleware(t *testing.T) {
 	}
 }
 
-func TestCORSMiddlewareOPTIONS(t *testing.T) {
-	t.Run("Without method matcher", func(t *testing.T) {
-		router := NewRouter()
+func TestCORSMiddlewareOPTIONSWithoutMethodMatcher(t *testing.T) {
+	router := NewRouter()
 
-		cases := []struct {
-			path                   string
-			response               string
-			testURL                string
-			expectedAllowedMethods string
-		}{
-			{"/g/{o}", "a", "/g/asdf", "OPTIONS,GET,HEAD,POST,PUT,DELETE,TRACE,CONNECT"},
+	cases := []struct {
+		path                   string
+		response               string
+		testURL                string
+		expectedAllowedMethods string
+	}{
+		{"/g/{o}", "a", "/g/asdf", "OPTIONS,GET,HEAD,POST,PUT,DELETE,TRACE,CONNECT"},
+	}
+
+	for _, tt := range cases {
+		router.HandleFunc(tt.path, stringHandler(tt.response))
+	}
+
+	router.Use(CORSMethodMiddleware(router))
+
+	for _, tt := range cases {
+		rr := httptest.NewRecorder()
+		req := newRequest("OPTIONS", tt.testURL)
+
+		router.ServeHTTP(rr, req)
+
+		allowedMethods := rr.HeaderMap.Get("Access-Control-Allow-Methods")
+
+		if want, have := 200, rr.Code; have != want {
+			t.Errorf("Expected status code %d, found %d", want, have)
 		}
 
-		for _, tt := range cases {
-			router.HandleFunc(tt.path, stringHandler(tt.response))
+		if allowedMethods != tt.expectedAllowedMethods {
+			t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", tt.expectedAllowedMethods, allowedMethods)
+		}
+	}
+}
+
+func TestCORSMiddlewareOPTIONSWithMethodMatcher(t *testing.T) {
+	router := NewRouter()
+
+	cases := []struct {
+		path                   string
+		response               string
+		method                 string
+		testURL                string
+		expectedAllowedMethods string
+	}{
+		{"/g/{o}", "a", "POST", "/g/asdf", "POST,PUT,GET,OPTIONS"},
+		{"/g/{o}", "b", "PUT", "/g/bla", "POST,PUT,GET,OPTIONS"},
+		{"/g/{o}", "c", "GET", "/g/orilla", "POST,PUT,GET,OPTIONS"},
+		{"/g/{o}", "c", "OPTIONS", "/g/orilla", "POST,PUT,GET,OPTIONS"},
+	}
+
+	for _, tt := range cases {
+		router.HandleFunc(tt.path, stringHandler(tt.response)).Methods(tt.method)
+	}
+
+	router.Use(CORSMethodMiddleware(router))
+
+	for _, tt := range cases {
+		rr := httptest.NewRecorder()
+		req := newRequest("OPTIONS", tt.testURL)
+
+		router.ServeHTTP(rr, req)
+
+		allowedMethods := rr.HeaderMap.Get("Access-Control-Allow-Methods")
+
+		if want, have := 200, rr.Code; have != want {
+			t.Errorf("Expected status code %d, found %d", want, have)
 		}
 
-		router.Use(CORSMethodMiddleware(router))
-
-		for _, tt := range cases {
-			rr := httptest.NewRecorder()
-			req := newRequest("OPTIONS", tt.testURL)
-
-			router.ServeHTTP(rr, req)
-
-			allowedMethods := rr.HeaderMap.Get("Access-Control-Allow-Methods")
-
-			if want, have := 200, rr.Result().StatusCode; have != want {
-				t.Errorf("Expected status code %d, found %d", want, have)
-			}
-
-			if allowedMethods != tt.expectedAllowedMethods {
-				t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", tt.expectedAllowedMethods, allowedMethods)
-			}
+		if allowedMethods != tt.expectedAllowedMethods {
+			t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", tt.expectedAllowedMethods, allowedMethods)
 		}
-	})
-
-	t.Run("With method matcher", func(t *testing.T) {
-		router := NewRouter()
-
-		cases := []struct {
-			path                   string
-			response               string
-			method                 string
-			testURL                string
-			expectedAllowedMethods string
-		}{
-			{"/g/{o}", "a", "POST", "/g/asdf", "POST,PUT,GET,OPTIONS"},
-			{"/g/{o}", "b", "PUT", "/g/bla", "POST,PUT,GET,OPTIONS"},
-			{"/g/{o}", "c", "GET", "/g/orilla", "POST,PUT,GET,OPTIONS"},
-			{"/g/{o}", "c", "OPTIONS", "/g/orilla", "POST,PUT,GET,OPTIONS"},
-		}
-
-		for _, tt := range cases {
-			router.HandleFunc(tt.path, stringHandler(tt.response)).Methods(tt.method)
-		}
-
-		router.Use(CORSMethodMiddleware(router))
-
-		for _, tt := range cases {
-			rr := httptest.NewRecorder()
-			req := newRequest("OPTIONS", tt.testURL)
-
-			router.ServeHTTP(rr, req)
-
-			allowedMethods := rr.HeaderMap.Get("Access-Control-Allow-Methods")
-
-			if want, have := 200, rr.Result().StatusCode; have != want {
-				t.Errorf("Expected status code %d, found %d", want, have)
-			}
-
-			if allowedMethods != tt.expectedAllowedMethods {
-				t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", tt.expectedAllowedMethods, allowedMethods)
-			}
-		}
-	})
+	}
 }
 
 // Create a router, attach a route, and apply the middleware.
