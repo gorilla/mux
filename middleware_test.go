@@ -2,9 +2,11 @@ package mux
 
 import (
 	"bytes"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 type testMiddleware struct {
@@ -374,4 +376,58 @@ func TestCORSMethodMiddleware(t *testing.T) {
 			t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", tt.expectedAllowedMethods, allowedMethods)
 		}
 	}
+}
+
+// Create a router, attach a route, and apply the middleware.
+func ExampleCORSMethodMiddleware() {
+	router := NewRouter()
+	router.Path("/some-path").HandlerFunc(stringHandler("This endpoint is accessible through CORS"))
+	router.Use(CORSMethodMiddleware(router))
+
+	srv := &http.Server{
+		Handler:      router,
+		Addr:         "127.0.0.1:8000",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	log.Fatal(srv.ListenAndServe())
+}
+
+// The middlewares are only executed if the call matches a route.
+// If a method matcher is set for the route, explicitly enable "OPTIONS" as a
+// method in order for the middleware to handle it.
+func ExampleCORSMethodMiddleware_methodsMatcher() {
+	router := NewRouter()
+	router.Path("/some-path").Methods("GET", "OPTIONS").HandlerFunc(stringHandler("This is a CORS-allowed, GET-only endpoint"))
+	router.Use(CORSMethodMiddleware(router))
+
+	srv := &http.Server{
+		Handler:      router,
+		Addr:         "127.0.0.1:8000",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	log.Fatal(srv.ListenAndServe())
+}
+
+// To only enable the CORS header for specific matchers, enable the middleware
+// on a subrouter.
+func ExampleCORSMethodMiddleware_subrouter() {
+	router := NewRouter()
+	router.Path("/endpoint_without_cors_header").HandlerFunc(stringHandler("no CORS allowed"))
+
+	routesWithCORS := router.NewRoute().Subrouter()
+	routesWithCORS.Path("/endpoint_with_cors_header").HandlerFunc(stringHandler("CORS allowed here!"))
+	routesWithCORS.Use(CORSMethodMiddleware(routesWithCORS))
+
+	srv := &http.Server{
+		Handler:      router,
+		Addr:         "127.0.0.1:8000",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	log.Fatal(srv.ListenAndServe())
 }
