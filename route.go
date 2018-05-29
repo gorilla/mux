@@ -415,7 +415,14 @@ func (r *Route) Queries(pairs ...string) *Route {
 type schemeMatcher []string
 
 func (m schemeMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchInArray(m, r.URL.Scheme)
+	scheme := r.URL.Scheme
+	if scheme == "" {
+		scheme = "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+	}
+	return matchInArray(m, scheme)
 }
 
 // Schemes adds a matcher for URL schemes.

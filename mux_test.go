@@ -7,6 +7,7 @@ package mux
 import (
 	"bufio"
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -523,6 +524,19 @@ func TestPathPrefix(t *testing.T) {
 }
 
 func TestSchemeHostPath(t *testing.T) {
+	// newRequestHostTLS a new request with a method, url, and host header, and fake TLS struct pointer
+	newRequestHostTLS := func(method, url, host string, fakeTLS bool) *http.Request {
+		req, err := http.NewRequest(method, url, nil)
+		if err != nil {
+			panic(err)
+		}
+		req.Host = host
+		if fakeTLS {
+			req.TLS = &tls.ConnectionState{}
+		}
+		return req
+	}
+
 	tests := []routeTest{
 		{
 			title:        "Host and Path route, match",
@@ -535,6 +549,42 @@ func TestSchemeHostPath(t *testing.T) {
 			pathTemplate: `/111/222/333`,
 			hostTemplate: `aaa.bbb.ccc`,
 			shouldMatch:  true,
+		},
+		{
+			title:        "Scheme (http), Host and Path route, host in header, match",
+			route:        new(Route).Schemes("http").Host("aaa.bbb.ccc").Path("/111/222/333"),
+			request:      newRequestHostTLS("GET", "/111/222/333", "aaa.bbb.ccc", false),
+			vars:         map[string]string{},
+			scheme:       "http",
+			host:         "aaa.bbb.ccc",
+			path:         "/111/222/333",
+			pathTemplate: `/111/222/333`,
+			hostTemplate: `aaa.bbb.ccc`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Scheme (https), Host and Path route, host in header, match",
+			route:        new(Route).Schemes("https").Host("aaa.bbb.ccc").Path("/111/222/333"),
+			request:      newRequestHostTLS("GET", "/111/222/333", "aaa.bbb.ccc", true),
+			vars:         map[string]string{},
+			scheme:       "https",
+			host:         "aaa.bbb.ccc",
+			path:         "/111/222/333",
+			pathTemplate: `/111/222/333`,
+			hostTemplate: `aaa.bbb.ccc`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Scheme (https), Host and Path route, host in header, mismatch",
+			route:        new(Route).Schemes("https").Host("aaa.bbb.ccc").Path("/111/222/333"),
+			request:      newRequestHostTLS("GET", "/111/222/333", "aaa.bbb.ccc", false),
+			vars:         map[string]string{},
+			scheme:       "http",
+			host:         "aaa.bbb.ccc",
+			path:         "/111/222/333",
+			pathTemplate: `/111/222/333`,
+			hostTemplate: `aaa.bbb.ccc`,
+			shouldMatch:  false,
 		},
 		{
 			title:        "Scheme, Host, and Path route, match",
