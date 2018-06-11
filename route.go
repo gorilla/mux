@@ -13,8 +13,6 @@ import (
 	"strings"
 )
 
-var ErrRouteHasNoMethods = errors.New("mux: route doesn't have methods")
-
 // Route stores information to match a request and build URLs.
 type Route struct {
 	// Parent where the route was registered (a Router).
@@ -673,7 +671,7 @@ func (r *Route) GetMethods() ([]string, error) {
 			return []string(methods), nil
 		}
 	}
-	return nil, ErrRouteHasNoMethods
+	return nil, errors.New("mux: route doesn't have methods")
 }
 
 // GetHostTemplate returns the template used to build the

@@ -48,10 +48,6 @@ func CORSMethodMiddleware(r *Router) MiddlewareFunc {
 					if _, ok := m.(*routeRegexp); ok {
 						if m.Match(req, &RouteMatch{}) {
 							methods, err := route.GetMethods()
-							if err == ErrRouteHasNoMethods {
-								allMethods = []string{"OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT"}
-								return nil
-							}
 							if err != nil {
 								return err
 							}
