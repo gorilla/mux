@@ -1174,7 +1174,7 @@ func TestSubRouter(t *testing.T) {
 	subrouter3 := new(Route).PathPrefix("/foo").Subrouter()
 	subrouter4 := new(Route).PathPrefix("/foo/bar").Subrouter()
 	subrouter5 := new(Route).PathPrefix("/{category}").Subrouter()
-	subrouter6 := new(Route).Matches("POST").PathPrefix("/foo").Subrouter()
+	subrouter6 := new(Route).Methods("POST").PathPrefix("/foo").Subrouter()
 
 	tests := []routeTest{
 		{
