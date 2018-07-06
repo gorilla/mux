@@ -1174,6 +1174,7 @@ func TestSubRouter(t *testing.T) {
 	subrouter3 := new(Route).PathPrefix("/foo").Subrouter()
 	subrouter4 := new(Route).PathPrefix("/foo/bar").Subrouter()
 	subrouter5 := new(Route).PathPrefix("/{category}").Subrouter()
+	subrouter6 := new(Route).Matches("POST").PathPrefix("/foo").Subrouter()
 
 	tests := []routeTest{
 		{
@@ -1267,6 +1268,24 @@ func TestSubRouter(t *testing.T) {
 			host:         "",
 			path:         "/baz",
 			pathTemplate: `/{category}`,
+			shouldMatch:  true,
+		},
+		{
+			route:        subrouter6.Path("/"),
+			request:      newRequest("GET", "http://localhost/foo/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/foo/",
+			pathTemplate: `/foo/`,
+			shouldMatch:  false,
+		},
+		{
+			route:        subrouter6.Path("/"),
+			request:      newRequest("POST", "http://localhost/foo/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/foo/",
+			pathTemplate: `/foo/`,
 			shouldMatch:  true,
 		},
 		{
