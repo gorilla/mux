@@ -91,9 +91,13 @@ func TestMiddlewareSubrouter(t *testing.T) {
 
 	subrouter := router.PathPrefix("/sub").Subrouter()
 	subrouter.HandleFunc("/x", dummyHandler).Methods("GET")
+	subrouter2 := router.PathPrefix("/sub2").Subrouter()
+	subrouter2.HandleFunc("/x", dummyHandler).Methods("GET")
 
 	mw := &testMiddleware{}
 	subrouter.useInterface(mw)
+	mw2 := &testMiddleware{}
+	subrouter2.useInterface(mw2)
 
 	rw := NewRecorder()
 	req := newRequest("GET", "/")
@@ -109,10 +113,22 @@ func TestMiddlewareSubrouter(t *testing.T) {
 		t.Fatalf("Expected %d calls, but got only %d", 0, mw.timesCalled)
 	}
 
+	req = newRequest("GET", "/sub2/")
+	router.ServeHTTP(rw, req)
+	if mw2.timesCalled != 0 {
+		t.Fatalf("Expected %d calls, but got only %d", 0, mw2.timesCalled)
+	}
+
 	req = newRequest("GET", "/sub/x")
 	router.ServeHTTP(rw, req)
 	if mw.timesCalled != 1 {
 		t.Fatalf("Expected %d calls, but got only %d", 1, mw.timesCalled)
+	}
+
+	req = newRequest("GET", "/sub2/x")
+	router.ServeHTTP(rw, req)
+	if mw2.timesCalled != 1 {
+		t.Fatalf("Expected %d calls, but got only %d", 1, mw2.timesCalled)
 	}
 
 	req = newRequest("GET", "/sub/not/found")
@@ -121,18 +137,40 @@ func TestMiddlewareSubrouter(t *testing.T) {
 		t.Fatalf("Expected %d calls, but got only %d", 1, mw.timesCalled)
 	}
 
+	req = newRequest("GET", "/sub2/not/found")
+	router.ServeHTTP(rw, req)
+	if mw2.timesCalled != 1 {
+		t.Fatalf("Expected %d calls, but got only %d", 1, mw2.timesCalled)
+	}
+
 	router.useInterface(mw)
+	router.useInterface(mw2)
 
 	req = newRequest("GET", "/")
 	router.ServeHTTP(rw, req)
 	if mw.timesCalled != 2 {
 		t.Fatalf("Expected %d calls, but got only %d", 2, mw.timesCalled)
 	}
+	if mw2.timesCalled != 2 {
+		t.Fatalf("Expected %d calls, but got only %d", 2, mw2.timesCalled)
+	}
 
 	req = newRequest("GET", "/sub/x")
 	router.ServeHTTP(rw, req)
 	if mw.timesCalled != 4 {
 		t.Fatalf("Expected %d calls, but got only %d", 4, mw.timesCalled)
+	}
+	if mw2.timesCalled != 3 {
+		t.Fatalf("Expected %d calls, but got only %d", 3, mw2.timesCalled)
+	}
+
+	req = newRequest("GET", "/sub2/x")
+	router.ServeHTTP(rw, req)
+	if mw.timesCalled != 5 {
+		t.Fatalf("Expected %d calls, but got only %d", 5, mw.timesCalled)
+	}
+	if mw2.timesCalled != 5 {
+		t.Fatalf("Expected %d calls, but got only %d", 5, mw2.timesCalled)
 	}
 }
 
