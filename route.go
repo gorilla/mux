@@ -137,7 +137,7 @@ func (r *Route) GetHandler() http.Handler {
 // Name -----------------------------------------------------------------------
 
 // Name sets the name for the route, used to build URLs.
-// If the name was registered already it will be overwritten.
+// It is an error to call Name more than once on a route.
 func (r *Route) Name(name string) *Route {
 	if r.name != "" {
 		r.err = fmt.Errorf("mux: route already has name %q, can't set %q",
