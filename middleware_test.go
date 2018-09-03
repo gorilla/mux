@@ -136,9 +136,28 @@ func TestMiddlewareSubrouter(t *testing.T) {
 	}
 }
 
+func TestMiddlewareWithOverlappingSubrouter(t *testing.T) {
+	router := NewRouter()
+	// Ensure that an overlapping router doesn't interfere with running of the middleware
+	router.PathPrefix("/sub/x").Subrouter()
+	subrouter := router.PathPrefix("/sub").Subrouter()
+	subrouter.HandleFunc("/x/y", dummyHandler).Methods("GET")
+
+	mw := &testMiddleware{}
+	subrouter.useInterface(mw)
+
+	rw := NewRecorder()
+	req := newRequest("GET", "/sub/x/y")
+	router.ServeHTTP(rw, req)
+	if mw.timesCalled != 1 {
+		t.Fatalf("Expected %d calls, but got only %d", 1, mw.timesCalled)
+	}
+}
+
 func TestMiddlewareDuplicateSubrouter(t *testing.T) {
 	router := NewRouter()
-	router.PathPrefix("/sub").Subrouter() // Deliberately create a duplicate router
+	// Ensure that an duplicate router doesn't interfere with running of the middleware
+	router.PathPrefix("/sub").Subrouter()
 	subrouter := router.PathPrefix("/sub").Subrouter()
 	subrouter.HandleFunc("/x", dummyHandler).Methods("GET")
 
