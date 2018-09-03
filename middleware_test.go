@@ -2,9 +2,11 @@ package mux
 
 import (
 	"bytes"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 type testMiddleware struct {
@@ -346,10 +348,10 @@ func TestCORSMethodMiddleware(t *testing.T) {
 		testURL                string
 		expectedAllowedMethods string
 	}{
-		{"/g/{o}", "a", "POST", "/g/asdf", "POST,PUT,GET,OPTIONS"},
-		{"/g/{o}", "b", "PUT", "/g/bla", "POST,PUT,GET,OPTIONS"},
-		{"/g/{o}", "c", "GET", "/g/orilla", "POST,PUT,GET,OPTIONS"},
-		{"/g", "d", "POST", "/g", "POST,OPTIONS"},
+		{"/g/{o}", "a", "POST", "/g/asdf", "POST,PUT,GET"},
+		{"/g/{o}", "b", "PUT", "/g/bla", "POST,PUT,GET"},
+		{"/g/{o}", "c", "GET", "/g/orilla", "POST,PUT,GET"},
+		{"/g", "d", "POST", "/g", "POST"},
 	}
 
 	for _, tt := range cases {
@@ -374,4 +376,107 @@ func TestCORSMethodMiddleware(t *testing.T) {
 			t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", tt.expectedAllowedMethods, allowedMethods)
 		}
 	}
+}
+
+// A route without a Method filter will not trigger the middleware.
+func TestCORSMiddlewareOPTIONSWithoutMethodMatcher(t *testing.T) {
+	router := NewRouter()
+
+	handlerStr := "a"
+
+	router.HandleFunc("/g/{o}", stringHandler(handlerStr))
+
+	router.Use(CORSMethodMiddleware(router))
+
+	rr := httptest.NewRecorder()
+	req := newRequest("OPTIONS", "/g/asdf")
+
+	router.ServeHTTP(rr, req)
+
+	if want, have := rr.HeaderMap.Get("Access-Control-Allow-Methods"), ""; have != want {
+		t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", want, have)
+	}
+
+	if string(rr.Body.Bytes()) != handlerStr {
+		t.Fatal("Handler response is not what it should be")
+	}
+}
+
+func TestCORSMiddlewareOPTIONSWithMethodMatcher(t *testing.T) {
+	router := NewRouter()
+
+	cases := []struct {
+		path                   string
+		response               string
+		method                 string
+		testURL                string
+		expectedAllowedMethods string
+	}{
+		{"/g/{o}", "a", "POST", "/g/asdf", "POST,PUT,GET,OPTIONS"},
+		{"/g/{o}", "b", "PUT", "/g/bla", "POST,PUT,GET,OPTIONS"},
+		{"/g/{o}", "c", "GET", "/g/orilla", "POST,PUT,GET,OPTIONS"},
+		{"/g/{o}", "c", "OPTIONS", "/g/orilla", "POST,PUT,GET,OPTIONS"},
+	}
+
+	for _, tt := range cases {
+		router.HandleFunc(tt.path, stringHandler(tt.response)).Methods(tt.method)
+	}
+
+	router.Use(CORSMethodMiddleware(router))
+
+	for _, tt := range cases {
+		rr := httptest.NewRecorder()
+		req := newRequest("OPTIONS", tt.testURL)
+
+		router.ServeHTTP(rr, req)
+
+		allowedMethods := rr.HeaderMap.Get("Access-Control-Allow-Methods")
+
+		if want, have := 200, rr.Code; have != want {
+			t.Errorf("Expected status code %d, found %d", want, have)
+		}
+
+		if allowedMethods != tt.expectedAllowedMethods {
+			t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", tt.expectedAllowedMethods, allowedMethods)
+		}
+	}
+}
+
+// Create a router, attach a route with a Methods filter, and apply the middleware.
+// The middlewares are only executed if the call matches a route.
+// Explicitly enable a Methods filter with "OPTIONS" in order for the middleware
+// to handle it.
+func ExampleCORSMethodMiddleware() {
+	router := NewRouter()
+	router.Path("/some-path").HandlerFunc(stringHandler("This endpoint is accessible through CORS")).Methods("OPTIONS", "GET", "PUT", "DELETE")
+	router.Use(CORSMethodMiddleware(router))
+
+	srv := &http.Server{
+		Handler:      router,
+		Addr:         "127.0.0.1:8000",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	log.Fatal(srv.ListenAndServe())
+}
+
+// To only enable the CORS header for specific matchers, enable the middleware
+// on a subrouter.
+func ExampleCORSMethodMiddleware_subrouter() {
+	router := NewRouter()
+	router.Path("/endpoint_without_cors_header").HandlerFunc(stringHandler("no CORS allowed")).Methods("OPTIONS", "GET", "PUT", "DELETE")
+
+	routesWithCORS := router.NewRoute().Subrouter()
+	routesWithCORS.Path("/endpoint_with_cors_header").HandlerFunc(stringHandler("CORS allowed here!")).Methods("OPTIONS", "GET", "PUT", "DELETE")
+	routesWithCORS.Use(CORSMethodMiddleware(routesWithCORS))
+
+	srv := &http.Server{
+		Handler:      router,
+		Addr:         "127.0.0.1:8000",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	log.Fatal(srv.ListenAndServe())
 }
