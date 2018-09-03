@@ -22,7 +22,7 @@ var (
 
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
-	return &Router{namedRoutes: make(map[string]*Route), KeepContext: false}
+	return &Router{namedRoutes: make(map[string]*Route)}
 }
 
 // Router registers routes to be matched and dispatches a handler.
@@ -60,10 +60,6 @@ type Router struct {
 	strictSlash bool
 	// See Router.SkipClean(). This defines the flag for new routes.
 	skipClean bool
-	// If true, do not clear the request context after handling the request.
-	// This has no effect when go1.7+ is used, since the context is stored
-	// on the request itself.
-	KeepContext bool
 	// see Router.UseEncodedPath(). This defines a flag for all routes.
 	useEncodedPath bool
 	// Slice of middlewares to be called after a match is found
@@ -153,10 +149,6 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if handler == nil {
 		handler = http.NotFoundHandler()
-	}
-
-	if !r.KeepContext {
-		defer contextClear(req)
 	}
 
 	handler.ServeHTTP(w, req)
@@ -418,8 +410,7 @@ func Vars(r *http.Request) map[string]string {
 // CurrentRoute returns the matched route for the current request, if any.
 // This only works when called inside the handler of the matched route
 // because the matched route is stored in the request context which is cleared
-// after the handler returns, unless the KeepContext option is set on the
-// Router.
+// after the handler returns.
 func CurrentRoute(r *http.Request) *Route {
 	if rv := contextGet(r, routeKey); rv != nil {
 		return rv.(*Route)
