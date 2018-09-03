@@ -71,7 +71,7 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 
 	// Return a method mismatch error if we saw a method mismatch and everything else matched
 	if matchErr != nil {
-		// Wipe everything we may have recorded from a previous successful match with the wrong method
+		// A previous successful match with the wrong method would have overwritten this, so we must reset it here
 		*match = RouteMatch{MatchErr: matchErr}
 		return false
 	}
