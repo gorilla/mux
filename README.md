@@ -6,7 +6,7 @@
 
 ![Gorilla Logo](http://www.gorillatoolkit.org/static/images/gorilla-icon-64.png)
 
-http://www.gorillatoolkit.org/pkg/mux
+https://www.gorillatoolkit.org/pkg/mux
 
 Package `gorilla/mux` implements a request router and dispatcher for matching incoming requests to
 their respective handler.
