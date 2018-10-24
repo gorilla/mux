@@ -296,7 +296,7 @@ func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) 
 					} else {
 						u.Path += "/"
 					}
-					m.Handler = http.RedirectHandler(u.String(), 301)
+					m.Handler = http.RedirectHandler(u.String(), http.StatusMovedPermanently)
 				}
 			}
 		}
