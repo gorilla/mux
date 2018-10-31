@@ -83,6 +83,16 @@ type Router struct {
 // field of the match argument.
 func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 	for _, route := range r.routes {
+		// Since there is another matcher to try, clear any match error or handler.
+		// Otherwise, the state of one matcher can leak into the other.
+		//
+		// However, do not override ErrMethodMismatch.
+		// If it not set again by a route, that's the error we will bubble up.
+		if match.MatchErr != ErrMethodMismatch {
+			match.MatchErr = nil
+			match.Handler = nil
+		}
+
 		if route.Match(req, match) {
 			// Build middleware chain if no error was found
 			if match.MatchErr == nil {

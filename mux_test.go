@@ -1911,6 +1911,67 @@ func TestSubrouterHeader(t *testing.T) {
 	}
 }
 
+func TestSubrouterMiddleware(t *testing.T) {
+	mwf := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("foo", "bar")
+			next.ServeHTTP(w, r)
+		})
+	}
+
+	h := func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}
+
+	r := NewRouter()
+
+	r.Methods("POST").Subrouter().HandleFunc("/post-only", h)
+
+	{
+		s := r.NewRoute().Subrouter()
+		s.HandleFunc("/without-mw", h)
+	}
+
+	{
+		s := r.NewRoute().Subrouter()
+		s.Use(mwf)
+		s.HandleFunc("/with-mw", h)
+	}
+
+	{
+		resp := NewRecorder()
+		req, _ := http.NewRequest("GET", "/without-mw", nil)
+		r.ServeHTTP(resp, req)
+		if resp.Code != http.StatusOK {
+			t.Errorf("Expecting code %v", http.StatusOK)
+		}
+		if resp.Header().Get("foo") != "" {
+			t.Errorf("Did not expect middleware to execute")
+		}
+	}
+
+	{
+		resp := NewRecorder()
+		req, _ := http.NewRequest("GET", "/with-mw", nil)
+		r.ServeHTTP(resp, req)
+		if resp.Code != http.StatusOK {
+			t.Errorf("Expecting code %v", http.StatusOK)
+		}
+		if resp.Header().Get("foo") != "bar" {
+			t.Errorf("Expected middleware to execute")
+		}
+	}
+
+	{
+		resp := NewRecorder()
+		req, _ := http.NewRequest("GET", "/post-only", nil)
+		r.ServeHTTP(resp, req)
+		if resp.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expecting code %d, got %d", http.StatusMethodNotAllowed, resp.Code)
+		}
+	}
+}
+
 func TestNoMatchMethodErrorHandler(t *testing.T) {
 	func1 := func(w http.ResponseWriter, r *http.Request) {}
 
