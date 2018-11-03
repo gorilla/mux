@@ -84,33 +84,27 @@ type Router struct {
 func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 	for _, route := range r.routes {
 		if route.Match(req, match) {
-			// Build middleware chain if no error was found
-			if match.MatchErr == nil {
-				for i := len(r.middlewares) - 1; i >= 0; i-- {
-					match.Handler = r.middlewares[i].Middleware(match.Handler)
-				}
+			for i := len(r.middlewares) - 1; i >= 0; i-- {
+				match.Handler = r.middlewares[i].Middleware(match.Handler)
 			}
 			return true
 		}
 	}
 
 	if match.MatchErr == ErrMethodMismatch {
-		if r.MethodNotAllowedHandler != nil {
+		if match.Handler == nil {
 			match.Handler = r.MethodNotAllowedHandler
-			return true
 		}
-
 		return false
 	}
 
+	match.MatchErr = ErrNotFound
+
 	// Closest match for a router (includes sub-routers)
-	if r.NotFoundHandler != nil {
+	if match.Handler == nil {
 		match.Handler = r.NotFoundHandler
-		match.MatchErr = ErrNotFound
-		return true
 	}
 
-	match.MatchErr = ErrNotFound
 	return false
 }
 
@@ -140,26 +134,27 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	var match RouteMatch
-	var handler http.Handler
-	if r.Match(req, &match) {
-		handler = match.Handler
+	r.Match(req, &match)
+
+	if match.Vars != nil {
 		req = setVars(req, match.Vars)
+	}
+	if match.Route != nil {
 		req = setCurrentRoute(req, match.Route)
 	}
 
-	if handler == nil && match.MatchErr == ErrMethodMismatch {
-		handler = methodNotAllowedHandler()
+	if match.Handler == nil && match.MatchErr == ErrMethodMismatch {
+		match.Handler = methodNotAllowedHandler()
 	}
-
-	if handler == nil {
-		handler = http.NotFoundHandler()
+	if match.Handler == nil {
+		match.Handler = http.NotFoundHandler()
 	}
 
 	if !r.KeepContext {
 		defer contextClear(req)
 	}
 
-	handler.ServeHTTP(w, req)
+	match.Handler.ServeHTTP(w, req)
 }
 
 // Get returns a route registered with the given name.

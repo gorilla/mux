@@ -1911,6 +1911,77 @@ func TestSubrouterHeader(t *testing.T) {
 	}
 }
 
+func TestSubrouterMiddleware(t *testing.T) {
+	mwf := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("foo", "bar")
+			next.ServeHTTP(w, r)
+		})
+	}
+
+	h := func(status int, body string) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(status)
+			_, err := w.Write([]byte(body))
+			if err != nil {
+				t.Error("Unexpected error", err)
+			}
+		}
+	}
+
+	r := NewRouter()
+
+	{
+		s := r.NewRoute().Subrouter()
+		s.Handle("/post-only", h(http.StatusInternalServerError, "should not happen")).Methods("POST")
+		s.MethodNotAllowedHandler = h(http.StatusBadRequest, "post-only")
+	}
+
+	{
+		s := r.NewRoute().Subrouter()
+		s.Handle("/without-mw", h(http.StatusOK, "without-mw"))
+	}
+
+	{
+		s := r.NewRoute().Subrouter()
+		s.Use(mwf)
+		s.Handle("/with-mw", h(http.StatusOK, "with-mw"))
+	}
+
+	var tests = []struct {
+		url        string
+		status     int
+		middleware bool
+	}{
+		{url: "without-mw", status: http.StatusOK, middleware: false},
+		{url: "with-mw", status: http.StatusOK, middleware: true},
+		{url: "post-only", status: http.StatusBadRequest, middleware: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.url, func(t *testing.T) {
+			resp := NewRecorder()
+			req, _ := http.NewRequest("GET", "/"+tt.url, nil)
+			r.ServeHTTP(resp, req)
+
+			if resp.Code != tt.status {
+				t.Errorf("Expected status code %d, got %d", tt.status, resp.Code)
+			}
+			body := resp.Body.String()
+			if body == "" {
+				body = "<nothing>"
+			}
+			if body != tt.url {
+				t.Errorf("Expected handler for %s, got %s", tt.url, body)
+			}
+			called := resp.Header().Get("foo") == "bar"
+			if called != tt.middleware {
+				t.Errorf("Expected middleware to be called: %t, but was: %t", tt.middleware, called)
+			}
+		})
+	}
+}
+
 func TestNoMatchMethodErrorHandler(t *testing.T) {
 	func1 := func(w http.ResponseWriter, r *http.Request) {}
 
@@ -1950,13 +2021,21 @@ func TestNoMatchMethodErrorHandler(t *testing.T) {
 	}
 }
 
+// Below, we compare the handlers.
+// We need an actual struct pointer since Go doesn't support function comparison
+type emptyHandler struct {
+}
+
+func (f *emptyHandler) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {
+}
+
 func TestErrMatchNotFound(t *testing.T) {
-	emptyHandler := func(w http.ResponseWriter, r *http.Request) {}
+	h := &emptyHandler{}
 
 	r := NewRouter()
-	r.HandleFunc("/", emptyHandler)
+	r.Handle("/", h)
 	s := r.PathPrefix("/sub/").Subrouter()
-	s.HandleFunc("/", emptyHandler)
+	s.Handle("/", h)
 
 	// Regular 404 not found
 	req, _ := http.NewRequest("GET", "/sub/whatever", nil)
@@ -1972,17 +2051,19 @@ func TestErrMatchNotFound(t *testing.T) {
 	}
 
 	// Now lets add a 404 handler to subrouter
-	s.NotFoundHandler = http.NotFoundHandler()
+	s.NotFoundHandler = h
 	req, _ = http.NewRequest("GET", "/sub/whatever", nil)
 
 	// Test the subrouter first
 	match = new(RouteMatch)
 	matched = s.Match(req, match)
-	// Now we should get a match
-	if !matched {
-		t.Errorf("Subrouter should have matched %s", req.RequestURI)
+	if matched {
+		t.Errorf("Subrouter should not have matched that, got %v", match.Route)
 	}
-	// But MatchErr should be set to ErrNotFound anyway
+	if match.Handler != s.NotFoundHandler {
+		t.Errorf("Expected custom handler MatchErr, but was %v", match.Handler)
+	}
+	// Even with a custom handler, MatchErr is set to ErrNotFound
 	if match.MatchErr != ErrNotFound {
 		t.Errorf("Expected ErrNotFound MatchErr, but was %v", match.MatchErr)
 	}
@@ -1990,10 +2071,11 @@ func TestErrMatchNotFound(t *testing.T) {
 	// Now test the parent (MatchErr should propagate)
 	match = new(RouteMatch)
 	matched = r.Match(req, match)
-
-	// Now we should get a match
-	if !matched {
-		t.Errorf("Router should have matched %s via subrouter", req.RequestURI)
+	if matched {
+		t.Errorf("Router should not have matched that, got %v", match.Route)
+	}
+	if match.Handler != s.NotFoundHandler {
+		t.Errorf("Expected custom handler MatchErr, but was %v", match.Handler)
 	}
 	// But MatchErr should be set to ErrNotFound anyway
 	if match.MatchErr != ErrNotFound {

@@ -55,30 +55,18 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 		return false
 	}
 
-	var matchErr error
-
 	// Match everything.
 	for _, m := range r.matchers {
 		if matched := m.Match(req, match); !matched {
-			if _, ok := m.(methodMatcher); ok {
-				matchErr = ErrMethodMismatch
-				continue
-			}
-			matchErr = nil
 			return false
 		}
-	}
-
-	if matchErr != nil {
-		match.MatchErr = matchErr
-		return false
 	}
 
 	if match.MatchErr == ErrMethodMismatch {
 		// We found a route which matches request method, clear MatchErr
 		match.MatchErr = nil
 		// Then override the mis-matched handler
-		match.Handler = r.handler
+		match.Handler = nil
 	}
 
 	// Yay, we have a match. Let's collect some info about it.
@@ -319,16 +307,33 @@ func (r *Route) MatcherFunc(f MatcherFunc) *Route {
 type methodMatcher []string
 
 func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchInArray(m, r.Method)
+	if !matchInArray(m, r.Method) {
+		match.MatchErr = ErrMethodMismatch
+		return false
+	}
+	return true
 }
 
 // Methods adds a matcher for HTTP methods.
 // It accepts a sequence of one or more methods to be matched, e.g.:
 // "GET", "POST", "PUT".
 func (r *Route) Methods(methods ...string) *Route {
+	if r.err != nil {
+		return r
+	}
+
 	for k, v := range methods {
 		methods[k] = strings.ToUpper(v)
 	}
+
+	// Append to existing methodMatcher
+	for i, m := range r.matchers {
+		if matcher, ok := m.(methodMatcher); ok {
+			r.matchers[i] = append(matcher, methods...)
+			return r
+		}
+	}
+
 	return r.addMatcher(methodMatcher(methods))
 }
 

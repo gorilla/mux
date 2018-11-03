@@ -212,6 +212,7 @@ func TestMiddlewareNotFound(t *testing.T) {
 func TestMiddlewareMethodMismatch(t *testing.T) {
 	mwStr := []byte("Middleware\n")
 	handlerStr := []byte("Logic\n")
+	mnaStr := []byte("Method not allowed")
 
 	router := NewRouter()
 	router.HandleFunc("/", func(w http.ResponseWriter, e *http.Request) {
@@ -239,12 +240,16 @@ func TestMiddlewareMethodMismatch(t *testing.T) {
 	req = newRequest("POST", "/")
 
 	router.MethodNotAllowedHandler = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		rw.Write([]byte("Method not allowed"))
+		rw.Write(mnaStr)
 	})
 	router.ServeHTTP(rw, req)
 
 	if bytes.Contains(rw.Body.Bytes(), mwStr) {
 		t.Fatal("Middleware was called for a method mismatch")
+	}
+
+	if !bytes.Contains(rw.Body.Bytes(), mnaStr) {
+		t.Fatal("MethodNotAllowedHandler was not called for a method mismatch")
 	}
 }
 
@@ -295,6 +300,7 @@ func TestMiddlewareNotFoundSubrouter(t *testing.T) {
 func TestMiddlewareMethodMismatchSubrouter(t *testing.T) {
 	mwStr := []byte("Middleware\n")
 	handlerStr := []byte("Logic\n")
+	mnaStr := []byte("Method not allowed")
 
 	router := NewRouter()
 	router.HandleFunc("/", func(w http.ResponseWriter, e *http.Request) {
@@ -313,27 +319,64 @@ func TestMiddlewareMethodMismatchSubrouter(t *testing.T) {
 		})
 	})
 
-	// Test method mismatch without custom handler
-	rw := NewRecorder()
-	req := newRequest("POST", "/sub/")
+	t.Run("WithoutCustomHandler", func(t *testing.T) {
+		rw := NewRecorder()
+		req := newRequest("POST", "/sub/")
+		router.ServeHTTP(rw, req)
 
-	router.ServeHTTP(rw, req)
-	if bytes.Contains(rw.Body.Bytes(), mwStr) {
-		t.Fatal("Middleware was called for a method mismatch")
-	}
-
-	// Test method mismatch with custom handler
-	rw = NewRecorder()
-	req = newRequest("POST", "/sub/")
-
-	router.MethodNotAllowedHandler = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		rw.Write([]byte("Method not allowed"))
+		if rw.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status code %d, got %d", http.StatusMethodNotAllowed, rw.Code)
+		}
+		if bytes.Contains(rw.Body.Bytes(), mwStr) {
+			t.Fatal("Middleware was called for a method mismatch")
+		}
 	})
-	router.ServeHTTP(rw, req)
 
-	if bytes.Contains(rw.Body.Bytes(), mwStr) {
-		t.Fatal("Middleware was called for a method mismatch")
-	}
+	customHandler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// Use StatusBadRequest just so it's different than the default handler
+		rw.WriteHeader(http.StatusBadRequest)
+		rw.Write(mnaStr)
+	})
+
+	t.Run("WithRouterCustomHandler", func(t *testing.T) {
+		rw := NewRecorder()
+		req := newRequest("POST", "/sub/")
+
+		router.MethodNotAllowedHandler = customHandler
+		subrouter.MethodNotAllowedHandler = nil
+
+		router.ServeHTTP(rw, req)
+
+		if rw.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, rw.Code)
+		}
+		if bytes.Contains(rw.Body.Bytes(), mwStr) {
+			t.Fatal("Middleware was called for a method mismatch")
+		}
+		if !bytes.Contains(rw.Body.Bytes(), mnaStr) {
+			t.Fatal("MethodNotAllowedHandler was not called for a method mismatch")
+		}
+	})
+
+	t.Run("WithSubrouterCustomHandler", func(t *testing.T) {
+		rw := NewRecorder()
+		req := newRequest("POST", "/sub/")
+
+		router.MethodNotAllowedHandler = nil
+		subrouter.MethodNotAllowedHandler = customHandler
+
+		router.ServeHTTP(rw, req)
+
+		if rw.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, rw.Code)
+		}
+		if bytes.Contains(rw.Body.Bytes(), mwStr) {
+			t.Fatal("Middleware was called for a method mismatch")
+		}
+		if !bytes.Contains(rw.Body.Bytes(), mnaStr) {
+			t.Fatal("MethodNotAllowedHandler was not called for a method mismatch")
+		}
+	})
 }
 
 func TestCORSMethodMiddleware(t *testing.T) {
