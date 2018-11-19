@@ -2023,8 +2023,7 @@ func TestNoMatchMethodErrorHandler(t *testing.T) {
 
 // Below, we compare the handlers.
 // We need an actual struct pointer since Go doesn't support function comparison
-type emptyHandler struct {
-}
+type emptyHandler struct{}
 
 func (f *emptyHandler) ServeHTTP(_ http.ResponseWriter, _ *http.Request) {
 }

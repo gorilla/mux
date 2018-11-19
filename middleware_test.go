@@ -212,7 +212,7 @@ func TestMiddlewareNotFound(t *testing.T) {
 func TestMiddlewareMethodMismatch(t *testing.T) {
 	mwStr := []byte("Middleware\n")
 	handlerStr := []byte("Logic\n")
-	mnaStr := []byte("Method not allowed")
+	mnaStr := []byte("Method not allowed\n")
 
 	router := NewRouter()
 	router.HandleFunc("/", func(w http.ResponseWriter, e *http.Request) {

@@ -491,6 +491,24 @@ r.Use(amw.Middleware)
 
 Note: The handler chain will be stopped if your middleware doesn't call `next.ServeHTTP()` with the corresponding parameters. This can be used to abort a request if the middleware writer wants to. Middlewares _should_ write to `ResponseWriter` if they _are_ going to terminate the request, and they _should not_ write to `ResponseWriter` if they _are not_ going to terminate it.
 
+#### Middlewares on route-not-found
+
+Middlwares only run when a route is found. If the request can't be matched, including if the method is not allowed, the middlewares will be skipped.
+
+This is also true if you specify a custom `MethodNotAllowedHandler` or `NotFoundHandler`.
+
+To _also_ run a middleware on a custom handler, apply it manually:
+
+```go
+r := mux.NewRouter()
+h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+    io.WriteString(w, "Nothing to see here")
+    w.WriteHeader(http.StatusNotFound)
+})
+h = loggingMiddleware(h)
+r.NotFoundHandler = h
+```
+
 ### Testing Handlers
 
 Testing handlers in a Go web application is straightforward, and _mux_ doesn't complicate this any further. Given two files: `endpoints.go` and `endpoints_test.go`, here's how we'd test an application using _mux_.
