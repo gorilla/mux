@@ -56,18 +56,70 @@ type Router struct {
 	routes []*Route
 	// Routes by name for URL building.
 	namedRoutes map[string]*Route
-	// See Router.StrictSlash(). This defines the flag for new routes.
-	strictSlash bool
-	// See Router.SkipClean(). This defines the flag for new routes.
-	skipClean bool
+
 	// If true, do not clear the request context after handling the request.
 	// This has no effect when go1.7+ is used, since the context is stored
 	// on the request itself.
 	KeepContext bool
-	// see Router.UseEncodedPath(). This defines a flag for all routes.
-	useEncodedPath bool
+
 	// Slice of middlewares to be called after a match is found
 	middlewares []middleware
+
+	routeConf
+}
+
+// common route configuration shared between `Router` and `Route`
+type routeConf struct {
+	// If true, "/path/foo%2Fbar/to" will match the path "/path/{var}/to"
+	useEncodedPath bool
+
+	// If true, when the path pattern is "/path/", accessing "/path" will
+	// redirect to the former and vice versa.
+	strictSlash bool
+
+	// If true, when the path pattern is "/path//to", accessing "/path//to"
+	// will not redirect
+	skipClean bool
+
+	// Manager for the variables from host and path.
+	regexp *routeRegexpGroup
+
+	// List of matchers.
+	matchers []matcher
+}
+
+// returns an effective deep copy of `routeConf`
+func copyRouteConf(r routeConf) routeConf {
+	c := routeConf{
+		useEncodedPath: r.useEncodedPath,
+		strictSlash:    r.strictSlash,
+		skipClean:      r.skipClean,
+	}
+
+	if r.regexp != nil {
+		c.regexp = &routeRegexpGroup{}
+		if r.regexp.path != nil {
+			c.regexp.path = copyRouteRegexp(r.regexp.path)
+		}
+		if r.regexp.host != nil {
+			c.regexp.host = copyRouteRegexp(r.regexp.host)
+		}
+		c.regexp.queries = make([]*routeRegexp, 0, len(r.regexp.queries))
+		for _, q := range r.regexp.queries {
+			c.regexp.queries = append(c.regexp.queries, copyRouteRegexp(q))
+		}
+		c.regexp.queries = r.regexp.queries
+	}
+
+	for _, m := range r.matchers {
+		c.matchers = append(c.matchers, m)
+	}
+	return c
+}
+
+func copyRouteRegexp(r *routeRegexp) *routeRegexp {
+	c := *r
+	return &c
 }
 
 // Match attempts to match the given request against the router's registered routes.
@@ -265,7 +317,8 @@ func (r *Router) buildVars(m map[string]string) map[string]string {
 
 // NewRoute registers an empty route.
 func (r *Router) NewRoute() *Route {
-	route := &Route{parent: r, strictSlash: r.strictSlash, skipClean: r.skipClean, useEncodedPath: r.useEncodedPath}
+	// initialize a route with a copy of the parent router's configuration
+	route := &Route{parent: r, routeConf: copyRouteConf(r.routeConf)}
 	r.routes = append(r.routes, route)
 	return route
 }

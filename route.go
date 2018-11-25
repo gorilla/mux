@@ -19,18 +19,6 @@ type Route struct {
 	parent parentRoute
 	// Request handler for the route.
 	handler http.Handler
-	// List of matchers.
-	matchers []matcher
-	// Manager for the variables from host and path.
-	regexp *routeRegexpGroup
-	// If true, when the path pattern is "/path/", accessing "/path" will
-	// redirect to the former and vice versa.
-	strictSlash bool
-	// If true, when the path pattern is "/path//to", accessing "/path//to"
-	// will not redirect
-	skipClean bool
-	// If true, "/path/foo%2Fbar/to" will match the path "/path/{var}/to"
-	useEncodedPath bool
 	// The scheme used when building URLs.
 	buildScheme string
 	// If true, this route never matches: it is only used to build URLs.
@@ -41,6 +29,8 @@ type Route struct {
 	err error
 
 	buildVarsFunc BuildVarsFunc
+
+	routeConf
 }
 
 // SkipClean reports whether path cleaning is enabled for this route via
@@ -458,7 +448,8 @@ func (r *Route) BuildVarsFunc(f BuildVarsFunc) *Route {
 // Here, the routes registered in the subrouter won't be tested if the host
 // doesn't match.
 func (r *Route) Subrouter() *Router {
-	router := &Router{parent: r, strictSlash: r.strictSlash}
+	// initialize a subrouter with a copy of the parent route's configuration
+	router := &Router{parent: r, routeConf: copyRouteConf(r.routeConf)}
 	r.addMatcher(router)
 	return router
 }

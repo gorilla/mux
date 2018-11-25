@@ -1193,7 +1193,6 @@ func TestSubRouter(t *testing.T) {
 	subrouter3 := new(Route).PathPrefix("/foo").Subrouter()
 	subrouter4 := new(Route).PathPrefix("/foo/bar").Subrouter()
 	subrouter5 := new(Route).PathPrefix("/{category}").Subrouter()
-
 	tests := []routeTest{
 		{
 			route:        subrouter1.Path("/{v2:[a-z]+}"),
@@ -1286,6 +1285,106 @@ func TestSubRouter(t *testing.T) {
 			host:         "",
 			path:         "/baz",
 			pathTemplate: `/{category}`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Mismatch method specified on parent route",
+			route:        new(Route).Methods("POST").PathPrefix("/foo").Subrouter().Path("/"),
+			request:      newRequest("GET", "http://localhost/foo/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/foo/",
+			pathTemplate: `/foo/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Match method specified on parent route",
+			route:        new(Route).Methods("POST").PathPrefix("/foo").Subrouter().Path("/"),
+			request:      newRequest("POST", "http://localhost/foo/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/foo/",
+			pathTemplate: `/foo/`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Mismatch scheme specified on parent route",
+			route:        new(Route).Schemes("https").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Match scheme specified on parent route",
+			route:        new(Route).Schemes("http").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "No match header specified on parent route",
+			route:        new(Route).Headers("X-Forwarded-Proto", "https").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Header mismatch value specified on parent route",
+			route:        new(Route).Headers("X-Forwarded-Proto", "https").Subrouter().PathPrefix("/"),
+			request:      newRequestWithHeaders("GET", "http://localhost/", "X-Forwarded-Proto", "http"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Header match value specified on parent route",
+			route:        new(Route).Headers("X-Forwarded-Proto", "https").Subrouter().PathPrefix("/"),
+			request:      newRequestWithHeaders("GET", "http://localhost/", "X-Forwarded-Proto", "https"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Query specified on parent route not present",
+			route:        new(Route).Headers("key", "foobar").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Query mismatch value specified on parent route",
+			route:        new(Route).Queries("key", "foobar").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/?key=notfoobar"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Query match value specified on subroute",
+			route:        new(Route).Queries("key", "foobar").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/?key=foobar"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
 			shouldMatch:  true,
 		},
 		{
@@ -1563,8 +1662,8 @@ func TestWalkSubrouters(t *testing.T) {
 	o.Methods("GET")
 	o.Methods("PUT")
 
-	// all 4 routes should be matched, but final 2 routes do not have path templates
-	paths := []string{"/g", "/g/o", "", ""}
+	// all 4 routes should be matched
+	paths := []string{"/g", "/g/o", "/g/o", "/g/o"}
 	idx := 0
 	err := router.Walk(func(route *Route, router *Router, ancestors []*Route) error {
 		path := paths[idx]
@@ -2404,5 +2503,20 @@ func newRequest(method, url string) *http.Request {
 	if err != nil {
 		panic(err)
 	}
+	return req
+}
+
+// create a new request with the provided headers
+func newRequestWithHeaders(method, url string, headers ...string) *http.Request {
+	req := newRequest(method, url)
+
+	if len(headers)%2 != 0 {
+		panic(fmt.Sprintf("Expected headers length divisible by 2 but got %v", len(headers)))
+	}
+
+	for i := 0; i < len(headers); i += 2 {
+		req.Header.Set(headers[i], headers[i+1])
+	}
+
 	return req
 }
