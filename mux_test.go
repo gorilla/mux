@@ -1611,12 +1611,16 @@ func TestWalkSingleDepth(t *testing.T) {
 func TestWalkNested(t *testing.T) {
 	router := NewRouter()
 
-	g := router.Path("/g").Subrouter()
-	o := g.PathPrefix("/o").Subrouter()
-	r := o.PathPrefix("/r").Subrouter()
-	i := r.PathPrefix("/i").Subrouter()
-	l1 := i.PathPrefix("/l").Subrouter()
-	l2 := l1.PathPrefix("/l").Subrouter()
+	routeSubrouter := func(r *Route) (*Route, *Router) {
+		return r, r.Subrouter()
+	}
+
+	gRoute, g := routeSubrouter(router.Path("/g"))
+	oRoute, o := routeSubrouter(g.PathPrefix("/o"))
+	rRoute, r := routeSubrouter(o.PathPrefix("/r"))
+	iRoute, i := routeSubrouter(r.PathPrefix("/i"))
+	l1Route, l1 := routeSubrouter(i.PathPrefix("/l"))
+	l2Route, l2 := routeSubrouter(l1.PathPrefix("/l"))
 	l2.Path("/a")
 
 	testCases := []struct {
@@ -1624,12 +1628,12 @@ func TestWalkNested(t *testing.T) {
 		ancestors []*Route
 	}{
 		{"/g", []*Route{}},
-		{"/g/o", []*Route{g.parent.(*Route)}},
-		{"/g/o/r", []*Route{g.parent.(*Route), o.parent.(*Route)}},
-		{"/g/o/r/i", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route)}},
-		{"/g/o/r/i/l", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route), i.parent.(*Route)}},
-		{"/g/o/r/i/l/l", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route), i.parent.(*Route), l1.parent.(*Route)}},
-		{"/g/o/r/i/l/l/a", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route), i.parent.(*Route), l1.parent.(*Route), l2.parent.(*Route)}},
+		{"/g/o", []*Route{gRoute}},
+		{"/g/o/r", []*Route{gRoute, oRoute}},
+		{"/g/o/r/i", []*Route{gRoute, oRoute, rRoute}},
+		{"/g/o/r/i/l", []*Route{gRoute, oRoute, rRoute, iRoute}},
+		{"/g/o/r/i/l/l", []*Route{gRoute, oRoute, rRoute, iRoute, l1Route}},
+		{"/g/o/r/i/l/l/a", []*Route{gRoute, oRoute, rRoute, iRoute, l1Route, l2Route}},
 	}
 
 	idx := 0
@@ -1844,7 +1848,11 @@ func testRoute(t *testing.T, test routeTest) {
 			}
 		}
 		if query != "" {
-			u, _ := route.URL(mapToPairs(match.Vars)...)
+			u, err := route.URL(mapToPairs(match.Vars)...)
+			if err != nil {
+				t.Errorf("(%v) erred while creating url: %v", test.title, err)
+				return
+			}
 			if query != u.RawQuery {
 				t.Errorf("(%v) URL query not equal: expected %v, got %v", test.title, query, u.RawQuery)
 				return

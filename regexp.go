@@ -267,7 +267,7 @@ type routeRegexpGroup struct {
 }
 
 // setMatch extracts the variables from the URL once a route matches.
-func (v *routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
+func (v routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
 	// Store host variables.
 	if v.host != nil {
 		host := getHost(req)

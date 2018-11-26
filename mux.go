@@ -50,10 +50,9 @@ type Router struct {
 	// Configurable Handler to be used when the request method does not match the route.
 	MethodNotAllowedHandler http.Handler
 
-	// Parent route, if this is a subrouter.
-	parent parentRoute
 	// Routes to be matched, in order.
 	routes []*Route
+
 	// Routes by name for URL building.
 	namedRoutes map[string]*Route
 
@@ -65,6 +64,7 @@ type Router struct {
 	// Slice of middlewares to be called after a match is found
 	middlewares []middleware
 
+	// configuration shared with `Route`
 	routeConf
 }
 
@@ -82,38 +82,39 @@ type routeConf struct {
 	skipClean bool
 
 	// Manager for the variables from host and path.
-	regexp *routeRegexpGroup
+	regexp routeRegexpGroup
 
 	// List of matchers.
 	matchers []matcher
+
+	// The scheme used when building URLs.
+	buildScheme string
+
+	buildVarsFunc BuildVarsFunc
 }
 
 // returns an effective deep copy of `routeConf`
 func copyRouteConf(r routeConf) routeConf {
-	c := routeConf{
-		useEncodedPath: r.useEncodedPath,
-		strictSlash:    r.strictSlash,
-		skipClean:      r.skipClean,
+	c := r
+
+	if r.regexp.path != nil {
+		c.regexp.path = copyRouteRegexp(r.regexp.path)
 	}
 
-	if r.regexp != nil {
-		c.regexp = &routeRegexpGroup{}
-		if r.regexp.path != nil {
-			c.regexp.path = copyRouteRegexp(r.regexp.path)
-		}
-		if r.regexp.host != nil {
-			c.regexp.host = copyRouteRegexp(r.regexp.host)
-		}
-		c.regexp.queries = make([]*routeRegexp, 0, len(r.regexp.queries))
-		for _, q := range r.regexp.queries {
-			c.regexp.queries = append(c.regexp.queries, copyRouteRegexp(q))
-		}
-		c.regexp.queries = r.regexp.queries
+	if r.regexp.host != nil {
+		c.regexp.host = copyRouteRegexp(r.regexp.host)
 	}
 
+	c.regexp.queries = make([]*routeRegexp, 0, len(r.regexp.queries))
+	for _, q := range r.regexp.queries {
+		c.regexp.queries = append(c.regexp.queries, copyRouteRegexp(q))
+	}
+
+	c.matchers = make([]matcher, 0, len(r.matchers))
 	for _, m := range r.matchers {
 		c.matchers = append(c.matchers, m)
 	}
+
 	return c
 }
 
@@ -216,13 +217,13 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // Get returns a route registered with the given name.
 func (r *Router) Get(name string) *Route {
-	return r.getNamedRoutes()[name]
+	return r.namedRoutes[name]
 }
 
 // GetRoute returns a route registered with the given name. This method
 // was renamed to Get() and remains here for backwards compatibility.
 func (r *Router) GetRoute(name string) *Route {
-	return r.getNamedRoutes()[name]
+	return r.namedRoutes[name]
 }
 
 // StrictSlash defines the trailing slash behavior for new routes. The initial
@@ -274,51 +275,13 @@ func (r *Router) UseEncodedPath() *Router {
 }
 
 // ----------------------------------------------------------------------------
-// parentRoute
-// ----------------------------------------------------------------------------
-
-func (r *Router) getBuildScheme() string {
-	if r.parent != nil {
-		return r.parent.getBuildScheme()
-	}
-	return ""
-}
-
-// getNamedRoutes returns the map where named routes are registered.
-func (r *Router) getNamedRoutes() map[string]*Route {
-	if r.namedRoutes == nil {
-		if r.parent != nil {
-			r.namedRoutes = r.parent.getNamedRoutes()
-		} else {
-			r.namedRoutes = make(map[string]*Route)
-		}
-	}
-	return r.namedRoutes
-}
-
-// getRegexpGroup returns regexp definitions from the parent route, if any.
-func (r *Router) getRegexpGroup() *routeRegexpGroup {
-	if r.parent != nil {
-		return r.parent.getRegexpGroup()
-	}
-	return nil
-}
-
-func (r *Router) buildVars(m map[string]string) map[string]string {
-	if r.parent != nil {
-		m = r.parent.buildVars(m)
-	}
-	return m
-}
-
-// ----------------------------------------------------------------------------
 // Route factories
 // ----------------------------------------------------------------------------
 
 // NewRoute registers an empty route.
 func (r *Router) NewRoute() *Route {
 	// initialize a route with a copy of the parent router's configuration
-	route := &Route{parent: r, routeConf: copyRouteConf(r.routeConf)}
+	route := &Route{routeConf: copyRouteConf(r.routeConf), namedRoutes: r.namedRoutes}
 	r.routes = append(r.routes, route)
 	return route
 }
