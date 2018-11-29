@@ -48,15 +48,6 @@ type routeTest struct {
 }
 
 func TestHost(t *testing.T) {
-	// newRequestHost a new request with a method, url, and host header
-	newRequestHost := func(method, url, host string) *http.Request {
-		req, err := http.NewRequest(method, url, nil)
-		if err != nil {
-			panic(err)
-		}
-		req.Host = host
-		return req
-	}
 
 	tests := []routeTest{
 		{
@@ -2439,6 +2430,194 @@ func testMethodsSubrouter(t *testing.T, test methodsSubrouterTest) {
 	}
 }
 
+func TestSubrouterMatching(t *testing.T) {
+	const (
+		none, stdOnly, subOnly uint8 = 0, 1 << 0, 1 << 1
+		both                         = subOnly | stdOnly
+	)
+
+	type request struct {
+		Name    string
+		Request *http.Request
+		Flags   uint8
+	}
+
+	cases := []struct {
+		Name                string
+		Standard, Subrouter func(*Router)
+		Requests            []request
+	}{
+		{
+			"pathPrefix",
+			func(r *Router) {
+				r.PathPrefix("/before").PathPrefix("/after")
+			},
+			func(r *Router) {
+				r.PathPrefix("/before").Subrouter().PathPrefix("/after")
+			},
+			[]request{
+				{"no match final path prefix", newRequest("GET", "/after"), none},
+				{"no match parent path prefix", newRequest("GET", "/before"), none},
+				{"matches append", newRequest("GET", "/before/after"), both},
+				{"matches as prefix", newRequest("GET", "/before/after/1234"), both},
+			},
+		},
+		{
+			"path",
+			func(r *Router) {
+				r.Path("/before").Path("/after")
+			},
+			func(r *Router) {
+				r.Path("/before").Subrouter().Path("/after")
+			},
+			[]request{
+				{"no match subroute path", newRequest("GET", "/after"), none},
+				{"no match parent path", newRequest("GET", "/before"), none},
+				{"no match as prefix", newRequest("GET", "/before/after/1234"), none},
+				{"no match append", newRequest("GET", "/before/after"), none},
+			},
+		},
+		{
+			"host",
+			func(r *Router) {
+				r.Host("before.com").Host("after.com")
+			},
+			func(r *Router) {
+				r.Host("before.com").Subrouter().Host("after.com")
+			},
+			[]request{
+				{"no match before", newRequestHost("GET", "/", "before.com"), none},
+				{"no match other", newRequestHost("GET", "/", "other.com"), none},
+				{"matches after", newRequestHost("GET", "/", "after.com"), none},
+			},
+		},
+		{
+			"queries variant keys",
+			func(r *Router) {
+				r.Queries("foo", "bar").Queries("cricket", "baseball")
+			},
+			func(r *Router) {
+				r.Queries("foo", "bar").Subrouter().Queries("cricket", "baseball")
+			},
+			[]request{
+				{"matches with all", newRequest("GET", "/?foo=bar&cricket=baseball"), both},
+				{"matches with more", newRequest("GET", "/?foo=bar&cricket=baseball&something=else"), both},
+				{"no match with none", newRequest("GET", "/"), none},
+				{"no match with some", newRequest("GET", "/?cricket=baseball"), none},
+			},
+		},
+		{
+			"queries overlapping keys",
+			func(r *Router) {
+				r.Queries("foo", "bar").Queries("foo", "baz")
+			},
+			func(r *Router) {
+				r.Queries("foo", "bar").Subrouter().Queries("foo", "baz")
+			},
+			[]request{
+				{"no match old value", newRequest("GET", "/?foo=bar"), none},
+				{"no match diff value", newRequest("GET", "/?foo=bak"), none},
+				{"no match with none", newRequest("GET", "/"), none},
+				{"matches override", newRequest("GET", "/?foo=baz"), none},
+			},
+		},
+		{
+			"header variant keys",
+			func(r *Router) {
+				r.Headers("foo", "bar").Headers("cricket", "baseball")
+			},
+			func(r *Router) {
+				r.Headers("foo", "bar").Subrouter().Headers("cricket", "baseball")
+			},
+			[]request{
+				{
+					"matches with all",
+					newRequestWithHeaders("GET", "/", "foo", "bar", "cricket", "baseball"),
+					both,
+				},
+				{
+					"matches with more",
+					newRequestWithHeaders("GET", "/", "foo", "bar", "cricket", "baseball", "something", "else"),
+					both,
+				},
+				{"no match with none", newRequest("GET", "/"), none},
+				{"no match with some", newRequestWithHeaders("GET", "/", "cricket", "baseball"), none},
+			},
+		},
+		{
+			"header overlapping keys",
+			func(r *Router) {
+				r.Headers("foo", "bar").Headers("foo", "baz")
+			},
+			func(r *Router) {
+				r.Headers("foo", "bar").Subrouter().Headers("foo", "baz")
+			},
+			[]request{
+				{"no match old value", newRequestWithHeaders("GET", "/", "foo", "bar"), none},
+				{"no match diff value", newRequestWithHeaders("GET", "/", "foo", "bak"), none},
+				{"no match with none", newRequest("GET", "/"), none},
+				{"matches override", newRequestWithHeaders("GET", "/", "foo", "baz"), none},
+			},
+		},
+		{
+			"method",
+			func(r *Router) {
+				r.Methods("POST").Methods("GET")
+			},
+			func(r *Router) {
+				r.Methods("POST").Subrouter().Methods("GET")
+			},
+			[]request{
+				{"matches before", newRequest("POST", "/"), none},
+				{"no match other", newRequest("HEAD", "/"), none},
+				{"matches override", newRequest("GET", "/"), none},
+			},
+		},
+		{
+			"schemes",
+			func(r *Router) {
+				r.Schemes("http").Schemes("https")
+			},
+			func(r *Router) {
+				r.Schemes("http").Subrouter().Schemes("https")
+			},
+			[]request{
+				{"matches overrides", newRequest("GET", "https://www.example.com/"), none},
+				{"matches original", newRequest("GET", "http://www.example.com/"), none},
+				{"no match other", newRequest("GET", "ftp://www.example.com/"), none},
+			},
+		},
+	}
+
+	// case -> request -> router
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			for _, req := range c.Requests {
+				t.Run(req.Name, func(t *testing.T) {
+					for _, v := range []struct {
+						Name     string
+						Config   func(*Router)
+						Expected bool
+					}{
+						{"subrouter", c.Subrouter, (req.Flags & subOnly) != 0},
+						{"standard", c.Standard, (req.Flags & stdOnly) != 0},
+					} {
+						r := NewRouter()
+						v.Config(r)
+						if r.Match(req.Request, &RouteMatch{}) != v.Expected {
+							if v.Expected {
+								t.Errorf("expected %v match", v.Name)
+							} else {
+								t.Errorf("expected %v no match", v.Name)
+							}
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
 // mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int
@@ -2526,5 +2705,15 @@ func newRequestWithHeaders(method, url string, headers ...string) *http.Request 
 		req.Header.Set(headers[i], headers[i+1])
 	}
 
+	return req
+}
+
+// newRequestHost a new request with a method, url, and host header
+func newRequestHost(method, url, host string) *http.Request {
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Host = host
 	return req
 }
