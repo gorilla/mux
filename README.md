@@ -491,11 +491,11 @@ r.Use(amw.Middleware)
 
 Note: The handler chain will be stopped if your middleware doesn't call `next.ServeHTTP()` with the corresponding parameters. This can be used to abort a request if the middleware writer wants to. Middlewares _should_ write to `ResponseWriter` if they _are_ going to terminate the request, and they _should not_ write to `ResponseWriter` if they _are not_ going to terminate it.
 
-#### Middlewares on route-not-found
+#### Middlewares and Routing
 
-Middlwares only run when a route is found. If the request can't be matched, including if the method is not allowed, the middlewares will be skipped.
+Middlewares only run when a route is found. If the request can't be matched, including if the method is not allowed, the middlewares will be skipped.
 
-This is also true if you specify a custom `MethodNotAllowedHandler` or `NotFoundHandler`.
+This is also true if you specify a custom `MethodNotAllowedHandler` or `NotFoundHandler`: middlewares will not be attached to these handlers.
 
 To _also_ run a middleware on a custom handler, apply it manually:
 
