@@ -2618,6 +2618,85 @@ func TestSubrouterMatching(t *testing.T) {
 	}
 }
 
+// verify that copyRouteConf copies fields as expected.
+func Test_copyRouteConf(t *testing.T) {
+	var (
+		m MatcherFunc = func(*http.Request, *RouteMatch) bool {
+			return true
+		}
+		b BuildVarsFunc = func(i map[string]string) map[string]string {
+			return i
+		}
+		r, _ = newRouteRegexp("hi", regexpTypeHost, routeRegexpOptions{})
+	)
+
+	tests := []struct {
+		name string
+		args routeConf
+		want routeConf
+	}{
+		{
+			"empty",
+			routeConf{},
+			routeConf{},
+		},
+		{
+			"full",
+			routeConf{
+				useEncodedPath: true,
+				strictSlash:    true,
+				skipClean:      true,
+				regexp:         routeRegexpGroup{host: r, path: r, queries: []*routeRegexp{r}},
+				matchers:       []matcher{m},
+				buildScheme:    "https",
+				buildVarsFunc:  b,
+			},
+			routeConf{
+				useEncodedPath: true,
+				strictSlash:    true,
+				skipClean:      true,
+				regexp:         routeRegexpGroup{host: r, path: r, queries: []*routeRegexp{r}},
+				matchers:       []matcher{m},
+				buildScheme:    "https",
+				buildVarsFunc:  b,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// special case some incomparable fields of routeConf before delegating to reflect.DeepEqual
+			got := copyRouteConf(tt.args)
+
+			// funcs not comparable, just compare length of slices
+			if len(got.matchers) != len(tt.want.matchers) {
+				t.Errorf("matchers different lengths: %v %v", len(got.matchers), len(tt.want.matchers))
+			}
+			got.matchers, tt.want.matchers = nil, nil
+
+			// deep equal treats nil slice differently to empty slice so check for zero len first
+			{
+				bothZero := len(got.regexp.queries) == 0 && len(tt.want.regexp.queries) == 0
+				if !bothZero && !reflect.DeepEqual(got.regexp.queries, tt.want.regexp.queries) {
+					t.Errorf("queries unequal: %v %v", got.regexp.queries, tt.want.regexp.queries)
+				}
+				got.regexp.queries, tt.want.regexp.queries = nil, nil
+			}
+
+			// funcs not comparable, just compare nullity
+			if (got.buildVarsFunc == nil) != (tt.want.buildVarsFunc == nil) {
+				t.Errorf("build vars funcs unequal: %v %v", got.buildVarsFunc == nil, tt.want.buildVarsFunc == nil)
+			}
+			got.buildVarsFunc, tt.want.buildVarsFunc = nil, nil
+
+			// finish the deal
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("route confs unequal: %v %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int
