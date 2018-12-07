@@ -48,15 +48,6 @@ type routeTest struct {
 }
 
 func TestHost(t *testing.T) {
-	// newRequestHost a new request with a method, url, and host header
-	newRequestHost := func(method, url, host string) *http.Request {
-		req, err := http.NewRequest(method, url, nil)
-		if err != nil {
-			panic(err)
-		}
-		req.Host = host
-		return req
-	}
 
 	tests := []routeTest{
 		{
@@ -1193,7 +1184,6 @@ func TestSubRouter(t *testing.T) {
 	subrouter3 := new(Route).PathPrefix("/foo").Subrouter()
 	subrouter4 := new(Route).PathPrefix("/foo/bar").Subrouter()
 	subrouter5 := new(Route).PathPrefix("/{category}").Subrouter()
-
 	tests := []routeTest{
 		{
 			route:        subrouter1.Path("/{v2:[a-z]+}"),
@@ -1286,6 +1276,106 @@ func TestSubRouter(t *testing.T) {
 			host:         "",
 			path:         "/baz",
 			pathTemplate: `/{category}`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Mismatch method specified on parent route",
+			route:        new(Route).Methods("POST").PathPrefix("/foo").Subrouter().Path("/"),
+			request:      newRequest("GET", "http://localhost/foo/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/foo/",
+			pathTemplate: `/foo/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Match method specified on parent route",
+			route:        new(Route).Methods("POST").PathPrefix("/foo").Subrouter().Path("/"),
+			request:      newRequest("POST", "http://localhost/foo/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/foo/",
+			pathTemplate: `/foo/`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Mismatch scheme specified on parent route",
+			route:        new(Route).Schemes("https").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Match scheme specified on parent route",
+			route:        new(Route).Schemes("http").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "No match header specified on parent route",
+			route:        new(Route).Headers("X-Forwarded-Proto", "https").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Header mismatch value specified on parent route",
+			route:        new(Route).Headers("X-Forwarded-Proto", "https").Subrouter().PathPrefix("/"),
+			request:      newRequestWithHeaders("GET", "http://localhost/", "X-Forwarded-Proto", "http"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Header match value specified on parent route",
+			route:        new(Route).Headers("X-Forwarded-Proto", "https").Subrouter().PathPrefix("/"),
+			request:      newRequestWithHeaders("GET", "http://localhost/", "X-Forwarded-Proto", "https"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Query specified on parent route not present",
+			route:        new(Route).Headers("key", "foobar").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Query mismatch value specified on parent route",
+			route:        new(Route).Queries("key", "foobar").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/?key=notfoobar"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
+			shouldMatch:  false,
+		},
+		{
+			title:        "Query match value specified on subroute",
+			route:        new(Route).Queries("key", "foobar").Subrouter().PathPrefix("/"),
+			request:      newRequest("GET", "http://localhost/?key=foobar"),
+			vars:         map[string]string{},
+			host:         "",
+			path:         "/",
+			pathTemplate: `/`,
 			shouldMatch:  true,
 		},
 		{
@@ -1512,12 +1602,16 @@ func TestWalkSingleDepth(t *testing.T) {
 func TestWalkNested(t *testing.T) {
 	router := NewRouter()
 
-	g := router.Path("/g").Subrouter()
-	o := g.PathPrefix("/o").Subrouter()
-	r := o.PathPrefix("/r").Subrouter()
-	i := r.PathPrefix("/i").Subrouter()
-	l1 := i.PathPrefix("/l").Subrouter()
-	l2 := l1.PathPrefix("/l").Subrouter()
+	routeSubrouter := func(r *Route) (*Route, *Router) {
+		return r, r.Subrouter()
+	}
+
+	gRoute, g := routeSubrouter(router.Path("/g"))
+	oRoute, o := routeSubrouter(g.PathPrefix("/o"))
+	rRoute, r := routeSubrouter(o.PathPrefix("/r"))
+	iRoute, i := routeSubrouter(r.PathPrefix("/i"))
+	l1Route, l1 := routeSubrouter(i.PathPrefix("/l"))
+	l2Route, l2 := routeSubrouter(l1.PathPrefix("/l"))
 	l2.Path("/a")
 
 	testCases := []struct {
@@ -1525,12 +1619,12 @@ func TestWalkNested(t *testing.T) {
 		ancestors []*Route
 	}{
 		{"/g", []*Route{}},
-		{"/g/o", []*Route{g.parent.(*Route)}},
-		{"/g/o/r", []*Route{g.parent.(*Route), o.parent.(*Route)}},
-		{"/g/o/r/i", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route)}},
-		{"/g/o/r/i/l", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route), i.parent.(*Route)}},
-		{"/g/o/r/i/l/l", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route), i.parent.(*Route), l1.parent.(*Route)}},
-		{"/g/o/r/i/l/l/a", []*Route{g.parent.(*Route), o.parent.(*Route), r.parent.(*Route), i.parent.(*Route), l1.parent.(*Route), l2.parent.(*Route)}},
+		{"/g/o", []*Route{gRoute}},
+		{"/g/o/r", []*Route{gRoute, oRoute}},
+		{"/g/o/r/i", []*Route{gRoute, oRoute, rRoute}},
+		{"/g/o/r/i/l", []*Route{gRoute, oRoute, rRoute, iRoute}},
+		{"/g/o/r/i/l/l", []*Route{gRoute, oRoute, rRoute, iRoute, l1Route}},
+		{"/g/o/r/i/l/l/a", []*Route{gRoute, oRoute, rRoute, iRoute, l1Route, l2Route}},
 	}
 
 	idx := 0
@@ -1563,8 +1657,8 @@ func TestWalkSubrouters(t *testing.T) {
 	o.Methods("GET")
 	o.Methods("PUT")
 
-	// all 4 routes should be matched, but final 2 routes do not have path templates
-	paths := []string{"/g", "/g/o", "", ""}
+	// all 4 routes should be matched
+	paths := []string{"/g", "/g/o", "/g/o", "/g/o"}
 	idx := 0
 	err := router.Walk(func(route *Route, router *Router, ancestors []*Route) error {
 		path := paths[idx]
@@ -1745,7 +1839,11 @@ func testRoute(t *testing.T, test routeTest) {
 			}
 		}
 		if query != "" {
-			u, _ := route.URL(mapToPairs(match.Vars)...)
+			u, err := route.URL(mapToPairs(match.Vars)...)
+			if err != nil {
+				t.Errorf("(%v) erred while creating url: %v", test.title, err)
+				return
+			}
 			if query != u.RawQuery {
 				t.Errorf("(%v) URL query not equal: expected %v, got %v", test.title, query, u.RawQuery)
 				return
@@ -2332,6 +2430,273 @@ func testMethodsSubrouter(t *testing.T, test methodsSubrouterTest) {
 	}
 }
 
+func TestSubrouterMatching(t *testing.T) {
+	const (
+		none, stdOnly, subOnly uint8 = 0, 1 << 0, 1 << 1
+		both                         = subOnly | stdOnly
+	)
+
+	type request struct {
+		Name    string
+		Request *http.Request
+		Flags   uint8
+	}
+
+	cases := []struct {
+		Name                string
+		Standard, Subrouter func(*Router)
+		Requests            []request
+	}{
+		{
+			"pathPrefix",
+			func(r *Router) {
+				r.PathPrefix("/before").PathPrefix("/after")
+			},
+			func(r *Router) {
+				r.PathPrefix("/before").Subrouter().PathPrefix("/after")
+			},
+			[]request{
+				{"no match final path prefix", newRequest("GET", "/after"), none},
+				{"no match parent path prefix", newRequest("GET", "/before"), none},
+				{"matches append", newRequest("GET", "/before/after"), both},
+				{"matches as prefix", newRequest("GET", "/before/after/1234"), both},
+			},
+		},
+		{
+			"path",
+			func(r *Router) {
+				r.Path("/before").Path("/after")
+			},
+			func(r *Router) {
+				r.Path("/before").Subrouter().Path("/after")
+			},
+			[]request{
+				{"no match subroute path", newRequest("GET", "/after"), none},
+				{"no match parent path", newRequest("GET", "/before"), none},
+				{"no match as prefix", newRequest("GET", "/before/after/1234"), none},
+				{"no match append", newRequest("GET", "/before/after"), none},
+			},
+		},
+		{
+			"host",
+			func(r *Router) {
+				r.Host("before.com").Host("after.com")
+			},
+			func(r *Router) {
+				r.Host("before.com").Subrouter().Host("after.com")
+			},
+			[]request{
+				{"no match before", newRequestHost("GET", "/", "before.com"), none},
+				{"no match other", newRequestHost("GET", "/", "other.com"), none},
+				{"matches after", newRequestHost("GET", "/", "after.com"), none},
+			},
+		},
+		{
+			"queries variant keys",
+			func(r *Router) {
+				r.Queries("foo", "bar").Queries("cricket", "baseball")
+			},
+			func(r *Router) {
+				r.Queries("foo", "bar").Subrouter().Queries("cricket", "baseball")
+			},
+			[]request{
+				{"matches with all", newRequest("GET", "/?foo=bar&cricket=baseball"), both},
+				{"matches with more", newRequest("GET", "/?foo=bar&cricket=baseball&something=else"), both},
+				{"no match with none", newRequest("GET", "/"), none},
+				{"no match with some", newRequest("GET", "/?cricket=baseball"), none},
+			},
+		},
+		{
+			"queries overlapping keys",
+			func(r *Router) {
+				r.Queries("foo", "bar").Queries("foo", "baz")
+			},
+			func(r *Router) {
+				r.Queries("foo", "bar").Subrouter().Queries("foo", "baz")
+			},
+			[]request{
+				{"no match old value", newRequest("GET", "/?foo=bar"), none},
+				{"no match diff value", newRequest("GET", "/?foo=bak"), none},
+				{"no match with none", newRequest("GET", "/"), none},
+				{"matches override", newRequest("GET", "/?foo=baz"), none},
+			},
+		},
+		{
+			"header variant keys",
+			func(r *Router) {
+				r.Headers("foo", "bar").Headers("cricket", "baseball")
+			},
+			func(r *Router) {
+				r.Headers("foo", "bar").Subrouter().Headers("cricket", "baseball")
+			},
+			[]request{
+				{
+					"matches with all",
+					newRequestWithHeaders("GET", "/", "foo", "bar", "cricket", "baseball"),
+					both,
+				},
+				{
+					"matches with more",
+					newRequestWithHeaders("GET", "/", "foo", "bar", "cricket", "baseball", "something", "else"),
+					both,
+				},
+				{"no match with none", newRequest("GET", "/"), none},
+				{"no match with some", newRequestWithHeaders("GET", "/", "cricket", "baseball"), none},
+			},
+		},
+		{
+			"header overlapping keys",
+			func(r *Router) {
+				r.Headers("foo", "bar").Headers("foo", "baz")
+			},
+			func(r *Router) {
+				r.Headers("foo", "bar").Subrouter().Headers("foo", "baz")
+			},
+			[]request{
+				{"no match old value", newRequestWithHeaders("GET", "/", "foo", "bar"), none},
+				{"no match diff value", newRequestWithHeaders("GET", "/", "foo", "bak"), none},
+				{"no match with none", newRequest("GET", "/"), none},
+				{"matches override", newRequestWithHeaders("GET", "/", "foo", "baz"), none},
+			},
+		},
+		{
+			"method",
+			func(r *Router) {
+				r.Methods("POST").Methods("GET")
+			},
+			func(r *Router) {
+				r.Methods("POST").Subrouter().Methods("GET")
+			},
+			[]request{
+				{"matches before", newRequest("POST", "/"), none},
+				{"no match other", newRequest("HEAD", "/"), none},
+				{"matches override", newRequest("GET", "/"), none},
+			},
+		},
+		{
+			"schemes",
+			func(r *Router) {
+				r.Schemes("http").Schemes("https")
+			},
+			func(r *Router) {
+				r.Schemes("http").Subrouter().Schemes("https")
+			},
+			[]request{
+				{"matches overrides", newRequest("GET", "https://www.example.com/"), none},
+				{"matches original", newRequest("GET", "http://www.example.com/"), none},
+				{"no match other", newRequest("GET", "ftp://www.example.com/"), none},
+			},
+		},
+	}
+
+	// case -> request -> router
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			for _, req := range c.Requests {
+				t.Run(req.Name, func(t *testing.T) {
+					for _, v := range []struct {
+						Name     string
+						Config   func(*Router)
+						Expected bool
+					}{
+						{"subrouter", c.Subrouter, (req.Flags & subOnly) != 0},
+						{"standard", c.Standard, (req.Flags & stdOnly) != 0},
+					} {
+						r := NewRouter()
+						v.Config(r)
+						if r.Match(req.Request, &RouteMatch{}) != v.Expected {
+							if v.Expected {
+								t.Errorf("expected %v match", v.Name)
+							} else {
+								t.Errorf("expected %v no match", v.Name)
+							}
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
+// verify that copyRouteConf copies fields as expected.
+func Test_copyRouteConf(t *testing.T) {
+	var (
+		m MatcherFunc = func(*http.Request, *RouteMatch) bool {
+			return true
+		}
+		b BuildVarsFunc = func(i map[string]string) map[string]string {
+			return i
+		}
+		r, _ = newRouteRegexp("hi", regexpTypeHost, routeRegexpOptions{})
+	)
+
+	tests := []struct {
+		name string
+		args routeConf
+		want routeConf
+	}{
+		{
+			"empty",
+			routeConf{},
+			routeConf{},
+		},
+		{
+			"full",
+			routeConf{
+				useEncodedPath: true,
+				strictSlash:    true,
+				skipClean:      true,
+				regexp:         routeRegexpGroup{host: r, path: r, queries: []*routeRegexp{r}},
+				matchers:       []matcher{m},
+				buildScheme:    "https",
+				buildVarsFunc:  b,
+			},
+			routeConf{
+				useEncodedPath: true,
+				strictSlash:    true,
+				skipClean:      true,
+				regexp:         routeRegexpGroup{host: r, path: r, queries: []*routeRegexp{r}},
+				matchers:       []matcher{m},
+				buildScheme:    "https",
+				buildVarsFunc:  b,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// special case some incomparable fields of routeConf before delegating to reflect.DeepEqual
+			got := copyRouteConf(tt.args)
+
+			// funcs not comparable, just compare length of slices
+			if len(got.matchers) != len(tt.want.matchers) {
+				t.Errorf("matchers different lengths: %v %v", len(got.matchers), len(tt.want.matchers))
+			}
+			got.matchers, tt.want.matchers = nil, nil
+
+			// deep equal treats nil slice differently to empty slice so check for zero len first
+			{
+				bothZero := len(got.regexp.queries) == 0 && len(tt.want.regexp.queries) == 0
+				if !bothZero && !reflect.DeepEqual(got.regexp.queries, tt.want.regexp.queries) {
+					t.Errorf("queries unequal: %v %v", got.regexp.queries, tt.want.regexp.queries)
+				}
+				got.regexp.queries, tt.want.regexp.queries = nil, nil
+			}
+
+			// funcs not comparable, just compare nullity
+			if (got.buildVarsFunc == nil) != (tt.want.buildVarsFunc == nil) {
+				t.Errorf("build vars funcs unequal: %v %v", got.buildVarsFunc == nil, tt.want.buildVarsFunc == nil)
+			}
+			got.buildVarsFunc, tt.want.buildVarsFunc = nil, nil
+
+			// finish the deal
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("route confs unequal: %v %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int
@@ -2404,5 +2769,30 @@ func newRequest(method, url string) *http.Request {
 	if err != nil {
 		panic(err)
 	}
+	return req
+}
+
+// create a new request with the provided headers
+func newRequestWithHeaders(method, url string, headers ...string) *http.Request {
+	req := newRequest(method, url)
+
+	if len(headers)%2 != 0 {
+		panic(fmt.Sprintf("Expected headers length divisible by 2 but got %v", len(headers)))
+	}
+
+	for i := 0; i < len(headers); i += 2 {
+		req.Header.Set(headers[i], headers[i+1])
+	}
+
+	return req
+}
+
+// newRequestHost a new request with a method, url, and host header
+func newRequestHost(method, url, host string) *http.Request {
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Host = host
 	return req
 }
