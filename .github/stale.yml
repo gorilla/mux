@@ -4,6 +4,7 @@ daysUntilClose: 7
 exemptLabels:
   - v2
   - needs-review
+  - work-required
 staleLabel: stale
 markComment: >
   This issue has been automatically marked as stale because it hasn't seen
