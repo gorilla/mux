@@ -56,6 +56,12 @@ type Router struct {
 	// Routes by name for URL building.
 	namedRoutes map[string]*Route
 
+	// If true, do not clear the request context after handling the request.
+	//
+	// Deprecated: No effect when go1.7+ is used, since the context is stored
+	// on the request itself.
+	KeepContext bool
+
 	// Slice of middlewares to be called after a match is found
 	middlewares []middleware
 
