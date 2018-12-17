@@ -22,7 +22,7 @@ var (
 
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
-	return &Router{namedRoutes: make(map[string]*Route), KeepContext: false}
+	return &Router{namedRoutes: make(map[string]*Route)}
 }
 
 // Router registers routes to be matched and dispatches a handler.
@@ -57,7 +57,8 @@ type Router struct {
 	namedRoutes map[string]*Route
 
 	// If true, do not clear the request context after handling the request.
-	// This has no effect when go1.7+ is used, since the context is stored
+	//
+	// Deprecated: No effect when go1.7+ is used, since the context is stored
 	// on the request itself.
 	KeepContext bool
 
@@ -206,10 +207,6 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if handler == nil {
 		handler = http.NotFoundHandler()
-	}
-
-	if !r.KeepContext {
-		defer contextClear(req)
 	}
 
 	handler.ServeHTTP(w, req)
