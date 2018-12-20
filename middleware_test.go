@@ -136,6 +136,66 @@ func TestMiddlewareSubrouter(t *testing.T) {
 	}
 }
 
+func TestMultipleSubrouterMiddleware(t *testing.T) {
+
+	router := NewRouter()
+	subrouter1 := router.NewRoute().Subrouter()
+	subrouter2 := router.NewRoute().Subrouter()
+
+	rmw := &testMiddleware{}
+	sr1mw := &testMiddleware{}
+	sr2mw := &testMiddleware{}
+
+	router.useInterface(rmw)
+	subrouter1.useInterface(sr1mw)
+	subrouter2.useInterface(sr2mw)
+
+	router.HandleFunc("/root", dummyHandler)
+	subrouter1.HandleFunc("/subr1", dummyHandler)
+	subrouter2.HandleFunc("/subr2", dummyHandler)
+
+	rw := NewRecorder()
+
+	// test /root calls root middleware and not middleware from either submux
+	req := newRequest("GET", "/root")
+	router.ServeHTTP(rw, req)
+	if rmw.timesCalled != 1 {
+		t.Fatalf("Expected root middleware %d calls, but got %d", 1, rmw.timesCalled)
+	}
+	if sr1mw.timesCalled != 0 {
+		t.Fatalf("Expected root middleware %d calls, but got %d", 0, sr1mw.timesCalled)
+	}
+	if sr2mw.timesCalled != 0 {
+		t.Fatalf("Expected root middleware %d calls, but got %d", 0, sr2mw.timesCalled)
+	}
+
+	// test /subr1 calls root middleware and submux1 middleware but not submux2 middleware
+	req = newRequest("GET", "/subr1")
+	router.ServeHTTP(rw, req)
+	if rmw.timesCalled != 2 {
+		t.Fatalf("Expected root middleware %d calls, but got %d", 1, rmw.timesCalled)
+	}
+	if sr1mw.timesCalled != 1 {
+		t.Fatalf("Expected root middleware %d calls, but got %d", 1, sr1mw.timesCalled)
+	}
+	if sr2mw.timesCalled != 0 {
+		t.Fatalf("Expected root middleware %d calls, but got %d", 0, sr2mw.timesCalled)
+	}
+
+	// test /subr2 calls root middleware and submux2 middleware but not submux1 middleware
+	req = newRequest("GET", "/subr2")
+	router.ServeHTTP(rw, req)
+	if rmw.timesCalled != 3 {
+		t.Fatalf("Expected root middleware %d calls, but got %d", 3, rmw.timesCalled)
+	}
+	if sr1mw.timesCalled != 1 {
+		t.Fatalf("Expected root middleware %d calls, but got %d", 1, sr1mw.timesCalled)
+	}
+	if sr2mw.timesCalled != 1 {
+		t.Fatalf("Expected root middleware %d calls, but got %d", 1, sr2mw.timesCalled)
+	}
+}
+
 func TestMiddlewareExecution(t *testing.T) {
 	mwStr := []byte("Middleware\n")
 	handlerStr := []byte("Logic\n")
