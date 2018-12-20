@@ -57,8 +57,8 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 		}
 	}
 
+	match.MatchErr = matchErr
 	if matchErr != nil {
-		match.MatchErr = matchErr
 		return false
 	}
 
