@@ -173,7 +173,7 @@ func TestMultipleSubrouterMiddleware(t *testing.T) {
 	req = newRequest("GET", "/subr1")
 	router.ServeHTTP(rw, req)
 	if rmw.timesCalled != 2 {
-		t.Fatalf("Expected root middleware %d calls, but got %d", 1, rmw.timesCalled)
+		t.Fatalf("Expected root middleware %d calls, but got %d", 2, rmw.timesCalled)
 	}
 	if sr1mw.timesCalled != 1 {
 		t.Fatalf("Expected root middleware %d calls, but got %d", 1, sr1mw.timesCalled)
