@@ -375,3 +375,63 @@ func TestCORSMethodMiddleware(t *testing.T) {
 		}
 	}
 }
+
+func TestMiddlewareOnMultiSubrouter(t *testing.T) {
+	first := "first"
+	second := "second"
+	notFound := "404 not found"
+
+	router := NewRouter()
+	firstSubRouter := router.PathPrefix("/").Subrouter()
+	secondSubRouter := router.PathPrefix("/").Subrouter()
+
+	router.NotFoundHandler = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Write([]byte(notFound))
+	})
+
+	firstSubRouter.HandleFunc("/first", func(w http.ResponseWriter, r *http.Request) {
+
+	})
+
+	secondSubRouter.HandleFunc("/second", func(w http.ResponseWriter, r *http.Request) {
+
+	})
+
+	firstSubRouter.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(first))
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	secondSubRouter.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(second))
+			h.ServeHTTP(w, r)
+		})
+	})
+
+	rw := NewRecorder()
+	req := newRequest("GET", "/first")
+
+	router.ServeHTTP(rw, req)
+	if rw.Body.String() != first {
+		t.Fatalf("Middleware did not run: expected %s middleware to write a response (got %s)", first, rw.Body.String())
+	}
+
+	rw = NewRecorder()
+	req = newRequest("GET", "/second")
+
+	router.ServeHTTP(rw, req)
+	if rw.Body.String() != second {
+		t.Fatalf("Middleware did not run: expected %s middleware to write a response (got %s)", second, rw.Body.String())
+	}
+
+	rw = NewRecorder()
+	req = newRequest("GET", "/second/not-exist")
+
+	router.ServeHTTP(rw, req)
+	if rw.Body.String() != notFound {
+		t.Fatalf("Notfound handler did not run: expected %s for not-exist, (got %s)", notFound, rw.Body.String())
+	}
+}
