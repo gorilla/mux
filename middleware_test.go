@@ -163,10 +163,10 @@ func TestMultipleSubrouterMiddleware(t *testing.T) {
 		t.Fatalf("Expected root middleware %d calls, but got %d", 1, rmw.timesCalled)
 	}
 	if sr1mw.timesCalled != 0 {
-		t.Fatalf("Expected root middleware %d calls, but got %d", 0, sr1mw.timesCalled)
+		t.Fatalf("Expected subrouter1 middleware %d calls, but got %d", 0, sr1mw.timesCalled)
 	}
 	if sr2mw.timesCalled != 0 {
-		t.Fatalf("Expected root middleware %d calls, but got %d", 0, sr2mw.timesCalled)
+		t.Fatalf("Expected subrouter2 middleware %d calls, but got %d", 0, sr2mw.timesCalled)
 	}
 
 	// test /subr1 calls root middleware and submux1 middleware but not submux2 middleware
@@ -176,10 +176,10 @@ func TestMultipleSubrouterMiddleware(t *testing.T) {
 		t.Fatalf("Expected root middleware %d calls, but got %d", 2, rmw.timesCalled)
 	}
 	if sr1mw.timesCalled != 1 {
-		t.Fatalf("Expected root middleware %d calls, but got %d", 1, sr1mw.timesCalled)
+		t.Fatalf("Expected subrouter1 middleware %d calls, but got %d", 1, sr1mw.timesCalled)
 	}
 	if sr2mw.timesCalled != 0 {
-		t.Fatalf("Expected root middleware %d calls, but got %d", 0, sr2mw.timesCalled)
+		t.Fatalf("Expected subrouter2 middleware %d calls, but got %d", 0, sr2mw.timesCalled)
 	}
 
 	// test /subr2 calls root middleware and submux2 middleware but not submux1 middleware
@@ -189,10 +189,10 @@ func TestMultipleSubrouterMiddleware(t *testing.T) {
 		t.Fatalf("Expected root middleware %d calls, but got %d", 3, rmw.timesCalled)
 	}
 	if sr1mw.timesCalled != 1 {
-		t.Fatalf("Expected root middleware %d calls, but got %d", 1, sr1mw.timesCalled)
+		t.Fatalf("Expected subrouter1 middleware %d calls, but got %d", 1, sr1mw.timesCalled)
 	}
 	if sr2mw.timesCalled != 1 {
-		t.Fatalf("Expected root middleware %d calls, but got %d", 1, sr2mw.timesCalled)
+		t.Fatalf("Expected subrouter2 middleware %d calls, but got %d", 1, sr2mw.timesCalled)
 	}
 }
 
