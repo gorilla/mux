@@ -43,6 +43,11 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 		return false
 	}
 
+	// Set MatchErr to nil to prevent
+	// subsequent matching subrouters from failing to run middleware.
+	// If not reset, the middleware would see a non-nil MatchErr and be skipped,
+	// even when there was a matching route.
+	match.MatchErr = nil
 	var matchErr error
 
 	// Match everything.
