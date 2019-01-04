@@ -312,17 +312,13 @@ func (v routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
 }
 
 // getHost tries its best to return the request host.
+// According to section 14.23 of RFC 2616 the Host header
+// can include the port number if the default value of 80 is not used.
 func getHost(r *http.Request) string {
 	if r.URL.IsAbs() {
 		return r.URL.Host
 	}
-	host := r.Host
-	// Slice off any port information.
-	if i := strings.Index(host, ":"); i != -1 {
-		host = host[:i]
-	}
-	return host
-
+	return r.Host
 }
 
 func extractVars(input string, matches []int, names []string, output map[string]string) {
