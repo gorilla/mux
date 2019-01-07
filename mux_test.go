@@ -2715,6 +2715,38 @@ func Test_copyRouteConf(t *testing.T) {
 	}
 }
 
+func TestMethodNotAllowed(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+	router.HandleFunc("/thing", handler).Methods(http.MethodGet)
+	router.HandleFunc("/something", handler).Methods(http.MethodGet)
+
+	w := NewRecorder()
+	req := newRequest(http.MethodPut, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != 405 {
+		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
+func TestSubrouterNotFound(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+	router.Path("/a").Subrouter().HandleFunc("/thing", handler).Methods(http.MethodGet)
+	router.Path("/b").Subrouter().HandleFunc("/something", handler).Methods(http.MethodGet)
+
+	w := NewRecorder()
+	req := newRequest(http.MethodPut, "/not-present")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != 404 {
+		t.Fatalf("Expected status code 404 (got %d)", w.Code)
+	}
+}
+
 // mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int
