@@ -151,7 +151,7 @@ func TestMiddlewareExecution(t *testing.T) {
 	// Test handler-only call
 	router.ServeHTTP(rw, req)
 
-	if bytes.Compare(rw.Body.Bytes(), handlerStr) != 0 {
+	if !bytes.Equal(rw.Body.Bytes(), handlerStr) {
 		t.Fatal("Handler response is not what it should be")
 	}
 
@@ -166,7 +166,7 @@ func TestMiddlewareExecution(t *testing.T) {
 	})
 
 	router.ServeHTTP(rw, req)
-	if bytes.Compare(rw.Body.Bytes(), append(mwStr, handlerStr...)) != 0 {
+	if !bytes.Equal(rw.Body.Bytes(), append(mwStr, handlerStr...)) {
 		t.Fatal("Middleware + handler response is not what it should be")
 	}
 }
@@ -368,7 +368,7 @@ func TestCORSMethodMiddleware(t *testing.T) {
 			t.Errorf("Expected body '%s', found '%s'", tt.response, rr.Body.String())
 		}
 
-		allowedMethods := rr.HeaderMap.Get("Access-Control-Allow-Methods")
+		allowedMethods := rr.Header().Get("Access-Control-Allow-Methods")
 
 		if allowedMethods != tt.expectedAllowedMethods {
 			t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", tt.expectedAllowedMethods, allowedMethods)

@@ -1123,10 +1123,7 @@ func TestSchemes(t *testing.T) {
 
 func TestMatcherFunc(t *testing.T) {
 	m := func(r *http.Request, m *RouteMatch) bool {
-		if r.URL.Host == "aaa.bbb.ccc" {
-			return true
-		}
-		return false
+		return r.URL.Host == "aaa.bbb.ccc"
 	}
 
 	tests := []routeTest{
