@@ -30,6 +30,9 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * [Graceful Shutdown](#graceful-shutdown)
 * [Middleware](#middleware)
 * [Testing Handlers](#testing-handlers)
+* [Automatic HTTPS](#automatic-https)
+  * [The Basics](#the-basics)
+  * [Concurrent HTTP/HTTPS](#concurrent-http-https)
 * [Full Example](#full-example)
 
 ---
@@ -616,6 +619,190 @@ func TestMetricsHandler(t *testing.T) {
     }
 }
 ```
+
+## Automatic HTTPS
+
+### The Basics
+
+By integrating with [certmagic](https://github.com/mholt/certmagic), we can have TLS certificates automatically provisioned, that can then be used for HTTPS communication. Typically this can be done by adding a single line of Go code to our pre-existing program.
+
+Consider the following line of code that would be typically used for serving our application over plain HTTP.
+
+```go
+http.ListenAndServe(":80", r)
+```
+With [certmagic](https://github.com/mholt/certmagic), we can replace it with the following:
+
+```go
+// Encrypted HTTPS communication, with automatic HTTP -> HTTPS redirects.
+certmagic.HTTPS([]string{"example.com"}, r)
+```
+
+With the above example [certmagic](https://github.com/mholt/certmagic)  will obtain and renew the TLS certificates for the given domain that you pass as the first argument. Ensure that the domain name you pass is one that you have configured externally, and correctly points to the server where your application will be running.
+
+### Concurrent HTTP/HTTPS
+
+What we covered in the previous section is fine, however it doesn't give us much control over what is happening. Ideally we want to be able to retrieve the TLS certificates ourselves, once provisioned, and use them to create concurrent listeners. This way we can implement a [Graceful Shutdown](#gracfeul-shutdown) for our application.
+
+Below is what a concurrent HTTP/HTTPS server would look like, using [certmagic](https://github.com/mholt/certmagic), to automatically provision our TLS certificates.
+
+```go
+package main
+
+import (
+    "context"
+    "crypto/tls"
+    "flag"
+    "log"
+    "net"
+    "net/http"
+    "os"
+    "os/signal"
+    "time"
+
+    "github.com/gorilla/mux"
+
+    "github.com/mholt/certmagic"
+)
+
+// The redirect handler we will pass to our HTTP server for redirecting all
+// HTTP requests to HTTPS.
+func redirect(w http.ResponseWriter, r *http.Request) {
+    // The base of the URL we're going to use to build up the new URL we want
+    // to redirect to.
+    url := "https://"
+
+    host, _, err := net.SplitHostPort(r.Host)
+
+    // Host most likely did not contain a port, so fallback to using the host
+    // we have in the HTTP request.
+    if err != nil {
+        host = r.Host
+    }
+
+    url += host
+    url += r.URL.RequestURI()
+
+    // Get rid of the HTTP connection.
+    w.Header().Set("Connection", "close")
+
+    http.Redirect(w, r, url, http.StatusMovedPermanently)
+}
+
+// The handler for our HTTPS server.
+func httpsHandler(w http.ResponseWriter, r *http.Request) {
+    w.Write([]byte("Secure Gorilla, thanks to certmagic!\n"))
+}
+
+func main() {
+    var wait time.Duration
+    flag.DurationVar(&wait, "graceful-timeout", time.Second * 15, "the duration for which the server gracefully waits for existing connections to finish - e.g. 15s or 1m")
+    flag.Parse()
+
+    // The address we want our HTTP listener to bind to. Set to the default
+    // HTTP port.
+    httpAddr := "0.0.0.0:80"
+
+    httpServer := &http.Server{
+        Addr:         httpAddr,
+
+        // Timeous set to avoid Slowloris attacks
+        WriteTimeout: time.Second * 15,
+        ReadTimeout:  time.Second * 15,
+        IdleTimeout:  time.Second * 60,
+ 
+        // Pass the redirect handler we have to redirect all traffic to our
+        // HTTPS server.
+        Handler:      http.HandlerFunc(redirect),
+    }
+
+    // For development work, we want to set the CA to the staging environment of
+    // Let's Encrypt. This will allow us to get things right before trusted
+    // certificates are issued.
+    certmagic.CA = certmagic.LetsEncryptStagingCA
+
+    // Provision the TLS certificates and return the corresponding *tls.Config
+    // type. This type will be used for configuring a TLS listener that will
+    // be used for our HTTPS server.
+    tlsCfg, err := certmagic.TLS([]string{"example.com"})
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    r := mux.NewRouter()
+    r.HandleFunc("/", httpsHandler)
+    // Add more routes as needed.
+
+    // The address we want our HTTPS listener to bind to. Set to the default
+    // HTTPS port.
+    httpsAddr := "0.0.0.0:443"
+
+    // The TLS certificates will have already been provisioned by certmagic at
+    // this point. Meaning when we come to serve up our HTTPS server we don't
+    // need to call ListenAndServeTLS, instead we can just call Serve, and pass
+    // it our TLS listener. Our TLS listener is created here, taking the TLS
+    // config we have for our provisioned TLS certificates.
+    httpsLn, err := tls.Listen("tcp", httpsAddr, tlsCfg)
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    httpsServer := &http.Server{
+        Addr:         httpsAddr,
+
+        // Timeous set to avoid Slowloris attacks
+        WriteTimeout: time.Second * 15,
+        ReadTimeout:  time.Second * 15,
+        IdleTimeout:  time.Second * 60,
+
+        // Unlike the HTTP server, we pass the mux router we have itself.
+        Handler:      r,
+    }
+
+    // Run our HTTP server in a goroutine so it doesn't block.
+    go func() {
+        if err := httpServer.ListenAndServe(); err != nil {
+            log.Println(err)
+        }
+    }()
+
+    // Run our HTTPS server in a goroutine so it doesn't block.
+    go func() {
+        if err := httpsServer.Serve(httpsLn); err != nil {
+            log.Println(err)
+        }
+    }()
+
+    c := make(chan os.Signal, 1)
+
+    // We'll handle graceful shutdowns when quit via SIGINT (Ctrl+C)
+    // SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
+    signal.Notify(c, os.Interrupt)
+
+    <-c
+
+    ctx, cancel := context.WithTimeout(context.Background(), wait)
+    defer cancel()
+
+    httpServer.Shutdown(ctx)
+    httpsServer.Shutdown(ctx)
+
+    log.Println("shutting down")
+}
+```
+
+So, this above example allows us more control over our application. We have implemented two concurrent servers, with the ability to gracefully shut them down. Of course, this above example assumes a handful of things regarding the environment it would run on:
+
+* The domain name, or domain names you pass to `certmagic.TLS` are yours, and have been configured to point to the server.
+* If using the Let's Encrypt staging CA, ensure you add the [Fake LE Intermediate X1](https://letsencrypt.org/certs/fakeleintermediatex1.pem) certificate to your browser, otherwise you will not be able to view your application via HTTPS.
+
+For further reading about [Let's Encrypt](https://letsencrypt.org) then please refer to some of the following documentation:
+
+* [Let's Encrypt - How it works](https://letsencrypt.org/how-it-works/)
+* [Let's Encrypt - Staging Environment](https://letsencrypt.org/docs/staging-environment)
+* [Let's Encrypt - Rate Limits](https://letsencrypt.org/docs/rate-limits)
 
 ## Full Example
 
