@@ -642,7 +642,7 @@ With the above example [certmagic](https://github.com/mholt/certmagic)  will obt
 
 ### Concurrent HTTP/HTTPS
 
-What we covered in the previous section is fine, however it doesn't give us much control over what is happening. Ideally we want to be able to retrieve the TLS certificates ourselves, once provisioned, and use them to create concurrent listeners. This way we can implement a [Graceful Shutdown](#gracfeul-shutdown) for our application.
+What we covered in the previous section is fine, however it doesn't give us much control over what is happening. Ideally we want to be able to retrieve the TLS certificates ourselves, once provisioned, and use them to create concurrent listeners. This way we can implement a [Graceful Shutdown](#graceful-shutdown) for our application.
 
 Below is what a concurrent HTTP/HTTPS server would look like, using [certmagic](https://github.com/mholt/certmagic), to automatically provision our TLS certificates.
 
