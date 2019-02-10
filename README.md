@@ -706,7 +706,7 @@ func main() {
     httpServer := &http.Server{
         Addr:         httpAddr,
 
-        // Timeous set to avoid Slowloris attacks
+        // Timeouts set to avoid Slowloris attacks
         WriteTimeout: time.Second * 15,
         ReadTimeout:  time.Second * 15,
         IdleTimeout:  time.Second * 60,
@@ -752,7 +752,7 @@ func main() {
     httpsServer := &http.Server{
         Addr:         httpsAddr,
 
-        // Timeous set to avoid Slowloris attacks
+        // Timeouts set to avoid Slowloris attacks
         WriteTimeout: time.Second * 15,
         ReadTimeout:  time.Second * 15,
         IdleTimeout:  time.Second * 60,
