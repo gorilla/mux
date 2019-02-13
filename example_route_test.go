@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// This example demonstrates setting a regular expression matcher for
+// ExampleRoute_HeadersRegexp: This example demonstrates setting a regular expression matcher for
 // the header value. A plain word will match any value that contains a
 // matching substring as if the pattern was wrapped with `.*`.
 func ExampleRoute_HeadersRegexp() {
@@ -29,7 +29,7 @@ func ExampleRoute_HeadersRegexp() {
 	// Match: true ["application/xhtml+xml"]
 }
 
-// This example demonstrates setting a strict regular expression matcher
+// ExampleRoute_HeadersRegexp_exactMatch: This example demonstrates setting a strict regular expression matcher
 // for the header value. Using the start and end of string anchors, the
 // value must be an exact match.
 func ExampleRoute_HeadersRegexp_exactMatch() {

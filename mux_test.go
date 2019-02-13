@@ -2633,7 +2633,7 @@ func TestSubrouterMatching(t *testing.T) {
 	}
 }
 
-// verify that copyRouteConf copies fields as expected.
+// Test_copyRouteConf: verify that copyRouteConf copies fields as expected.
 func Test_copyRouteConf(t *testing.T) {
 	var (
 		m MatcherFunc = func(*http.Request, *RouteMatch) bool {

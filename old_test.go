@@ -636,7 +636,7 @@ func TestRedirectSlash(t *testing.T) {
 	}
 }
 
-// Test for the new regexp library, still not available in stable Go.
+// TestNewRegexp tests for the new regexp library, still not available in stable Go.
 func TestNewRegexp(t *testing.T) {
 	var p *routeRegexp
 	var matches []string

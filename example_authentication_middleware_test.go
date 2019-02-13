@@ -12,7 +12,7 @@ type authenticationMiddleware struct {
 	tokenUsers map[string]string
 }
 
-// Initialize it somewhere
+// Populate: Initialize it somewhere
 func (amw *authenticationMiddleware) Populate() {
 	amw.tokenUsers["00000000"] = "user0"
 	amw.tokenUsers["aaaaaaaa"] = "userA"
