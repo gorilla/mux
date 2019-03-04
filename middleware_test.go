@@ -343,10 +343,13 @@ func TestCORSMethodMiddleware(t *testing.T) {
 	cases := []struct {
 		requestMethod          string
 		methods                []string
+		expectedResponseCode   int
 		expectedResponse       string
 		expectedAllowedMethods string
 	}{
-		{"POST", []string{"POST", "PUT", "GET"}, responseBody, "POST,PUT,GET,OPTIONS"},
+		{"POST", []string{"POST", "PUT", "GET"}, 200, responseBody, "POST,PUT,GET"},
+		{"OPTIONS", []string{"POST", "PUT", "GET"}, 405, "", ""},
+		{"OPTIONS", []string{"POST", "PUT", "GET", "OPTIONS"}, 200, "", "POST,PUT,GET,OPTIONS"},
 	}
 
 	for _, tt := range cases {
@@ -358,6 +361,10 @@ func TestCORSMethodMiddleware(t *testing.T) {
 		req := newRequest(tt.requestMethod, handleURL)
 
 		router.ServeHTTP(rr, req)
+
+		if rr.Code != tt.expectedResponseCode {
+			t.Errorf("Expected response code '%d', found '%d'", tt.expectedResponseCode, rr.Code)
+		}
 
 		if rr.Body.String() != tt.expectedResponse {
 			t.Errorf("Expected body '%s', found '%s'", tt.expectedResponse, rr.Body.String())
