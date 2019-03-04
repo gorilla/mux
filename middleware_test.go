@@ -337,35 +337,30 @@ func TestMiddlewareMethodMismatchSubrouter(t *testing.T) {
 }
 
 func TestCORSMethodMiddleware(t *testing.T) {
-	router := NewRouter()
+	handleURL := "/gorilka"
+	responseBody := "test response"
 
 	cases := []struct {
-		path                   string
-		response               string
-		method                 string
-		testURL                string
+		requestMethod          string
+		methods                []string
+		expectedResponse       string
 		expectedAllowedMethods string
 	}{
-		{"/g/{o}", "a", "POST", "/g/asdf", "POST,PUT,GET,OPTIONS"},
-		{"/g/{o}", "b", "PUT", "/g/bla", "POST,PUT,GET,OPTIONS"},
-		{"/g/{o}", "c", "GET", "/g/orilla", "POST,PUT,GET,OPTIONS"},
-		{"/g", "d", "POST", "/g", "POST,OPTIONS"},
+		{"POST", []string{"POST", "PUT", "GET"}, responseBody, "POST,PUT,GET,OPTIONS"},
 	}
 
 	for _, tt := range cases {
-		router.HandleFunc(tt.path, stringHandler(tt.response)).Methods(tt.method)
-	}
+		router := NewRouter()
+		router.HandleFunc(handleURL, stringHandler(responseBody)).Methods(tt.methods...)
+		router.Use(CORSMethodMiddleware(router))
 
-	router.Use(CORSMethodMiddleware(router))
-
-	for _, tt := range cases {
 		rr := httptest.NewRecorder()
-		req := newRequest(tt.method, tt.testURL)
+		req := newRequest(tt.requestMethod, handleURL)
 
 		router.ServeHTTP(rr, req)
 
-		if rr.Body.String() != tt.response {
-			t.Errorf("Expected body '%s', found '%s'", tt.response, rr.Body.String())
+		if rr.Body.String() != tt.expectedResponse {
+			t.Errorf("Expected body '%s', found '%s'", tt.expectedResponse, rr.Body.String())
 		}
 
 		allowedMethods := rr.Header().Get("Access-Control-Allow-Methods")
