@@ -183,6 +183,8 @@ func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
 		if isMatch {
 			if !r.options.skipClean && req.URL.Path != match.CleanPath {
 				match.OnlyMatchedCleanPath = true
+			} else {
+				match.OnlyMatchedCleanPath = false
 			}
 		}
 		return isMatch
