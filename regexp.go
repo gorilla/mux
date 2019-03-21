@@ -17,6 +17,7 @@ import (
 type routeRegexpOptions struct {
 	strictSlash    bool
 	useEncodedPath bool
+	skipClean      bool
 }
 
 type regexpType int
@@ -170,7 +171,21 @@ func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
 		if r.options.useEncodedPath {
 			path = req.URL.EscapedPath()
 		}
-		return r.regexp.MatchString(path)
+		if !r.options.skipClean {
+			// Only clean the path when needed, and cache the result for later use.
+			if match.CleanPath == "" {
+				// Clean path to canonical form for testing purposes.
+				match.CleanPath = cleanPath(path)
+			}
+			path = match.CleanPath
+		}
+		isMatch := r.regexp.MatchString(path)
+		if isMatch {
+			if !r.options.skipClean && req.URL.Path != match.CleanPath {
+				match.OnlyMatchedCleanPath = true
+			}
+		}
+		return isMatch
 	}
 
 	return r.regexp.MatchString(getHost(req))
