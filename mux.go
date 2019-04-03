@@ -92,6 +92,11 @@ type routeConf struct {
 	buildScheme string
 
 	buildVarsFunc BuildVarsFunc
+
+	// If true, if the url is cleaned, will send
+	// HTTP Status code 308 (Permanent Redirect) instead of
+	// the default 301 (Moved Permanently)
+	cleanRedirectUse308 bool
 }
 
 // returns an effective deep copy of `routeConf`
@@ -189,7 +194,11 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			p = url.String()
 
 			w.Header().Set("Location", p)
-			w.WriteHeader(http.StatusMovedPermanently)
+			if r.cleanRedirectUse308 {
+				w.WriteHeader(http.StatusPermanentRedirect)
+			} else {
+				w.WriteHeader(http.StatusMovedPermanently)
+			}
 			return
 		}
 	}
@@ -361,6 +370,16 @@ func (r *Router) BuildVarsFunc(f BuildVarsFunc) *Route {
 // are explored depth-first.
 func (r *Router) Walk(walkFn WalkFunc) error {
 	return r.walk(walkFn, []*Route{})
+}
+
+// CleanRedirectUse308 defines the redirect code following a path cleaning. The
+// default value is false - meaning it will use 301 (Moved Permanently) code.
+// 308 is relatively new HTTP Status code - so some browsers may not support it
+// The difference between 301 / 308 are in https://tools.ietf.org/html/rfc7238
+//
+func (r *Router) CleanRedirectUse308(value bool) *Router {
+	r.cleanRedirectUse308 = value
+	return r
 }
 
 // SkipRouter is used as a return value from WalkFuncs to indicate that the
