@@ -374,9 +374,8 @@ func (r *Router) Walk(walkFn WalkFunc) error {
 
 // CleanRedirectUse308 defines the redirect code following a path cleaning. The
 // default value is false - meaning it will use 301 (Moved Permanently) code.
-// 308 is relatively new HTTP Status code - so some browsers may not support it
-// The difference between 301 / 308 are in https://tools.ietf.org/html/rfc7238
-//
+// 308 is relatively new HTTP Status code - so some browsers may not support it.
+// RFC https://tools.ietf.org/html/rfc7238 explains the difference between 301 & 308
 func (r *Router) CleanRedirectUse308(value bool) *Router {
 	r.cleanRedirectUse308 = value
 	return r

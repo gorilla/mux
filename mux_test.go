@@ -1937,20 +1937,20 @@ func testQueriesTemplates(t *testing.T, test routeTest) {
 	}
 }
 
-type TestA301ResponseWriter struct {
+type TestA30xResponseWriter struct {
 	hh     http.Header
 	status int
 }
 
-func (ho *TestA301ResponseWriter) Header() http.Header {
+func (ho *TestA30xResponseWriter) Header() http.Header {
 	return http.Header(ho.hh)
 }
 
-func (ho *TestA301ResponseWriter) Write(b []byte) (int, error) {
+func (ho *TestA30xResponseWriter) Write(b []byte) (int, error) {
 	return 0, nil
 }
 
-func (ho *TestA301ResponseWriter) WriteHeader(code int) {
+func (ho *TestA30xResponseWriter) WriteHeader(code int) {
 	ho.status = code
 }
 
@@ -1966,7 +1966,7 @@ func Test301Redirect(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", "http://localhost//api/?abc=def", nil)
 
-	res := TestA301ResponseWriter{
+	res := TestA30xResponseWriter{
 		hh:     m,
 		status: 0,
 	}
@@ -1974,6 +1974,37 @@ func Test301Redirect(t *testing.T) {
 
 	if "http://localhost/api/?abc=def" != res.hh["Location"][0] {
 		t.Errorf("Should have complete URL with query string")
+	}
+
+	if http.StatusMovedPermanently != res.status {
+		t.Errorf("Should have returned 301 (Moved Permanently)")
+	}
+}
+
+func Test308Redirect(t *testing.T) {
+	m := make(http.Header)
+
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+	func2 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter().CleanRedirectUse308(true)
+	r.HandleFunc("/api/", func2).Name("func2")
+	r.HandleFunc("/", func1).Name("func1")
+
+	req, _ := http.NewRequest("GET", "http://localhost//api/?abc=def", nil)
+
+	res := TestA30xResponseWriter{
+		hh:     m,
+		status: 0,
+	}
+	r.ServeHTTP(&res, req)
+
+	if "http://localhost/api/?abc=def" != res.hh["Location"][0] {
+		t.Errorf("Should have complete URL with query string")
+	}
+
+	if http.StatusPermanentRedirect != res.status {
+		t.Errorf("Should have returned 308 (Permanent Redirect)")
 	}
 }
 
