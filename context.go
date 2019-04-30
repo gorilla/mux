@@ -19,5 +19,6 @@ func contextSet(r *http.Request, key, val interface{}) *http.Request {
 }
 
 func gotest(){
-	fmt.Println("gogoog")
+	a := 123
+	fmt.Printf("%+10d\n", a)  //+123
 }
