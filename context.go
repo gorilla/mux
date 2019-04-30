@@ -3,6 +3,7 @@ package mux
 import (
 	"context"
 	"net/http"
+		"fmt"
 )
 
 func contextGet(r *http.Request, key interface{}) interface{} {
@@ -15,4 +16,8 @@ func contextSet(r *http.Request, key, val interface{}) *http.Request {
 	}
 
 	return r.WithContext(context.WithValue(r.Context(), key, val))
+}
+
+func gotest(){
+	fmt.Println("gogoog"))
 }
