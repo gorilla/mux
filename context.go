@@ -19,5 +19,5 @@ func contextSet(r *http.Request, key, val interface{}) *http.Request {
 }
 
 func gotest(){
-	fmt.Println("gogoog"))
+	fmt.Println("gogoog")
 }
