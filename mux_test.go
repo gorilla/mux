@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"strings"
@@ -2837,10 +2838,7 @@ func newRequestWithHeaders(method, url string, headers ...string) *http.Request 
 
 // newRequestHost a new request with a method, url, and host header
 func newRequestHost(method, url, host string) *http.Request {
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		panic(err)
-	}
+	req := httptest.NewRequest(method, url, nil)
 	req.Host = host
 	return req
 }

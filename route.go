@@ -412,7 +412,20 @@ func (r *Route) Queries(pairs ...string) *Route {
 type schemeMatcher []string
 
 func (m schemeMatcher) Match(r *http.Request, match *RouteMatch) bool {
-	return matchInArray(m, r.URL.Scheme)
+	scheme := r.URL.Scheme
+	// https://golang.org/pkg/net/http/#Request
+	// "For [most] server requests, fields other than Path and RawQuery will be
+	// empty."
+	// Since we're an http muxer, the scheme is either going to be http or https
+	// though, so we can just set it based on the tls termination state.
+	if scheme == "" {
+		if r.TLS == nil {
+			scheme = "http"
+		} else {
+			scheme = "https"
+		}
+	}
+	return matchInArray(m, scheme)
 }
 
 // Schemes adds a matcher for URL schemes.
