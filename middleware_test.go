@@ -403,6 +403,23 @@ func TestCORSMethodMiddleware(t *testing.T) {
 			expectedAccessControlAllowMethodsHeader: "GET,PUT,PATCH,OPTIONS",
 			expectedResponse:                        "b",
 		},
+		{
+			name: "does not set methods from unmatching routes",
+			registerRoutes: func(r *Router) {
+				r.HandleFunc("/foo", stringHandler("c")).Methods(http.MethodDelete)
+				r.HandleFunc("/foo/bar", stringHandler("a")).Methods(http.MethodGet, http.MethodPut, http.MethodPatch)
+				r.HandleFunc("/foo/bar", stringHandler("b")).Methods(http.MethodOptions)
+			},
+			requestMethod: "OPTIONS",
+			requestPath:   "/foo/bar",
+			requestHeader: http.Header{
+				"Access-Control-Request-Method":  []string{"GET"},
+				"Access-Control-Request-Headers": []string{"Authorization"},
+				"Origin":                         []string{"http://example.com"},
+			},
+			expectedAccessControlAllowMethodsHeader: "GET,PUT,PATCH,OPTIONS",
+			expectedResponse:                        "b",
+		},
 	}
 
 	for _, tt := range testCases {
