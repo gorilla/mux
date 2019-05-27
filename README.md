@@ -30,6 +30,7 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * [Walking Routes](#walking-routes)
 * [Graceful Shutdown](#graceful-shutdown)
 * [Middleware](#middleware)
+* [CORS Method Middleware](#corsmethodmiddleware)
 * [Testing Handlers](#testing-handlers)
 * [Full Example](#full-example)
 
