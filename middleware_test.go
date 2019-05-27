@@ -3,7 +3,6 @@ package mux
 import (
 	"bytes"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
@@ -337,42 +336,99 @@ func TestMiddlewareMethodMismatchSubrouter(t *testing.T) {
 }
 
 func TestCORSMethodMiddleware(t *testing.T) {
-	router := NewRouter()
-
-	cases := []struct {
-		path                   string
-		response               string
-		method                 string
-		testURL                string
-		expectedAllowedMethods string
+	testCases := []struct {
+		name                                    string
+		registerRoutes                          func(r *Router)
+		requestHeader                           http.Header
+		requestMethod                           string
+		requestPath                             string
+		expectedAccessControlAllowMethodsHeader string
+		expectedResponse                        string
 	}{
-		{"/g/{o}", "a", "POST", "/g/asdf", "POST,PUT,GET,OPTIONS"},
-		{"/g/{o}", "b", "PUT", "/g/bla", "POST,PUT,GET,OPTIONS"},
-		{"/g/{o}", "c", "GET", "/g/orilla", "POST,PUT,GET,OPTIONS"},
-		{"/g", "d", "POST", "/g", "POST,OPTIONS"},
+		{
+			name: "does not set without OPTIONS matcher",
+			registerRoutes: func(r *Router) {
+				r.HandleFunc("/foo", stringHandler("a")).Methods(http.MethodGet, http.MethodPut, http.MethodPatch)
+			},
+			requestMethod:                           "GET",
+			requestPath:                             "/foo",
+			expectedAccessControlAllowMethodsHeader: "",
+			expectedResponse:                        "a",
+		},
+		{
+			name: "does not set on non OPTIONS",
+			registerRoutes: func(r *Router) {
+				r.HandleFunc("/foo", stringHandler("a")).Methods(http.MethodGet, http.MethodPut, http.MethodPatch)
+				r.HandleFunc("/foo", stringHandler("b")).Methods(http.MethodOptions)
+			},
+			requestMethod:                           "GET",
+			requestPath:                             "/foo",
+			expectedAccessControlAllowMethodsHeader: "",
+			expectedResponse:                        "a",
+		},
+		{
+			name: "does not set without preflight headers",
+			registerRoutes: func(r *Router) {
+				r.HandleFunc("/foo", stringHandler("a")).Methods(http.MethodGet, http.MethodPut, http.MethodPatch)
+				r.HandleFunc("/foo", stringHandler("b")).Methods(http.MethodOptions)
+			},
+			requestMethod:                           "OPTIONS",
+			requestPath:                             "/foo",
+			expectedAccessControlAllowMethodsHeader: "",
+			expectedResponse:                        "b",
+		},
+		{
+			name: "does not set on error",
+			registerRoutes: func(r *Router) {
+				r.HandleFunc("/foo", stringHandler("a"))
+			},
+			requestMethod:                           "OPTIONS",
+			requestPath:                             "/foo",
+			expectedAccessControlAllowMethodsHeader: "",
+			expectedResponse:                        "a",
+		},
+		{
+			name: "sets header on valid preflight",
+			registerRoutes: func(r *Router) {
+				r.HandleFunc("/foo", stringHandler("a")).Methods(http.MethodGet, http.MethodPut, http.MethodPatch)
+				r.HandleFunc("/foo", stringHandler("b")).Methods(http.MethodOptions)
+			},
+			requestMethod: "OPTIONS",
+			requestPath:   "/foo",
+			requestHeader: http.Header{
+				"Access-Control-Request-Method":  []string{"GET"},
+				"Access-Control-Request-Headers": []string{"Authorization"},
+				"Origin":                         []string{"http://example.com"},
+			},
+			expectedAccessControlAllowMethodsHeader: "GET,PUT,PATCH,OPTIONS",
+			expectedResponse:                        "b",
+		},
 	}
 
-	for _, tt := range cases {
-		router.HandleFunc(tt.path, stringHandler(tt.response)).Methods(tt.method)
-	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			router := NewRouter()
 
-	router.Use(CORSMethodMiddleware(router))
+			tt.registerRoutes(router)
 
-	for _, tt := range cases {
-		rr := httptest.NewRecorder()
-		req := newRequest(tt.method, tt.testURL)
+			router.Use(CORSMethodMiddleware(router))
 
-		router.ServeHTTP(rr, req)
+			rw := NewRecorder()
+			req := newRequest(tt.requestMethod, tt.requestPath)
+			req.Header = tt.requestHeader
 
-		if rr.Body.String() != tt.response {
-			t.Errorf("Expected body '%s', found '%s'", tt.response, rr.Body.String())
-		}
+			router.ServeHTTP(rw, req)
 
-		allowedMethods := rr.Header().Get("Access-Control-Allow-Methods")
+			actualMethodsHeader := rw.Header().Get("Access-Control-Allow-Methods")
+			if actualMethodsHeader != tt.expectedAccessControlAllowMethodsHeader {
+				t.Fatalf("Expected Access-Control-Allow-Methods to equal %s but got %s", tt.expectedAccessControlAllowMethodsHeader, actualMethodsHeader)
+			}
 
-		if allowedMethods != tt.expectedAllowedMethods {
-			t.Errorf("Expected Access-Control-Allow-Methods '%s', found '%s'", tt.expectedAllowedMethods, allowedMethods)
-		}
+			actualResponse := rw.Body.String()
+			if actualResponse != tt.expectedResponse {
+				t.Fatalf("Expected response to equal %s but got %s", tt.expectedResponse, actualResponse)
+			}
+		})
 	}
 }
 

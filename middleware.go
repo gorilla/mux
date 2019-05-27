@@ -32,41 +32,60 @@ func (r *Router) useInterface(mw middleware) {
 	r.middlewares = append(r.middlewares, mw)
 }
 
-// CORSMethodMiddleware sets the Access-Control-Allow-Methods response header
-// on a request, by matching routes based only on paths. It also handles
-// OPTIONS requests, by settings Access-Control-Allow-Methods, and then
-// returning without calling the next http handler.
+// CORSMethodMiddleware automatically sets the Access-Control-Allow-Methods response header
+// on preflight requests for routes that have an OPTIONS method matcher to all the method
+// matchers on the route. See the example for usage.
 func CORSMethodMiddleware(r *Router) MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			var allMethods []string
-
-			err := r.Walk(func(route *Route, _ *Router, _ []*Route) error {
-				for _, m := range route.matchers {
-					if _, ok := m.(*routeRegexp); ok {
-						if m.Match(req, &RouteMatch{}) {
-							methods, err := route.GetMethods()
-							if err != nil {
-								return err
-							}
-
-							allMethods = append(allMethods, methods...)
-						}
-						break
-					}
-				}
-				return nil
-			})
-
-			if err == nil {
-				w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allMethods, "OPTIONS"), ","))
-
-				if req.Method == "OPTIONS" {
-					return
+			if isPreflight(req) {
+				allMethods, err := getAllMethodsForRoute(r, req)
+				if err == nil {
+					w.Header().Set("Access-Control-Allow-Methods", strings.Join(allMethods, ","))
 				}
 			}
 
 			next.ServeHTTP(w, req)
 		})
 	}
+}
+
+// isPreflight returns true when the request is a valid preflight request according to the
+// following rules from https://developer.mozilla.org/en-US/docs/Glossary/preflight_request:
+// * The request method is OPTIONS
+// * The request has a non-empty Access-Control-Request-Method header
+// * The request has a non-empty Access-Control-Request-Headers header
+// * The request has a non-empty Origin header
+// and otherwise returns false.
+func isPreflight(req *http.Request) bool {
+	requestMethod := req.Header.Get("Access-Control-Request-Method")
+	requestHeaders := req.Header.Get("Access-Control-Request-Headers")
+	origin := req.Header.Get("Origin")
+
+	return req.Method == http.MethodOptions && requestMethod != "" && requestHeaders != "" && origin != ""
+}
+
+// getAllMethodsForRoute returns all the methods from method matchers matching a given
+// request.
+func getAllMethodsForRoute(r *Router, req *http.Request) ([]string, error) {
+	var allMethods []string
+
+	err := r.Walk(func(route *Route, _ *Router, _ []*Route) error {
+		for _, m := range route.matchers {
+			if _, ok := m.(*routeRegexp); ok {
+				if m.Match(req, &RouteMatch{}) {
+					methods, err := route.GetMethods()
+					if err != nil {
+						return err
+					}
+
+					allMethods = append(allMethods, methods...)
+				}
+				break
+			}
+		}
+		return nil
+	})
+
+	return allMethods, err
 }
