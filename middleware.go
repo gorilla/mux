@@ -41,7 +41,7 @@ func CORSMethodMiddleware(r *Router) MiddlewareFunc {
 			allMethods, err := getAllMethodsForRoute(r, req)
 			if err == nil {
 				for _, v := range allMethods {
-					if v == "OPTIONS" {
+					if v == http.MethodOptions {
 						w.Header().Set("Access-Control-Allow-Methods", strings.Join(allMethods, ","))
 					}
 				}
