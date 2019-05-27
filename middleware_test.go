@@ -356,25 +356,25 @@ func TestCORSMethodMiddleware(t *testing.T) {
 			expectedResponse:                        "a",
 		},
 		{
-			name: "does not set on non OPTIONS",
+			name: "sets on non OPTIONS",
 			registerRoutes: func(r *Router) {
 				r.HandleFunc("/foo", stringHandler("a")).Methods(http.MethodGet, http.MethodPut, http.MethodPatch)
 				r.HandleFunc("/foo", stringHandler("b")).Methods(http.MethodOptions)
 			},
 			requestMethod:                           "GET",
 			requestPath:                             "/foo",
-			expectedAccessControlAllowMethodsHeader: "",
+			expectedAccessControlAllowMethodsHeader: "GET,PUT,PATCH,OPTIONS",
 			expectedResponse:                        "a",
 		},
 		{
-			name: "does not set without preflight headers",
+			name: "sets without preflight headers",
 			registerRoutes: func(r *Router) {
 				r.HandleFunc("/foo", stringHandler("a")).Methods(http.MethodGet, http.MethodPut, http.MethodPatch)
 				r.HandleFunc("/foo", stringHandler("b")).Methods(http.MethodOptions)
 			},
 			requestMethod:                           "OPTIONS",
 			requestPath:                             "/foo",
-			expectedAccessControlAllowMethodsHeader: "",
+			expectedAccessControlAllowMethodsHeader: "GET,PUT,PATCH,OPTIONS",
 			expectedResponse:                        "b",
 		},
 		{
