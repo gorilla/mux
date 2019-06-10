@@ -225,7 +225,7 @@ r.HandleFunc("/articles/{category}/{id:[0-9]+}", ArticleHandler).
 To build a URL, get the route and call the `URL()` method, passing a sequence of key/value pairs for the route variables. For the previous route, we would do:
 
 ```go
-url, err := r.Get("article").URL("category", "technology", "id", "42")
+url, err := r.Get("articles").URL("category", "technology", "id", "42")
 ```
 
 ...and the result will be a `url.URL` with the following path:
