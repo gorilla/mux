@@ -1,0 +1,19 @@
+env:
+  CIRRUS_WORKING_DIR: /go/src/github.com/gorilla/mux
+
+test_task:
+  matrix:
+    - container:
+        image: golang:latest
+      vet_script: go vet . # extra script
+    - container:
+        matrix: 
+          - image: golang:1.7
+          - image: golang:1.8
+          - image: golang:1.9
+          - image: golang:1.10
+          - image: golang:1.11
+          - image: golang:1.12
+  get_script: go get -t -v ./...
+  fmt_script: diff -u <(echo -n) <(gofmt -d .)
+  test_script: go test -v -race ./...
