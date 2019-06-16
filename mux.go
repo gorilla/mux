@@ -223,6 +223,17 @@ func (r *Router) GetRoute(name string) *Route {
 	return r.namedRoutes[name]
 }
 
+// GetRouteByPath returns a route registered with the given path.
+// An error will be returned if the route does not exists
+func (r *Router) GetRouteByPath(path string) (*Route, error) {
+	for _, route := range r.routes {
+		if template, err := route.GetPathTemplate(); err == nil && template == path {
+			return route, nil
+		}
+	}
+	return nil, errors.New("mux: route does not exists")
+}
+
 // StrictSlash defines the trailing slash behavior for new routes. The initial
 // value is false.
 //
