@@ -1,0 +1,35 @@
+version: 2.0
+
+jobs:
+  "golang-latest": &golang
+    docker:
+      - image: circleci/golang:1.12
+    working_directory: ~/circleci-demo-workflows
+    steps: &steps
+      - checkout
+      - run: bundle install --path vendor/bundle
+      - run: bundle exec rake db:create db:schema:load
+      - run:
+          name: Run tests
+          command: rake
+
+  "go-1.11": *golang
+    docker:
+      - image: circleci/golang:1.11
+
+  "go-1.10": *golang
+    docker:
+      - image: circleci/golang:1.10
+      
+   "go-tip": *golang
+    docker:
+      - image: circleci/golang:tip    
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - "go-1.10"
+      - "go-1.11"
+      - "go-tip"
+- "golang-latest"
