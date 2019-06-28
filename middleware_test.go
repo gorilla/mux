@@ -25,14 +25,24 @@ func TestMiddlewareAdd(t *testing.T) {
 	router := NewRouter()
 	router.HandleFunc("/", dummyHandler).Methods("GET")
 
-	for i := 0; i < 3; i++ {
-		t.Run(fmt.Sprintf("adds %d middlewares", i+1), func(t *testing.T) {
-			mw := &testMiddleware{}
-			router.useInterface(mw)
-			if len(router.middlewares) != i+1 || router.middlewares[i] != mw {
-				t.Fatalf("Middleware %d was not added correctly", i+1)
-			}
-		})
+	mw := &testMiddleware{}
+
+	router.useInterface(mw)
+	if len(router.middlewares) != 1 || router.middlewares[0] != mw {
+		t.Fatal("Middleware interface was not added correctly")
+	}
+
+	router.Use(mw.Middleware)
+	if len(router.middlewares) != 2 {
+		t.Fatal("Middleware method was not added correctly")
+	}
+
+	banalMw := func(handler http.Handler) http.Handler {
+		return handler
+	}
+	router.Use(banalMw)
+	if len(router.middlewares) != 3 {
+		t.Fatal("Middleware function was not added correctly")
 	}
 }
 
