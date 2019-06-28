@@ -495,9 +495,12 @@ Note: The handler chain will be stopped if your middleware doesn't call `next.Se
 
 ### Handling CORS Requests
 
-[CORSMethodMiddleware](https://godoc.org/github.com/gorilla/mux#CORSMethodMiddleware) intends to make it easier to strictly set the `Access-Control-Allow-Methods` response header. You will still need to use your own CORS handler to set the other CORS headers such as `Access-Control-Allow-Origin`.
+[CORSMethodMiddleware](https://godoc.org/github.com/gorilla/mux#CORSMethodMiddleware) intends to make it easier to strictly set the `Access-Control-Allow-Methods` response header.
 
-`CORSMethodMiddleware` will set the `Access-Control-Allow-Methods` header to all the method matchers (e.g. `r.Methods(http.MethodGet, http.MethodPut, http.MethodOptions)` -> `Access-Control-Allow-Methods: GET,PUT,OPTIONS`) on a route. Note that there must be an `OPTIONS` method matcher for the middleware to set the headers.
+* You will still need to use your own CORS handler to set the other CORS headers such as `Access-Control-Allow-Origin`
+* The middleware will set the `Access-Control-Allow-Methods` header to all the method matchers (e.g. `r.Methods(http.MethodGet, http.MethodPut, http.MethodOptions)` -> `Access-Control-Allow-Methods: GET,PUT,OPTIONS`) on a route
+* If you do not specify any methods, then:
+> _Important_: there must be an `OPTIONS` method matcher for the middleware to set the headers.
 
 Here is an example of using `CORSMethodMiddleware` along with a custom `OPTIONS` handler to set all the required CORS headers:
 
