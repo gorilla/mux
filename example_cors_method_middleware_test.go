@@ -12,7 +12,7 @@ func ExampleCORSMethodMiddleware() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
-		// Do something here
+		// Handle the request
 	}).Methods(http.MethodGet, http.MethodPut, http.MethodPatch)
 	r.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "http://example.com")
