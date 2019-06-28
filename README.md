@@ -532,7 +532,13 @@ func fooHandler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-And an `OPTIONS` request to `/foo` would look like:
+And an request to `/foo` using something like:
+
+```bash
+curl localhost:8080/foo -v
+```
+
+Would look like:
 
 ```bash
 *   Trying ::1...
@@ -540,13 +546,13 @@ And an `OPTIONS` request to `/foo` would look like:
 * Connected to localhost (::1) port 8080 (#0)
 > GET /foo HTTP/1.1
 > Host: localhost:8080
-> User-Agent: curl/7.64.0
+> User-Agent: curl/7.59.0
 > Accept: */*
 > 
 < HTTP/1.1 200 OK
 < Access-Control-Allow-Methods: GET,PUT,PATCH,OPTIONS
 < Access-Control-Allow-Origin: *
-< Date: Mon, 27 May 2019 03:25:07 GMT
+< Date: Fri, 28 Jun 2019 20:13:30 GMT
 < Content-Length: 3
 < Content-Type: text/plain; charset=utf-8
 < 
