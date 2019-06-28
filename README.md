@@ -514,6 +514,8 @@ import (
 
 func main() {
     r := mux.NewRouter()
+
+    // IMPORTANT: you must specify an OPTIONS method matcher for the middleware to set CORS headers
     r.HandleFunc("/foo", fooHandler).Methods(http.MethodGet, http.MethodPut, http.MethodPatch, http.MethodOptions)
     r.Use(mux.CORSMethodMiddleware(r))
     
