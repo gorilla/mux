@@ -30,7 +30,7 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * [Walking Routes](#walking-routes)
 * [Graceful Shutdown](#graceful-shutdown)
 * [Middleware](#middleware)
-* [CORS Method Middleware](#corsmethodmiddleware)
+* [Handling CORS Requests](#handling-cors-requests)
 * [Testing Handlers](#testing-handlers)
 * [Full Example](#full-example)
 
@@ -493,7 +493,7 @@ r.Use(amw.Middleware)
 
 Note: The handler chain will be stopped if your middleware doesn't call `next.ServeHTTP()` with the corresponding parameters. This can be used to abort a request if the middleware writer wants to. Middlewares _should_ write to `ResponseWriter` if they _are_ going to terminate the request, and they _should not_ write to `ResponseWriter` if they _are not_ going to terminate it.
 
-### CORSMethodMiddleware
+### Handling CORS Requests
 
 `CORSMethodMiddleware` intends to make it easier to strictly set the `Access-Control-Allow-Methods` response header. You will still need to use your own CORS handler to set the other CORS headers such as `Access-Control-Allow-Origin`.
 
