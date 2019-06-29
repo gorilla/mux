@@ -26,6 +26,7 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * [Examples](#examples)
 * [Matching Routes](#matching-routes)
 * [Static Files](#static-files)
+* [Serving SPAs](#serving-spas)
 * [Registered URLs](#registered-urls)
 * [Walking Routes](#walking-routes)
 * [Graceful Shutdown](#graceful-shutdown)
@@ -209,6 +210,77 @@ func main() {
     }
 
     log.Fatal(srv.ListenAndServe())
+}
+```
+
+### Serving SPAs
+
+Most of the time it makes sense to serve your SPA on a separate web server from your API,
+but sometimes it's desirable to serve them both from one place. It's possible to write a simple
+handler for serving your SPA (for use with React's BrowserRouter for example), and leverage
+mux's powerful routing for your API endpoints.
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/gorilla/mux"
+)
+
+type spaHandler struct {
+	staticPath string
+	indexPath  string
+}
+
+func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	path, err := filepath.Abs(r.URL.Path)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	path = filepath.Join(h.staticPath, path)
+
+	_, err = os.Stat(path)
+	if os.IsNotExist(err) {
+		// file does not exist, serve index.html
+		http.ServeFile(w, r, filepath.Join(h.staticPath, h.indexPath))
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
+}
+
+func main() {
+	r := mux.NewRouter()
+
+	r.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		// an example API handler
+		json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+	})
+
+	spa := spaHandler{staticPath: "build", indexPath: "index.html"}
+	r.PathPrefix("/").Handler(spa)
+
+	srv := &http.Server{
+		Handler: r,
+		Addr:    "127.0.0.1:8000",
+		// Good practice: enforce timeouts for servers you create!
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	log.Fatal(srv.ListenAndServe())
 }
 ```
 
