@@ -11,8 +11,11 @@ jobs:
       - checkout
       - run: go version
       - run: go get -t -v ./...
-      - run: diff -u <(echo -n) <(gofmt -d .)
-      - run: if [[ "$LATEST" = true ]]; then go vet -v .; fi
+      - run: >
+          if [[ "$LATEST" = true ]]; then
+            diff -u <(echo -n) <(gofmt -d .)
+            go vet -v .
+          fi
       - run: go test -v -race ./...
 
   "latest":
