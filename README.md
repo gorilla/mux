@@ -26,7 +26,7 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * [Examples](#examples)
 * [Matching Routes](#matching-routes)
 * [Static Files](#static-files)
-* [Serving SPAs](#serving-spas)
+* [Serving Single Page Applications](#serving-single-page-applications) (e.g. React, Vue, Ember.js, etc.)
 * [Registered URLs](#registered-urls)
 * [Walking Routes](#walking-routes)
 * [Graceful Shutdown](#graceful-shutdown)
@@ -213,7 +213,7 @@ func main() {
 }
 ```
 
-### Serving SPAs
+### Serving Single Page Applications
 
 Most of the time it makes sense to serve your SPA on a separate web server from your API,
 but sometimes it's desirable to serve them both from one place. It's possible to write a simple
