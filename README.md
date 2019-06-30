@@ -217,7 +217,7 @@ func main() {
 
 Most of the time it makes sense to serve your SPA on a separate web server from your API,
 but sometimes it's desirable to serve them both from one place. It's possible to write a simple
-handler for serving your SPA (for use with React's BrowserRouter for example), and leverage
+handler for serving your SPA (for use with React Router's [BrowserRouter](https://reacttraining.com/react-router/web/api/BrowserRouter) for example), and leverage
 mux's powerful routing for your API endpoints.
 
 ```go
