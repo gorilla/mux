@@ -262,18 +262,18 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	r := mux.NewRouter()
+	router := mux.NewRouter()
 
-	r.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		// an example API handler
 		json.NewEncoder(w).Encode(map[string]bool{"ok": true})
 	})
 
 	spa := spaHandler{staticPath: "build", indexPath: "index.html"}
-	r.PathPrefix("/").Handler(spa)
+	router.PathPrefix("/").Handler(spa)
 
 	srv := &http.Server{
-		Handler: r,
+		Handler: router,
 		Addr:    "127.0.0.1:8000",
 		// Good practice: enforce timeouts for servers you create!
 		WriteTimeout: 15 * time.Second,
