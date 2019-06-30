@@ -1,10 +1,10 @@
-daysUntilStale: 60
-daysUntilClose: 7
+daysUntilStale: 75
+daysUntilClose: 14
 # Issues with these labels will never be considered stale
 exemptLabels:
-  - v2
-  - needs-review
-  - work-required
+  - proposal
+  - needs review
+  - build system
 staleLabel: stale
 markComment: >
   This issue has been automatically marked as stale because it hasn't seen
