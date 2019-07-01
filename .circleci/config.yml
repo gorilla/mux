@@ -8,23 +8,35 @@ jobs:
       - image: circleci/golang:latest
     working_directory: /go/src/github.com/gorilla/mux
     steps: &steps
+      # Our build steps: we checkout the repo, fetch our deps, lint, and finally
+      # run "go test" on the package.
       - checkout
+      # Logs the version in our build logs, for posterity
       - run: go version
-      - run: go get -t -v ./...
+      - run:
+          name: "Fetch dependencies"
+          command: >
+            go get -t -v ./...
       # Only run gofmt, vet & lint against the latest Go version
-      - run: >
-          if [[ "$LATEST" = true ]]; then
-            go get -u golang.org/x/lint/golint
-            golint ./...
-          fi
-      - run: >
-          if [[ "$LATEST" = true ]]; then
-            diff -u <(echo -n) <(gofmt -d .)
-          fi
-      - run: >
-          if [[ "$LATEST" = true ]]; then
-            go vet -v .
-          fi
+      - run:
+          name: "Run golint"
+          command: >
+            if [ "${LATEST}" = true ] && [ -z "${SKIP_GOLINT}" ]; then
+              go get -u golang.org/x/lint/golint
+              golint ./...
+            fi
+      - run:
+          name: "Run gofmt"
+          command: >
+            if [[ "${LATEST}" = true ]]; then
+              diff -u <(echo -n) <(gofmt -d -e .)
+            fi
+      - run:
+          name: "Run go vet"
+          command:  >
+            if [[ "${LATEST}" = true ]]; then
+              go vet -v ./...
+            fi
       - run: go test -v -race ./...
 
   "latest":
