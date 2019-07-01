@@ -21,7 +21,7 @@ jobs:
       - run:
           name: "Run golint"
           command: >
-            if [[ "${LATEST}" = true ] && [ -z "${SKIP_GOLINT}" ]]; then
+            if [ "${LATEST}" = true ] && [ -z "${SKIP_GOLINT}" ]; then
               go get -u golang.org/x/lint/golint
               golint ./...
             fi
