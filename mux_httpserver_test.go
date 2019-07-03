@@ -11,10 +11,14 @@ import (
 )
 
 func TestSchemeMatchers(t *testing.T) {
-	router := NewRouter()
-	router.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
+	httpRouter := NewRouter()
+	httpRouter.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
 		rw.Write([]byte("hello world"))
-	}).Schemes("http", "https")
+	}).Schemes("http")
+	httpsRouter := NewRouter()
+	httpsRouter.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Write([]byte("hello world"))
+	}).Schemes("https")
 
 	assertHelloWorldResponse := func(t *testing.T, s *httptest.Server) {
 		resp, err := s.Client().Get(s.URL)
@@ -34,12 +38,12 @@ func TestSchemeMatchers(t *testing.T) {
 	}
 
 	t.Run("httpServer", func(t *testing.T) {
-		s := httptest.NewServer(router)
+		s := httptest.NewServer(httpRouter)
 		defer s.Close()
 		assertHelloWorldResponse(t, s)
 	})
 	t.Run("httpsServer", func(t *testing.T) {
-		s := httptest.NewTLSServer(router)
+		s := httptest.NewTLSServer(httpsRouter)
 		defer s.Close()
 		assertHelloWorldResponse(t, s)
 	})
