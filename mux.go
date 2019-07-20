@@ -111,10 +111,8 @@ func copyRouteConf(r routeConf) routeConf {
 		c.regexp.queries = append(c.regexp.queries, copyRouteRegexp(q))
 	}
 
-	c.matchers = make([]matcher, 0, len(r.matchers))
-	for _, m := range r.matchers {
-		c.matchers = append(c.matchers, m)
-	}
+	c.matchers = make([]matcher, len(r.matchers))
+	copy(c.matchers, r.matchers)
 
 	return c
 }
