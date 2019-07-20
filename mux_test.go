@@ -1943,7 +1943,7 @@ type TestA301ResponseWriter struct {
 }
 
 func (ho *TestA301ResponseWriter) Header() http.Header {
-	return http.Header(ho.hh)
+	return ho.hh
 }
 
 func (ho *TestA301ResponseWriter) Write(b []byte) (int, error) {
