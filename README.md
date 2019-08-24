@@ -4,7 +4,7 @@
 [![CircleCI](https://circleci.com/gh/gorilla/mux.svg?style=svg)](https://circleci.com/gh/gorilla/mux)
 [![Sourcegraph](https://sourcegraph.com/github.com/gorilla/mux/-/badge.svg)](https://sourcegraph.com/github.com/gorilla/mux?badge)
 
-![Gorilla Logo](http://www.gorillatoolkit.org/static/images/gorilla-icon-64.png)
+![Gorilla Logo](https://cloud-cdn.questionable.services/gorilla-icon-64.png)
 
 https://www.gorillatoolkit.org/pkg/mux
 
