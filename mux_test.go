@@ -2046,7 +2046,7 @@ func TestNoMatchMethodErrorHandler(t *testing.T) {
 
 	resp := NewRecorder()
 	r.ServeHTTP(resp, req)
-	if resp.Code != 405 {
+	if resp.Code != http.StatusMethodNotAllowed {
 		t.Errorf("Expecting code %v", 405)
 	}
 
@@ -2725,7 +2725,7 @@ func TestMethodNotAllowed(t *testing.T) {
 
 	router.ServeHTTP(w, req)
 
-	if w.Code != 405 {
+	if w.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("Expected status code 405 (got %d)", w.Code)
 	}
 }
@@ -2798,7 +2798,7 @@ func TestSubrouterNotFound(t *testing.T) {
 
 	router.ServeHTTP(w, req)
 
-	if w.Code != 404 {
+	if w.Code != http.StatusNotFound {
 		t.Fatalf("Expected status code 404 (got %d)", w.Code)
 	}
 }
