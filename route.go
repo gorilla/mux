@@ -635,7 +635,7 @@ func (r *Route) GetQueriesRegexp() ([]string, error) {
 	if r.regexp.queries == nil {
 		return nil, errors.New("mux: route doesn't have queries")
 	}
-	var queries []string
+	queries := make([]string, 0, len(r.regexp.queries))
 	for _, query := range r.regexp.queries {
 		queries = append(queries, query.regexp.String())
 	}
@@ -654,7 +654,7 @@ func (r *Route) GetQueriesTemplates() ([]string, error) {
 	if r.regexp.queries == nil {
 		return nil, errors.New("mux: route doesn't have queries")
 	}
-	var queries []string
+	queries := make([]string, 0, len(r.regexp.queries))
 	for _, query := range r.regexp.queries {
 		queries = append(queries, query.template)
 	}
