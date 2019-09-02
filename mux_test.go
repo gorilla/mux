@@ -2803,6 +2803,48 @@ func TestSubrouterNotFound(t *testing.T) {
 	}
 }
 
+// testOptionsMiddleWare returns 200 on an OPTIONS request
+func testOptionsMiddleWare(inner http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		inner.ServeHTTP(w, r)
+	})
+}
+
+// TestRouterOrder Should Pass whichever order route is defined
+func TestRouterOrder(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {}
+	router := NewRouter()
+	router.Path("/a/b").Handler(http.HandlerFunc(handler)).Methods(http.MethodGet)
+	router.Path("/a/{a}").Handler(nil).Methods(http.MethodOptions)
+	router.Use(MiddlewareFunc(testOptionsMiddleWare))
+
+	w := NewRecorder()
+	req := newRequest(http.MethodOptions, "/a/b")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status code 200 (got %d)", w.Code)
+	}
+
+	reversedPathRouter := NewRouter()
+	reversedPathRouter.Path("/a/{a}").Handler(http.HandlerFunc(handler)).Methods(http.MethodGet)
+	reversedPathRouter.Path("/a/b").Handler(nil).Methods(http.MethodOptions)
+	reversedPathRouter.Use(MiddlewareFunc(testOptionsMiddleWare))
+
+	w = NewRecorder()
+
+	reversedPathRouter.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status code 200 (got %d)", w.Code)
+	}
+}
+
 // mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int
