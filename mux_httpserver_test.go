@@ -11,16 +11,15 @@ import (
 )
 
 func TestSchemeMatchers(t *testing.T) {
-	httpRouter := NewRouter()
-	httpRouter.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Write([]byte("hello world"))
+	router := NewRouter()
+	router.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Write([]byte("hello http world"))
 	}).Schemes("http")
-	httpsRouter := NewRouter()
-	httpsRouter.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Write([]byte("hello world"))
+	router.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
+		rw.Write([]byte("hello https world"))
 	}).Schemes("https")
 
-	assertHelloWorldResponse := func(t *testing.T, s *httptest.Server) {
+	assertResponseBody := func(t *testing.T, s *httptest.Server, expectedBody string) {
 		resp, err := s.Client().Get(s.URL)
 		if err != nil {
 			t.Fatalf("unexpected error getting from server: %v", err)
@@ -32,19 +31,19 @@ func TestSchemeMatchers(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error reading body: %v", err)
 		}
-		if !bytes.Equal(body, []byte("hello world")) {
+		if !bytes.Equal(body, []byte(expectedBody)) {
 			t.Fatalf("response should be hello world, was: %q", string(body))
 		}
 	}
 
 	t.Run("httpServer", func(t *testing.T) {
-		s := httptest.NewServer(httpRouter)
+		s := httptest.NewServer(router)
 		defer s.Close()
-		assertHelloWorldResponse(t, s)
+		assertResponseBody(t, s, "hello http world")
 	})
 	t.Run("httpsServer", func(t *testing.T) {
-		s := httptest.NewTLSServer(httpsRouter)
+		s := httptest.NewTLSServer(router)
 		defer s.Close()
-		assertHelloWorldResponse(t, s)
+		assertResponseBody(t, s, "hello https world")
 	})
 }
