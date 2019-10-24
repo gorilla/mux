@@ -59,8 +59,7 @@ type Router struct {
 
 	// If true, do not clear the request context after handling the request.
 	//
-	// Deprecated: No effect when go1.7+ is used, since the context is stored
-	// on the request itself.
+	// Deprecated: No effect, since the context is stored on the request itself.
 	KeepContext bool
 
 	// Slice of middlewares to be called after a match is found
