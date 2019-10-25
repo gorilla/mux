@@ -114,6 +114,8 @@ func copyRouteConf(r routeConf) routeConf {
 	c.matchers = make([]matcher, len(r.matchers))
 	copy(c.matchers, r.matchers)
 
+	c.skipClean = r.skipClean
+
 	return c
 }
 
@@ -171,26 +173,6 @@ func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 // When there is a match, the route variables can be retrieved calling
 // mux.Vars(request).
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if !r.skipClean {
-		path := req.URL.Path
-		if r.useEncodedPath {
-			path = req.URL.EscapedPath()
-		}
-		// Clean path to canonical form and redirect.
-		if p := cleanPath(path); p != path {
-
-			// Added 3 lines (Philip Schlump) - It was dropping the query string and #whatever from query.
-			// This matches with fix in go 1.2 r.c. 4 for same problem.  Go Issue:
-			// http://code.google.com/p/go/issues/detail?id=5252
-			url := *req.URL
-			url.Path = p
-			p = url.String()
-
-			w.Header().Set("Location", p)
-			w.WriteHeader(http.StatusMovedPermanently)
-			return
-		}
-	}
 	var match RouteMatch
 	var handler http.Handler
 	if r.Match(req, &match) {
@@ -205,6 +187,17 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if handler == nil {
 		handler = http.NotFoundHandler()
+	}
+
+	if match.OnlyMatchedCleanPath {
+		// Added 3 lines (Philip Schlump) - It was dropping the query string and #whatever from query.
+		// This matches with fix in go 1.2 r.c. 4 for same problem.  Go Issue:
+		// http://code.google.com/p/go/issues/detail?id=5252
+		url := *req.URL
+		url.Path = match.CleanPath
+		w.Header().Set("Location", url.String())
+		w.WriteHeader(http.StatusMovedPermanently)
+		return
 	}
 
 	handler.ServeHTTP(w, req)
@@ -410,6 +403,13 @@ type RouteMatch struct {
 	Route   *Route
 	Handler http.Handler
 	Vars    map[string]string
+
+	// Cleaned version of the path being matched.
+	CleanPath string
+
+	// true if a valid route match occurs, but only on the cleaned version
+	// of a URL.
+	OnlyMatchedCleanPath bool
 
 	// MatchErr is set to appropriate matching error
 	// It is set to ErrMethodMismatch if there is a mismatch in

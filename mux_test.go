@@ -1999,6 +1999,40 @@ func TestSkipClean(t *testing.T) {
 	}
 }
 
+func TestSkipCleanSubrouter(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+	func2 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter().SkipClean(true)
+	r.HandleFunc("/api/", func1).Name("func2")
+	subRouter := r.PathPrefix("/v0").Subrouter().SkipClean(false)
+	subRouter.HandleFunc("/action/do/", func2).Name("func2")
+
+	req, _ := http.NewRequest("GET", "http://localhost/api/?abc=def", nil)
+	res := NewRecorder()
+	r.ServeHTTP(res, req)
+
+	if len(res.HeaderMap["Location"]) != 0 {
+		t.Errorf("Req 1: Shouldn't redirect since route is already clean")
+	}
+
+	req, _ = http.NewRequest("GET", "http://localhost//api/?abc=def", nil)
+	res = NewRecorder()
+	r.ServeHTTP(res, req)
+
+	if len(res.HeaderMap["Location"]) != 0 {
+		t.Errorf("Req 2: Shouldn't redirect since skip clean is disabled")
+	}
+
+	req, _ = http.NewRequest("GET", "http://localhost/v0/action//do/?ghi=jkl", nil)
+	res = NewRecorder()
+	r.ServeHTTP(res, req)
+
+	if len(res.HeaderMap["Location"]) == 0 {
+		t.Errorf("Req 3: Should redirect since skip clean is enabled for subroute")
+	}
+}
+
 // https://plus.google.com/101022900381697718949/posts/eWy6DjFJ6uW
 func TestSubrouterHeader(t *testing.T) {
 	expected := "func1 response"
