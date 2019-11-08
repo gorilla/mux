@@ -55,6 +55,7 @@ func main() {
     r.HandleFunc("/products", ProductsHandler)
     r.HandleFunc("/articles", ArticlesHandler)
     http.Handle("/", r)
+    http.ListenAndServe(":8080", nil)
 }
 ```
 
