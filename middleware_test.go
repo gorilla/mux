@@ -478,6 +478,26 @@ func TestCORSMethodMiddleware(t *testing.T) {
 	}
 }
 
+func TestCORSMethodMiddlewareSubrouter(t *testing.T) {
+	router := NewRouter().StrictSlash(true)
+
+	subrouter := router.PathPrefix("/test").Subrouter()
+	subrouter.HandleFunc("/hello", stringHandler("a")).Methods(http.MethodGet, http.MethodOptions, http.MethodPost)
+	subrouter.HandleFunc("/hello/{name}", stringHandler("b")).Methods(http.MethodGet, http.MethodOptions)
+
+	subrouter.Use(CORSMethodMiddleware(subrouter))
+
+	rw := NewRecorder()
+	req := newRequest("GET", "/test/hello/asdf")
+	router.ServeHTTP(rw, req)
+
+	actualMethods := rw.Header().Get("Access-Control-Allow-Methods")
+	expectedMethods := "GET,OPTIONS"
+	if actualMethods != expectedMethods {
+		t.Fatalf("expected methods %q but got: %q", expectedMethods, actualMethods)
+	}
+}
+
 func TestMiddlewareOnMultiSubrouter(t *testing.T) {
 	first := "first"
 	second := "second"
