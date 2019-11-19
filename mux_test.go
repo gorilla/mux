@@ -684,8 +684,8 @@ func TestHeaders(t *testing.T) {
 		},
 		{
 			title:       "Headers route, regex header values to match",
-			route:       new(Route).Headers("foo", "ba[zr]"),
-			request:     newRequestHeaders("GET", "http://localhost", map[string]string{"foo": "bar"}),
+			route:       new(Route).HeadersRegexp("foo", "ba[zr]"),
+			request:     newRequestHeaders("GET", "http://localhost", map[string]string{"foo": "baw"}),
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
