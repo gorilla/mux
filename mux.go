@@ -306,6 +306,12 @@ func (r *Router) Headers(pairs ...string) *Route {
 	return r.NewRoute().Headers(pairs...)
 }
 
+// Cookies registers a new route with a matcher for request cookie values.
+// See Route.Cookies().
+func (r *Router) Cookies(pairs ...string) *Route {
+	return r.NewRoute().Cookies(pairs...)
+}
+
 // Host registers a new route with a matcher for the URL host.
 // See Route.Host().
 func (r *Router) Host(tpl string) *Route {

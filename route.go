@@ -218,6 +218,73 @@ func (r *Route) addRegexpMatcher(tpl string, typ regexpType) error {
 	return nil
 }
 
+// Cookies
+// cookieMatcher matches the request against cookie values.
+type cookieMatcher map[string]string
+
+func (c cookieMatcher) Match(r *http.Request, match *RouteMatch) bool {
+	values := map[string][]string{}
+	for name := range c {
+		c_, err := r.Cookie(name)
+		if err != nil {
+			return false
+		}
+		values[name] = []string{c_.Value}
+	}
+	return matchMapWithString(c, values, false)
+}
+
+// Cookies adds a matcher for request cookie values.
+// It accepts a sequence of key/value pairs to be matched. For example:
+//
+//     r := mux.NewRouter()
+//     r.Cookie("user-role", "test-a")
+//
+// The above route will only match if both request cookie values match.
+// If the value is an empty string, it will match any value if the key is set.
+func (r *Route) Cookies(pairs ...string) *Route {
+	if r.err == nil {
+		var cookies map[string]string
+		cookies, r.err = mapFromPairsToString(pairs...)
+		return r.addMatcher(cookieMatcher(cookies))
+	}
+	return r
+}
+
+// cookieRegexMatcher matches the request against the route given a regex for the cookie
+type cookieRegexMatcher map[string]*regexp.Regexp
+
+func (c cookieRegexMatcher) Match(r *http.Request, match *RouteMatch) bool {
+
+	values := map[string][]string{}
+	for name := range c {
+		c_, err := r.Cookie(name)
+		if err != nil {
+			return false
+		}
+		values[name] = []string{c_.Value}
+	}
+	return matchMapWithRegex(c, values, false)
+}
+
+// CookiesRegexp accepts a sequence of key/value pairs, where the value has regex
+// support. For example:
+//
+//     r := mux.NewRouter()
+//     r.CookiesRegexp("user-role", "(test-a|test-b)")
+//
+// The above route will only match if both the request cookie matches both regular expressions.
+// If the value is an empty string, it will match any value if the key is set.
+// Use the start and end of string anchors (^ and $) to match an exact value.
+func (r *Route) CookiesRegexp(pairs ...string) *Route {
+	if r.err == nil {
+		var cookies map[string]*regexp.Regexp
+		cookies, r.err = mapFromPairsToRegex(pairs...)
+		return r.addMatcher(cookieRegexMatcher(cookies))
+	}
+	return r
+}
+
 // Headers --------------------------------------------------------------------
 
 // headerMatcher matches the request against header values.
