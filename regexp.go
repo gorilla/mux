@@ -181,16 +181,16 @@ func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
 			}
 		}
 		return r.regexp.MatchString(host)
-	} else {
-		if r.regexpType == regexpTypeQuery {
-			return r.matchQueryString(req)
-		}
-		path := req.URL.Path
-		if r.options.useEncodedPath {
-			path = req.URL.EscapedPath()
-		}
-		return r.regexp.MatchString(path)
 	}
+
+	if r.regexpType == regexpTypeQuery {
+		return r.matchQueryString(req)
+	}
+	path := req.URL.Path
+	if r.options.useEncodedPath {
+		path = req.URL.EscapedPath()
+	}
+	return r.regexp.MatchString(path)
 }
 
 // url builds a URL part using the given values.
