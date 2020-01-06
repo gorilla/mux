@@ -147,6 +147,16 @@ func TestHost(t *testing.T) {
 			shouldMatch:  true,
 		},
 		{
+			title:        "Host route with pattern, match with wildcard port",
+			route:        new(Route).Host("aaa.{v1:[a-z]{3}}.ccc"),
+			request:      newRequest("GET", "http://aaa.bbb.ccc:8080/111/222/333"),
+			vars:         map[string]string{"v1": "bbb"},
+			host:         "aaa.bbb.ccc",
+			path:         "",
+			hostTemplate: `aaa.{v1:[a-z]{3}}.ccc`,
+			shouldMatch:  true,
+		},
+		{
 			title:        "Host route with pattern, additional capturing group, match",
 			route:        new(Route).Host("aaa.{v1:[a-z]{2}(?:b|c)}.ccc"),
 			request:      newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
