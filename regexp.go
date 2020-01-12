@@ -230,12 +230,49 @@ func (r *routeRegexp) getURLQuery(req *http.Request) string {
 		return ""
 	}
 	templateKey := strings.SplitN(r.template, "=", 2)[0]
-	for key, vals := range req.URL.Query() {
-		if key == templateKey && len(vals) > 0 {
-			return key + "=" + vals[0]
-		}
+	val, ok := findFirstQueryKey(req.URL.RawQuery, templateKey)
+	if ok {
+		return templateKey + "=" + val
 	}
 	return ""
+}
+
+// findFirstQueryKey returns the same result as (*url.URL).Query()[key][0].
+// If key was not found, empty string and false is returned.
+func findFirstQueryKey(rawQuery, key string) (value string, ok bool) {
+	query := []byte(rawQuery)
+	for len(query) > 0 {
+		foundKey := query
+		if i := bytes.IndexAny(foundKey, "&;"); i >= 0 {
+			foundKey, query = foundKey[:i], foundKey[i+1:]
+		} else {
+			query = query[:0]
+		}
+		if len(foundKey) == 0 {
+			continue
+		}
+		var value []byte
+		if i := bytes.IndexByte(foundKey, '='); i >= 0 {
+			foundKey, value = foundKey[:i], foundKey[i+1:]
+		}
+		if len(foundKey) < len(key) {
+			// Cannot possibly be key.
+			continue
+		}
+		keyString, err := url.QueryUnescape(string(foundKey))
+		if err != nil {
+			continue
+		}
+		if keyString != key {
+			continue
+		}
+		valueString, err := url.QueryUnescape(string(value))
+		if err != nil {
+			continue
+		}
+		return valueString, true
+	}
+	return "", false
 }
 
 func (r *routeRegexp) matchQueryString(req *http.Request) bool {
