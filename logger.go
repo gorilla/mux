@@ -108,7 +108,7 @@ func LoggerWithConfig(c LogConfig) MiddlewareFunc {
 
 			sw := statusWriter{
 				ResponseWriter: w,
-				status:         0,
+				status:         200,
 			}
 			next.ServeHTTP(&sw, r)
 
