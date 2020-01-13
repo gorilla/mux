@@ -23,7 +23,10 @@ var (
 
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
-	return &Router{namedRoutes: make(map[string]*Route)}
+	r := &Router{namedRoutes: make(map[string]*Route)}
+	r.Use(Logger)
+
+	return r
 }
 
 // Router registers routes to be matched and dispatches a handler.

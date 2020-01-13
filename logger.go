@@ -32,8 +32,6 @@ type LogFormatterParams struct {
 	StatusCode int
 	// Latency is how much time the server cost to process a certain request.
 	Latency time.Duration
-	// ClientIP equals Context's ClientIP method.
-	ClientIP string
 	// Method is the HTTP method given to the request.
 	Method string
 	// Path is a path the client requests.
@@ -97,7 +95,7 @@ func Logger(next http.Handler) http.Handler {
 }
 
 func LoggerWithConfig(c LogConfig) MiddlewareFunc {
-	return func (next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
 		out := c.Output
 		if out == nil {
 			out = os.Stdout
@@ -120,13 +118,12 @@ func LoggerWithConfig(c LogConfig) MiddlewareFunc {
 
 			stop := time.Now()
 			p := LogFormatterParams{
-				Request:      r,
-				TimeStamp: stop,
-				Latency: stop.Sub(start),
-				ClientIP: "",
-				Method: r.Method,
+				Request:    r,
+				TimeStamp:  stop,
+				Latency:    stop.Sub(start),
+				Method:     r.Method,
 				StatusCode: sw.status,
-				Path: path,
+				Path:       path,
 			}
 
 			fmt.Fprintf(out, formatter(p))
@@ -143,11 +140,10 @@ func formatter(p LogFormatterParams) string {
 		p.Latency = p.Latency - p.Latency%time.Second
 	}
 
-	return fmt.Sprintf("[MUX] %v |%s %3d %s| %13v | %15s |%s %-7s %s %s\n",
+	return fmt.Sprintf("[MUX] %v |%s %3d %s| %13v |%s %-7s %s %s\n",
 		p.TimeStamp.Format("2006/01/02 - 15:04:05"),
 		statusColor, p.StatusCode, resetColor,
 		p.Latency,
-		p.ClientIP,
 		methodColor, p.Method, resetColor,
 		p.Path,
 	)

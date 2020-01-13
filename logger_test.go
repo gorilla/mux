@@ -16,7 +16,7 @@ func testHandler(status int) http.HandlerFunc {
 func TestLogger(t *testing.T) {
 	buffer := new(bytes.Buffer)
 	r := NewRouter()
-	r.Use(LoggerWithConfig(LogConfig{Output:buffer}))
+	r.Use(LoggerWithConfig(LogConfig{Output: buffer}))
 	r.HandleFunc("/example", testHandler(http.StatusOK)).
 		Methods("GET", "POST", "PUT", "DELETE", "OPTIONS")
 
