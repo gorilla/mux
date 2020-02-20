@@ -2733,6 +2733,23 @@ func TestMethodNotAllowed(t *testing.T) {
 	}
 }
 
+func TestRequireExplicitMethodNotAllowedHandler(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+	router.RequireExplicitMethodNotAllowedHandler = true
+	router.HandleFunc("/thing", handler).Methods(http.MethodGet)
+	router.HandleFunc("/something", handler).Methods(http.MethodGet)
+
+	w := NewRecorder()
+	req := newRequest(http.MethodPut, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("Expected status code 404 (got %d)", w.Code)
+	}
+}
+
 type customMethodNotAllowedHandler struct {
 	msg string
 }

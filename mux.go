@@ -51,6 +51,9 @@ type Router struct {
 	// Configurable Handler to be used when the request method does not match the route.
 	MethodNotAllowedHandler http.Handler
 
+	// If true, only handle MethodNotAllowed if the router MethodNotAllowedHandler is explicitly specified
+	RequireExplicitMethodNotAllowedHandler bool
+
 	// Routes to be matched, in order.
 	routes []*Route
 
@@ -199,7 +202,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		req = requestWithRoute(req, match.Route)
 	}
 
-	if handler == nil && match.MatchErr == ErrMethodMismatch {
+	if handler == nil && match.MatchErr == ErrMethodMismatch && !r.RequireExplicitMethodNotAllowedHandler {
 		handler = methodNotAllowedHandler()
 	}
 
