@@ -261,6 +261,18 @@ var hostMatcherTests = []hostMatcherTest{
 		result:  true,
 	},
 	{
+		matcher: NewRouter().NewRoute().Host("{foo:[a-z][a-z][a-z]}.{bar:[a-z][a-z][a-z]}.{baz:[a-z][a-z][a-z]}:{port:.*}"),
+		url:     "http://abc.def.ghi:65535/",
+		vars:    map[string]string{"foo": "abc", "bar": "def", "baz": "ghi", "port": "65535"},
+		result:  true,
+	},
+	{
+		matcher: NewRouter().NewRoute().Host("{foo:[a-z][a-z][a-z]}.{bar:[a-z][a-z][a-z]}.{baz:[a-z][a-z][a-z]}"),
+		url:     "http://abc.def.ghi:65535/",
+		vars:    map[string]string{"foo": "abc", "bar": "def", "baz": "ghi"},
+		result:  true,
+	},
+	{
 		matcher: NewRouter().NewRoute().Host("{foo:[a-z][a-z][a-z]}.{bar:[a-z][a-z][a-z]}.{baz:[a-z][a-z][a-z]}"),
 		url:     "http://a.b.c/",
 		vars:    map[string]string{"foo": "abc", "bar": "def", "baz": "ghi"},
@@ -366,6 +378,11 @@ var urlBuildingTests = []urlBuildingTest{
 		url:   "http://bar.domain.com",
 	},
 	{
+		route: new(Route).Host("{subdomain}.domain.com:{port:.*}"),
+		vars:  []string{"subdomain", "bar", "port", "65535"},
+		url:   "http://bar.domain.com:65535",
+	},
+	{
 		route: new(Route).Host("foo.domain.com").Path("/articles"),
 		vars:  []string{},
 		url:   "http://foo.domain.com/articles",
@@ -412,7 +429,11 @@ func TestHeaderMatcher(t *testing.T) {
 
 func TestHostMatcher(t *testing.T) {
 	for _, v := range hostMatcherTests {
-		request, _ := http.NewRequest("GET", v.url, nil)
+		request, err := http.NewRequest("GET", v.url, nil)
+		if err != nil {
+			t.Errorf("http.NewRequest failed %#v", err)
+			continue
+		}
 		var routeMatch RouteMatch
 		result := v.matcher.Match(request, &routeMatch)
 		vars := routeMatch.Vars
