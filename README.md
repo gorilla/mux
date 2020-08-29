@@ -96,7 +96,7 @@ r.Host("{subdomain:[a-z]+}.example.com")
 There are several other matchers that can be added. To match path prefixes:
 
 ```go
-r.PathPrefix("/products/")
+r.PathPrefix("/products")
 ```
 
 ...or HTTP methods:
