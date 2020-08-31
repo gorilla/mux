@@ -51,6 +51,16 @@ type routeTest struct {
 	shouldRedirect  bool              // whether the request should result in a redirect
 }
 
+func skipRoute(tpl string, skipHosts ...string) *Route {
+	skipRoute := &Route{}
+	skipRoute.skipHosts = map[string]struct{}{}
+	for _, host := range skipHosts {
+		skipRoute.skipHosts[host] = struct{}{}
+	}
+	skipRoute.Host(tpl)
+	return skipRoute
+}
+
 func TestHost(t *testing.T) {
 
 	tests := []routeTest{
@@ -215,6 +225,16 @@ func TestHost(t *testing.T) {
 			path:         "",
 			hostTemplate: `{v-1:[a-z]{3}}.{v-2:[a-z]{3}}.{v-3:[a-z]{3}}`,
 			shouldMatch:  true,
+		},
+		{
+			title:        "Host route match should skip specific hosts when specified",
+			route:        skipRoute("{subdomain}.domain.com", "test.domain.com"), // skip matching 'test.domain.com'
+			request:      newRequest("GET", "http://test.domain.com"),
+			vars:         map[string]string{},
+			host:         "test.domain.com",
+			path:         "",
+			hostTemplate: `{subdomain}.domain.com`,
+			shouldMatch:  false,
 		},
 	}
 	for _, test := range tests {

@@ -17,6 +17,7 @@ import (
 type routeRegexpOptions struct {
 	strictSlash    bool
 	useEncodedPath bool
+	skipHosts      map[string]struct{}
 }
 
 type regexpType int
@@ -178,6 +179,11 @@ func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
 			// Don't be strict on the port match
 			if i := strings.Index(host, ":"); i != -1 {
 				host = host[:i]
+			}
+		}
+		if len(r.options.skipHosts) > 0 {
+			if _, ok := r.options.skipHosts[host]; ok {
+				return false
 			}
 		}
 		return r.regexp.MatchString(host)

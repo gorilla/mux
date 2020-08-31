@@ -82,6 +82,9 @@ type routeConf struct {
 	// will not redirect
 	skipClean bool
 
+	// If set to a host skips the this host from r.Host() matcher.
+	skipHosts map[string]struct{}
+
 	// Manager for the variables from host and path.
 	regexp routeRegexpGroup
 
@@ -266,6 +269,21 @@ func (r *Router) SkipClean(value bool) *Router {
 // For eg. "/path/foo%2Fbar/to" will match the path "/path/foo/bar/to"
 func (r *Router) UseEncodedPath() *Router {
 	r.useEncodedPath = true
+	return r
+}
+
+// SkipHosts tells the router to skip the these list of hosts from
+// r.Host() rules.
+// For eg: "r.Host("{subdomain}.domain.com") will match "test.subdomain.com"
+// and you would want to skip the matcher for `test.subdomain.com`.
+//
+// Go regexes do not support PCRE style lookahead/lookbehind like
+// features, this function is a way to provide this functionality.
+func (r *Router) SkipHosts(hosts ...string) *Router {
+	r.skipHosts = map[string]struct{}{}
+	for _, host := range hosts {
+		r.skipHosts[host] = struct{}{}
+	}
 	return r
 }
 
