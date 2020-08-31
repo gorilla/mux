@@ -6,8 +6,6 @@
 
 ![Gorilla Logo](https://cloud-cdn.questionable.services/gorilla-icon-64.png)
 
-https://www.gorillatoolkit.org/pkg/mux
-
 Package `gorilla/mux` implements a request router and dispatcher for matching incoming requests to
 their respective handler.
 
