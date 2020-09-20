@@ -15,8 +15,9 @@ import (
 )
 
 type routeRegexpOptions struct {
-	strictSlash    bool
-	useEncodedPath bool
+	strictSlash        bool
+	useEncodedPath     bool
+	registeredPatterns map[string]string
 }
 
 type regexpType int
@@ -84,6 +85,9 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 		if name == "" || patt == "" {
 			return nil, fmt.Errorf("mux: missing name or pattern in %q",
 				tpl[idxs[i]:end])
+		}
+		if registeredPattern, ok := options.registeredPatterns[patt]; ok {
+			patt = registeredPattern
 		}
 		// Build the regexp pattern.
 		fmt.Fprintf(pattern, "%s(?P<%s>%s)", regexp.QuoteMeta(raw), varGroupName(i/2), patt)

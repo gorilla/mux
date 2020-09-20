@@ -92,6 +92,8 @@ type routeConf struct {
 	buildScheme string
 
 	buildVarsFunc BuildVarsFunc
+
+	registeredPatterns map[string]string
 }
 
 // returns an effective deep copy of `routeConf`
@@ -120,6 +122,14 @@ func copyRouteConf(r routeConf) routeConf {
 func copyRouteRegexp(r *routeRegexp) *routeRegexp {
 	c := *r
 	return &c
+}
+
+func (r *Router) RegisterPattern(alias string, pattern string) *Router {
+	if r.registeredPatterns == nil {
+		r.registeredPatterns = map[string]string{}
+	}
+	r.registeredPatterns[alias] = pattern
+	return r
 }
 
 // Match attempts to match the given request against the router's registered routes.
