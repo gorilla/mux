@@ -455,6 +455,7 @@ import (
 )
 
 func main() {
+    defer os.Exit(0)
     var wait time.Duration
     flag.DurationVar(&wait, "graceful-timeout", time.Second * 15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
     flag.Parse()
@@ -496,7 +497,6 @@ func main() {
     // <-ctx.Done() if your application should wait for other services
     // to finalize based on context cancellation.
     log.Println("shutting down")
-    defer os.Exit(0)
 }
 ```
 
