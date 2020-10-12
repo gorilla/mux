@@ -28,7 +28,7 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * [Serving Single Page Applications](#serving-single-page-applications) (e.g. React, Vue, Ember.js, etc.)
 * [Registered URLs](#registered-urls)
 * [Walking Routes](#walking-routes)
-* [Alias Pattern Registration](#pattern-registration)
+* [Re-using Regular Expressions](#re-using-regular-expressions)
 * [Graceful Shutdown](#graceful-shutdown)
 * [Middleware](#middleware)
 * [Handling CORS Requests](#handling-cors-requests)
@@ -436,7 +436,7 @@ func main() {
 }
 ```
 
-### Alias Pattern Registration
+### Re-using Regular Expressions
 
 There can be a situation when you often need to specify some complex regular expressions inside your paths, e.g. uuid. This can be easily shorthanded:
 
