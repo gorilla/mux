@@ -7,7 +7,7 @@ import (
 )
 
 // This example demonstrates alias pattern registration on router
-func ExampleRegisterPattern() {
+func ExampleRouter_RegisterPattern() {
 
 	r := mux.NewRouter().RegisterPattern("uuid", "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}")
 	route := r.Path("/category/{id:uuid}")
