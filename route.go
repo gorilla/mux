@@ -488,6 +488,12 @@ func (r *Route) Subrouter() *Router {
 	return router
 }
 
+// Mount registers a subrouter for the route.
+func (r *Router) Mount(prefix string, wrapFunc func(r *Router)) {
+	sub := r.PathPrefix(prefix).Subrouter()
+	wrapFunc(sub)
+}
+
 // ----------------------------------------------------------------------------
 // URL building
 // ----------------------------------------------------------------------------
