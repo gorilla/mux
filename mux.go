@@ -297,7 +297,12 @@ func (r *Router) Handle(path string, handler http.Handler) *Route {
 // See Route.Path() and Route.HandlerFunc().
 func (r *Router) HandleFunc(path string, f func(http.ResponseWriter,
 	*http.Request)) *Route {
-	return r.NewRoute().Path(path).HandlerFunc(f)
+		if path[len(path)-1] != '/' {
+			r.NewRoute().Path(path+"/").HandlerFunc(f)
+		} else {
+			r.NewRoute().Path(path[:len(path)-1]).HandlerFunc(f)
+		}
+		return r.NewRoute().Path(path).HandlerFunc(f)
 }
 
 // Headers registers a new route with a matcher for request header values.
