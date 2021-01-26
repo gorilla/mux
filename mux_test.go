@@ -7,14 +7,17 @@ package mux
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func (r *Route) GoString() string {
@@ -681,8 +684,8 @@ func TestHeaders(t *testing.T) {
 		},
 		{
 			title:       "Headers route, regex header values to match",
-			route:       new(Route).Headers("foo", "ba[zr]"),
-			request:     newRequestHeaders("GET", "http://localhost", map[string]string{"foo": "bar"}),
+			route:       new(Route).HeadersRegexp("foo", "ba[zr]"),
+			request:     newRequestHeaders("GET", "http://localhost", map[string]string{"foo": "baw"}),
 			vars:        map[string]string{},
 			host:        "",
 			path:        "",
@@ -2803,6 +2806,28 @@ func TestSubrouterNotFound(t *testing.T) {
 	}
 }
 
+func TestContextMiddleware(t *testing.T) {
+	withTimeout := func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx, cancel := context.WithTimeout(r.Context(), time.Minute)
+			defer cancel()
+			h.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+
+	r := NewRouter()
+	r.Handle("/path/{foo}", withTimeout(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		vars := Vars(r)
+		if vars["foo"] != "bar" {
+			t.Fatal("Expected foo var to be set")
+		}
+	})))
+
+	rec := NewRecorder()
+	req := newRequest("GET", "/path/bar")
+	r.ServeHTTP(rec, req)
+}
+
 // testOptionsMiddleWare returns 200 on an OPTIONS request
 func testOptionsMiddleWare(inner http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2937,10 +2962,7 @@ func newRequestWithHeaders(method, url string, headers ...string) *http.Request 
 
 // newRequestHost a new request with a method, url, and host header
 func newRequestHost(method, url, host string) *http.Request {
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		panic(err)
-	}
+	req := httptest.NewRequest(method, url, nil)
 	req.Host = host
 	return req
 }
