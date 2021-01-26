@@ -2841,32 +2841,147 @@ func testOptionsMiddleWare(inner http.Handler) http.Handler {
 
 // TestRouterOrder Should Pass whichever order route is defined
 func TestRouterOrder(t *testing.T) {
-	handler := func(w http.ResponseWriter, r *http.Request) {}
-	router := NewRouter()
-	router.Path("/a/b").Handler(http.HandlerFunc(handler)).Methods(http.MethodGet)
-	router.Path("/a/{a}").Handler(nil).Methods(http.MethodOptions)
-	router.Use(MiddlewareFunc(testOptionsMiddleWare))
-
-	w := NewRecorder()
-	req := newRequest(http.MethodOptions, "/a/b")
-
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("Expected status code 200 (got %d)", w.Code)
+	type requestCase struct {
+		request *http.Request
+		expCode int
 	}
 
-	reversedPathRouter := NewRouter()
-	reversedPathRouter.Path("/a/{a}").Handler(http.HandlerFunc(handler)).Methods(http.MethodGet)
-	reversedPathRouter.Path("/a/b").Handler(nil).Methods(http.MethodOptions)
-	reversedPathRouter.Use(MiddlewareFunc(testOptionsMiddleWare))
+	tests := []struct {
+		name             string
+		routes           []*Route
+		customMiddleware MiddlewareFunc
+		requests         []requestCase
+	}{
+		{
+			name: "Routes added with same method and intersecting path regex",
+			routes: []*Route{
+				new(Route).Path("/a/b").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusNotFound)
+				})).Methods(http.MethodGet),
+				new(Route).Path("/a/{a}").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				})).Methods(http.MethodGet),
+			},
+			requests: []requestCase{
+				{
+					request: newRequest(http.MethodGet, "/a/b"),
+					expCode: http.StatusNotFound,
+				},
+				{
+					request: newRequest(http.MethodGet, "/a/a"),
+					expCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name: "Routes added with same method and intersecting path regex, path with pathVariable first",
+			routes: []*Route{
+				new(Route).Path("/a/{a}").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})).Methods(http.MethodGet),
+				new(Route).Path("/a/b").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusNotFound)
+					})).Methods(http.MethodGet),
+			},
+			requests: []requestCase{
+				{
+					request: newRequest(http.MethodGet, "/a/b"),
+					expCode: http.StatusOK,
+				},
+				{
+					request: newRequest(http.MethodGet, "/a/a"),
+					expCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name: "Routes added same path - different methods, no path variables",
+			routes: []*Route{
+				new(Route).Path("/a/b").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})).Methods(http.MethodGet),
+				new(Route).Path("/a/b").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusNotFound)
+					})).Methods(http.MethodOptions),
+			},
+			requests: []requestCase{
+				{
+					request: newRequest(http.MethodGet, "/a/b"),
+					expCode: http.StatusOK,
+				},
+				{
+					request: newRequest(http.MethodOptions, "/a/b"),
+					expCode: http.StatusNotFound,
+				},
+			},
+		},
+		{
+			name: "Routes added same path - different methods, with path variables and middleware",
+			routes: []*Route{
+				new(Route).Path("/a/{a}").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusNotFound)
+					})).Methods(http.MethodGet),
+				new(Route).Path("/a/b").Handler(nil).Methods(http.MethodOptions),
+			},
+			customMiddleware: testOptionsMiddleWare,
+			requests: []requestCase{
+				{
+					request: newRequest(http.MethodGet, "/a/b"),
+					expCode: http.StatusNotFound,
+				},
+				{
+					request: newRequest(http.MethodOptions, "/a/b"),
+					expCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name: "Routes added same path - different methods, with path variables and middleware order reversed",
+			routes: []*Route{
+				new(Route).Path("/a/b").Handler(nil).Methods(http.MethodOptions),
+				new(Route).Path("/a/{a}").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusNotFound)
+					})).Methods(http.MethodGet),
+			},
+			customMiddleware: testOptionsMiddleWare,
+			requests: []requestCase{
+				{
+					request: newRequest(http.MethodGet, "/a/b"),
+					expCode: http.StatusNotFound,
+				},
+				{
+					request: newRequest(http.MethodOptions, "/a/b"),
+					expCode: http.StatusOK,
+				},
+			},
+		},
+	}
 
-	w = NewRecorder()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			router := NewRouter()
 
-	reversedPathRouter.ServeHTTP(w, req)
+			if test.customMiddleware != nil {
+				router.Use(test.customMiddleware)
+			}
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("Expected status code 200 (got %d)", w.Code)
+			router.routes = test.routes
+			w := NewRecorder()
+
+			for _, requestCase := range test.requests {
+				router.ServeHTTP(w, requestCase.request)
+
+				if w.Code != requestCase.expCode {
+					t.Fatalf("Expected status code %d (got %d)", requestCase.expCode, w.Code)
+				}
+			}
+		})
 	}
 }
 
