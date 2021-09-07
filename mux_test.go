@@ -1574,6 +1574,24 @@ func TestUseEncodedPath(t *testing.T) {
 	}
 }
 
+func TestUseEncodedPathEscaping(t *testing.T) {
+	r := NewRouter()
+	r.UseEncodedPath()
+
+	req, _ := http.NewRequest("GET", "http://localhost/foo/../bar%25", nil)
+	res := NewRecorder()
+	r.ServeHTTP(res, req)
+
+	if len(res.HeaderMap["Location"]) != 1 {
+		t.Fatalf("Expected redirect from path clean")
+	}
+
+	expected := "http://localhost/bar%25"
+	if res.HeaderMap["Location"][0] != expected {
+		t.Errorf("Expected redirect location to %s, found %s", expected, res.HeaderMap["Location"][0])
+	}
+}
+
 func TestWalkSingleDepth(t *testing.T) {
 	r0 := NewRouter()
 	r1 := NewRouter()

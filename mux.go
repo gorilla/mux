@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path"
 	"regexp"
 )
@@ -174,19 +175,30 @@ func (r *Router) Match(req *http.Request, match *RouteMatch) bool {
 // mux.Vars(request).
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if !r.skipClean {
-		path := req.URL.Path
+		urlPath := req.URL.Path
 		if r.useEncodedPath {
-			path = req.URL.EscapedPath()
+			urlPath = req.URL.EscapedPath()
 		}
 		// Clean path to canonical form and redirect.
-		if p := cleanPath(path); p != path {
-
+		if p := cleanPath(urlPath); p != urlPath {
 			// Added 3 lines (Philip Schlump) - It was dropping the query string and #whatever from query.
 			// This matches with fix in go 1.2 r.c. 4 for same problem.  Go Issue:
 			// http://code.google.com/p/go/issues/detail?id=5252
-			url := *req.URL
-			url.Path = p
-			p = url.String()
+			reqURL := *req.URL
+
+			if r.useEncodedPath {
+				pURL, err := url.ParseRequestURI(p)
+				if err != nil {
+					// This shouldn't be possible, but fall back to old behaviour if some edge case triggers it
+					reqURL.Path = p
+				} else {
+					reqURL.Path = pURL.Path
+					reqURL.RawPath = pURL.RawPath
+				}
+			} else {
+				reqURL.Path = p
+			}
+			p = reqURL.String()
 
 			w.Header().Set("Location", p)
 			w.WriteHeader(http.StatusMovedPermanently)
