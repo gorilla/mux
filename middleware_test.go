@@ -3,6 +3,7 @@ package mux
 import (
 	"bytes"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -562,4 +563,37 @@ func TestMiddlewareOnMultiSubrouter(t *testing.T) {
 			t.Fatalf("Notfound handler did not run: expected %s for not-exist, (got %s)", notFound, rw.Body.String())
 		}
 	})
+}
+
+func TestNewMiddleware(t *testing.T) {
+
+	mwFuncCalls := 0
+
+	handler := &mockHandler{
+		serverHttp: func(w http.ResponseWriter, r *http.Request) {
+			if mwFuncCalls != 1 {
+				t.Fatalf("Expected Handler to be called after mw run. However, the middleware run {%d} times before the handler.", mwFuncCalls)
+			}
+			mwFuncCalls++
+		},
+	}
+
+	newHandler := NewMiddleware(func(http.ResponseWriter, *http.Request) {
+		mwFuncCalls++
+	}).Middleware(handler)
+
+	newHandler.ServeHTTP(&httptest.ResponseRecorder{}, &http.Request{})
+
+	if mwFuncCalls != 2 {
+		t.Fatalf("Expected mwFuncCalls to be 2, but got {%d}", mwFuncCalls)
+	}
+
+}
+
+type mockHandler struct {
+	serverHttp func(writer http.ResponseWriter, request *http.Request)
+}
+
+func (d *mockHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	d.serverHttp(writer, request)
 }

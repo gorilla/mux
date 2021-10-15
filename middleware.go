@@ -20,6 +20,27 @@ func (mw MiddlewareFunc) Middleware(handler http.Handler) http.Handler {
 	return mw(handler)
 }
 
+// NewMiddleware helper method which allows creating a middleware from a function which receives the response and request.
+// The typical case would be passing a closure
+func NewMiddleware(mw func(http.ResponseWriter, *http.Request)) MiddlewareFunc {
+	return func(handler http.Handler) http.Handler {
+		return &genericMW{
+			process: func(w http.ResponseWriter, r *http.Request) {
+				mw(w, r)
+				handler.ServeHTTP(w, r)
+			},
+		}
+	}
+}
+
+// genericMW is for creating a middleware from a closure, it's used in the public method NewMiddleware
+type genericMW struct {
+	process func(http.ResponseWriter, *http.Request)
+}
+func (instance *genericMW) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	instance.process(w, req)
+}
+
 // Use appends a MiddlewareFunc to the chain. Middleware can be used to intercept or otherwise modify requests and/or responses, and are executed in the order that they are applied to the Router.
 func (r *Router) Use(mwf ...MiddlewareFunc) {
 	for _, fn := range mwf {
