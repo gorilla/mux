@@ -37,6 +37,7 @@ func NewMiddleware(mw func(http.ResponseWriter, *http.Request)) MiddlewareFunc {
 type genericMW struct {
 	process func(http.ResponseWriter, *http.Request)
 }
+
 func (instance *genericMW) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	instance.process(w, req)
 }
