@@ -570,7 +570,7 @@ func TestNewMiddleware(t *testing.T) {
 	mwFuncCalls := 0
 
 	handler := &mockHandler{
-		serverHttp: func(w http.ResponseWriter, r *http.Request) {
+		serverHTTP: func(w http.ResponseWriter, r *http.Request) {
 			if mwFuncCalls != 1 {
 				t.Fatalf("Expected Handler to be called after mw run. However, the middleware run {%d} times before the handler.", mwFuncCalls)
 			}
@@ -591,9 +591,9 @@ func TestNewMiddleware(t *testing.T) {
 }
 
 type mockHandler struct {
-	serverHttp func(writer http.ResponseWriter, request *http.Request)
+	serverHTTP func(writer http.ResponseWriter, request *http.Request)
 }
 
 func (d *mockHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	d.serverHttp(writer, request)
+	d.serverHTTP(writer, request)
 }
