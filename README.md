@@ -472,31 +472,40 @@ func main() {
     }
 
     // Run our server in a goroutine so that it doesn't block.
+    serverErrorChannel := make(chan error, 1)
+    defer close(serverErrorChannel)
     go func() {
-        if err := srv.ListenAndServe(); err != nil {
-            log.Println(err)
-        }
+        log.Printf("Running server: %s\n", server.Addr)
+        serverErrorChannel <- server.ListenAndServe()
     }()
 
-    c := make(chan os.Signal, 1)
+    osSignalChannel := make(chan os.Signal, 1)
+    defer close(osSignalChannel)
     // We'll accept graceful shutdowns when quit via SIGINT (Ctrl+C)
     // SIGKILL, SIGQUIT or SIGTERM (Ctrl+/) will not be caught.
-    signal.Notify(c, os.Interrupt)
+    signal.Notify(osSignalChannel, os.Interrupt)
 
-    // Block until we receive our signal.
-    <-c
-
-    // Create a deadline to wait for.
-    ctx, cancel := context.WithTimeout(context.Background(), wait)
-    defer cancel()
-    // Doesn't block if no connections, but will otherwise wait
-    // until the timeout deadline.
-    srv.Shutdown(ctx)
-    // Optionally, you could run srv.Shutdown in a goroutine and block on
-    // <-ctx.Done() if your application should wait for other services
-    // to finalize based on context cancellation.
-    log.Println("shutting down")
-    os.Exit(0)
+    // Block until we receive from one of our channels
+    select {
+    case capturedSignal := <-osSignalChannel:
+        log.Printf("Signal caught: %s", capturedSignal)
+        // Create a deadline to wait for.
+        ctx, cancel := context.WithTimeout(context.Background(), wait)
+        defer cancel()
+        // Doesn't block if no connections, but will otherwise wait
+        // until the timeout deadline.
+        server.Shutdown(ctx)
+        <-serverErrorChannel
+        // Optionally, you could run srv.Shutdown in a goroutine and block on
+        // <-ctx.Done() if your application should wait for other services
+        // to finalize based on context cancellation.
+        log.Println("Gracefully Shutdown")
+    case serverError := <-serverErrorChannel:
+        // Fatally exit should the server run into an irrecoverable error.
+        // An example of this would be when attempting to reserve a port
+        // that is already reserved.
+        log.Fatalln(serverError)
+    }
 }
 ```
 
