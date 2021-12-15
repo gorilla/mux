@@ -1,0 +1,11 @@
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - deadcode
+    - ineffassign
+    - staticcheck
+    - unused
