@@ -25,6 +25,8 @@ func TestSchemeMatchers(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error getting from server: %v", err)
 		}
+		defer resp.Body.Close()
+
 		if resp.StatusCode != 200 {
 			t.Fatalf("expected a status code of 200, got %v", resp.StatusCode)
 		}
