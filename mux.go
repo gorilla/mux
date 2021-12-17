@@ -265,6 +265,12 @@ func (r *Router) SkipClean(value bool) *Router {
 // UnescapeVars tells the router to escape the route variables before invoking
 // the handler. This is useful when used together with UseEncodedPath to avoid
 // un-escaping the variable values in the handler.
+//
+// For example, if the router is configured only with UseEncodedPath(), and
+// "/path/foo%2Fbar/to" matches the path template "/path/{var}/to", your handler
+// will receive the value "foo%2Fbar" for the variable "var". Instead, if the
+// router is configured with both UseEncodedPath() and UnescapeVars(true), the
+// value for the variable "var" will be "foo/bar".
 func (r *Router) UnescapeVars(value bool) *Router {
 	r.unescapeVars = value
 	return r
