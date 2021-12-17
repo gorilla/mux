@@ -1553,7 +1553,7 @@ func TestUseEncodedPath(t *testing.T) {
 		},
 		{
 			title:        "Router with useEncodedPath, URL with encoded slash does match, variables decoded",
-			route:        NewRouter().UseEncodedPath().UnescapeVars(true).NewRoute().Path("/v1/{v1}/v2"),
+			route:        NewRouter().UseEncodedPath().UnescapeVars().NewRoute().Path("/v1/{v1}/v2"),
 			request:      newRequest("GET", "http://localhost/v1/1%2F2/v2"),
 			vars:         map[string]string{"v1": "1/2"},
 			host:         "",

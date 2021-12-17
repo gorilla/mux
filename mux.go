@@ -269,10 +269,10 @@ func (r *Router) SkipClean(value bool) *Router {
 // For example, if the router is configured only with UseEncodedPath(), and
 // "/path/foo%2Fbar/to" matches the path template "/path/{var}/to", your handler
 // will receive the value "foo%2Fbar" for the variable "var". Instead, if the
-// router is configured with both UseEncodedPath() and UnescapeVars(true), the
-// value for the variable "var" will be "foo/bar".
-func (r *Router) UnescapeVars(value bool) *Router {
-	r.unescapeVars = value
+// router is configured with both UseEncodedPath() and UnescapeVars(), the value
+// for the variable "var" will be "foo/bar".
+func (r *Router) UnescapeVars() *Router {
+	r.unescapeVars = true
 	return r
 }
 
