@@ -17,6 +17,7 @@ import (
 type routeRegexpOptions struct {
 	strictSlash    bool
 	useEncodedPath bool
+	unescapeVars   bool
 }
 
 type regexpType int
@@ -204,7 +205,11 @@ func (r *routeRegexp) url(values map[string]string) (string, error) {
 		if r.regexpType == regexpTypeQuery {
 			value = url.QueryEscape(value)
 		}
-		urlValues[k] = value
+		if r.options.unescapeVars {
+			urlValues[k] = url.PathEscape(value)
+		} else {
+			urlValues[k] = value
+		}
 	}
 	rv := fmt.Sprintf(r.reverse, urlValues...)
 	if !r.regexp.MatchString(rv) {
@@ -345,6 +350,9 @@ func (v routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
 		matches := v.path.regexp.FindStringSubmatchIndex(path)
 		if len(matches) > 0 {
 			extractVars(path, matches, v.path.varsN, m.Vars)
+			if r.unescapeVars {
+				unescapeVars(m.Vars)
+			}
 			// Check if we should redirect.
 			if v.path.options.strictSlash {
 				p1 := strings.HasSuffix(path, "/")
@@ -384,5 +392,15 @@ func getHost(r *http.Request) string {
 func extractVars(input string, matches []int, names []string, output map[string]string) {
 	for i, name := range names {
 		output[name] = input[matches[2*i+2]:matches[2*i+3]]
+	}
+}
+
+func unescapeVars(vars map[string]string) {
+	for k, v := range vars {
+		if decoded, err := url.PathUnescape(v); err != nil {
+			vars[k] = v
+		} else {
+			vars[k] = decoded
+		}
 	}
 }

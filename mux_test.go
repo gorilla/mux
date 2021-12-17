@@ -1540,13 +1540,10 @@ func TestStrictSlash(t *testing.T) {
 }
 
 func TestUseEncodedPath(t *testing.T) {
-	r := NewRouter()
-	r.UseEncodedPath()
-
 	tests := []routeTest{
 		{
 			title:        "Router with useEncodedPath, URL with encoded slash does match",
-			route:        r.NewRoute().Path("/v1/{v1}/v2"),
+			route:        NewRouter().UseEncodedPath().NewRoute().Path("/v1/{v1}/v2"),
 			request:      newRequest("GET", "http://localhost/v1/1%2F2/v2"),
 			vars:         map[string]string{"v1": "1%2F2"},
 			host:         "",
@@ -1555,8 +1552,18 @@ func TestUseEncodedPath(t *testing.T) {
 			shouldMatch:  true,
 		},
 		{
+			title:        "Router with useEncodedPath, URL with encoded slash does match, variables decoded",
+			route:        NewRouter().UseEncodedPath().UnescapeVars(true).NewRoute().Path("/v1/{v1}/v2"),
+			request:      newRequest("GET", "http://localhost/v1/1%2F2/v2"),
+			vars:         map[string]string{"v1": "1/2"},
+			host:         "",
+			path:         "/v1/1%2F2/v2",
+			pathTemplate: `/v1/{v1}/v2`,
+			shouldMatch:  true,
+		},
+		{
 			title:        "Router with useEncodedPath, URL with encoded slash doesn't match",
-			route:        r.NewRoute().Path("/v1/1/2/v2"),
+			route:        NewRouter().UseEncodedPath().NewRoute().Path("/v1/1/2/v2"),
 			request:      newRequest("GET", "http://localhost/v1/1%2F2/v2"),
 			vars:         map[string]string{"v1": "1%2F2"},
 			host:         "",

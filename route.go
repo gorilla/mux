@@ -186,6 +186,7 @@ func (r *Route) addRegexpMatcher(tpl string, typ regexpType) error {
 	rr, err := newRouteRegexp(tpl, typ, routeRegexpOptions{
 		strictSlash:    r.strictSlash,
 		useEncodedPath: r.useEncodedPath,
+		unescapeVars:   r.unescapeVars,
 	})
 	if err != nil {
 		return err

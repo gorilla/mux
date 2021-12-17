@@ -84,6 +84,8 @@ type routeConf struct {
 	// will not redirect
 	skipClean bool
 
+	unescapeVars bool
+
 	// Manager for the variables from host and path.
 	regexp routeRegexpGroup
 
@@ -257,6 +259,14 @@ func (r *Router) StrictSlash(value bool) *Router {
 // become /fetch/http/xkcd.com/534
 func (r *Router) SkipClean(value bool) *Router {
 	r.skipClean = value
+	return r
+}
+
+// UnescapeVars tells the router to escape the route variables before invoking
+// the handler. This is useful when used together with UseEncodedPath to avoid
+// un-escaping the variable values in the handler.
+func (r *Router) UnescapeVars(value bool) *Router {
+	r.unescapeVars = value
 	return r
 }
 
