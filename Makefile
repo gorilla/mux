@@ -6,7 +6,7 @@ install-lint:
 	fi
 
 lint: install-lint
-	@echo "golangci-lint run ../..."
+	@echo "golangci-lint run ./..."
 	@$(GOBIN)/golangci-lint run ./...
 
 test:
