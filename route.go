@@ -255,7 +255,7 @@ func (m headerRegexMatcher) Match(r *http.Request, match *RouteMatch) bool {
 // HeadersRegexp accepts a sequence of key/value pairs, where the value has regex
 // support. For example:
 //
-//     r := mux.NewRouter()
+//     r := mux.NewRouter().NewRoute()
 //     r.HeadersRegexp("Content-Type", "application/(text|json)",
 //               "X-Requested-With", "XMLHttpRequest")
 //
