@@ -29,7 +29,10 @@ type spaHandler struct {
 // file located at the index path on the SPA handler will be served. This
 // is suitable behavior for serving an SPA (single page application).
 // This is a negative test case where `filepath.Abs` will return path value like `D:\`
-// if our route is `/`. As per docs: Abs returns an absolute representation of path. If the path is not absolute it will be joined with the current working directory to turn it into an absolute path. The absolute path name for a given file is not guaranteed to be unique. Abs calls Clean on the result.
+// if our route is `/`. As per docs: Abs returns an absolute representation of path.
+// If the path is not absolute it will be joined with the current working directory to turn
+// it into an absolute path. The absolute path name for a given file is not guaranteed to
+// be unique. Abs calls Clean on the result.
 func (h spaHandler) FilepathAbsServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// get the absolute path to prevent directory traversal
 	path, err := filepath.Abs(r.URL.Path)
@@ -41,7 +44,7 @@ func (h spaHandler) FilepathAbsServeHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	// prepend the path with the path to the static directory
-	// path = filepath.Join(h.staticPath, path)
+	path = filepath.Join(h.staticPath, path)
 
 	// check whether a file exists at the given path
 	_, err = os.Stat(path)
@@ -66,8 +69,8 @@ func (h spaHandler) FilepathAbsServeHTTP(w http.ResponseWriter, r *http.Request)
 // file located at the index path on the SPA handler will be served. This
 // is suitable behavior for serving an SPA (single page application).
 func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// get the absolute path to prevent directory traversal
 	var err error
+	// internally calls path.Clean path to prevent directory traversal
 	path := filepath.Join(h.staticPath, r.URL.Path)
 	if err != nil {
 		// if we failed to get the absolute path respond with a 400 bad request
