@@ -170,7 +170,7 @@ func TestServeHttpFilepathAbs(t *testing.T) {
 	if runtime.GOOS != "windows" && rr.Body.String() != string(htmlContent) {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), string(htmlContent))
-	} else if runtime.GOOS == "windows" && strings.Contains(rr.Body.String(), "syntax is incorrect.") {
+	} else if runtime.GOOS == "windows" && !strings.Contains(rr.Body.String(), "syntax is incorrect.") {
 		t.Errorf("handler returned unexpected body in case of windows: got %v want %v",
 			rr.Body.String(), string(htmlContent))
 	}
