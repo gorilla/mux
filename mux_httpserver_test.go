@@ -141,7 +141,7 @@ func TestServeHttpFilepathAbs(t *testing.T) {
 
 	// create a file `index.html` and write below content
 	htmlContent := []byte(`<html><head><title>hello</title></head><body>world</body></html>`)
-	err := os.WriteFile("./build/index.html", htmlContent, 0700)
+	err := ioutil.WriteFile("./build/index.html", htmlContent, 0700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +182,7 @@ func TestServeHttpFilepathJoin(t *testing.T) {
 
 	// create a file `index.html` and write below content
 	htmlContent := []byte(`<html><head><title>hello</title></head><body>world</body></html>`)
-	err := os.WriteFile("./build/index.html", htmlContent, 0700)
+	err := ioutil.WriteFile("./build/index.html", htmlContent, 0700)
 	if err != nil {
 		t.Fatal(err)
 	}
