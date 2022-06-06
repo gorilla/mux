@@ -226,6 +226,16 @@ func TestHost(t *testing.T) {
 			hostTemplate: `{v-1:version}.{v-2:version}.{v-3:version}`,
 			shouldMatch:  true,
 		},
+		{
+			title:        "Host route with not matched alias patterns",
+			route:        new(Route).RegisterPattern("pin", "[1-9]{4}").Host("{v-1:pin}.{v-2:pin}.{v-3:pin}"),
+			request:      newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
+			vars:         map[string]string{"v-1": "aaa", "v-2": "bbb", "v-3": "ccc"},
+			host:         "aaa.bbb.ccc",
+			path:         "",
+			hostTemplate: `{v-1:pin}.{v-2:pin}.{v-3:pin}`,
+			shouldMatch:  false,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
@@ -480,14 +490,14 @@ func TestPath(t *testing.T) {
 			shouldMatch:  true,
 		},
 		{
-			title:        "Path route with regexp alias patterns passed through router",
-			route:        NewRouter().RegisterPattern("digits", "[0-9]+").Path("/{id:digits}"),
-			request:      newRequest("GET", "http://localhost/1"),
+			title:        "Path route with not matched regexp alias patterns",
+			route:        new(Route).RegisterPattern("digits", "[0-9]+").Path("/{id:digits}"),
+			request:      newRequest("GET", "http://localhost/letters"),
 			vars:         map[string]string{"id": "1"},
 			host:         "",
-			path:         "/1",
+			path:         "/letters",
 			pathTemplate: `/{id:digits}`,
-			shouldMatch:  true,
+			shouldMatch:  false,
 		},
 	}
 
