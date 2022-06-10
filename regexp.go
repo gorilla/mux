@@ -22,10 +22,10 @@ type routeRegexpOptions struct {
 type regexpType int
 
 const (
-	regexpTypePath   regexpType = 0
-	regexpTypeHost   regexpType = 1
-	regexpTypePrefix regexpType = 2
-	regexpTypeQuery  regexpType = 3
+	regexpTypePath regexpType = iota
+	regexpTypeHost
+	regexpTypePrefix
+	regexpTypeQuery
 )
 
 // newRouteRegexp parses a route template and returns a routeRegexp,
