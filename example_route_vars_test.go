@@ -1,11 +1,14 @@
-package mux
+package mux_test
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/gorilla/mux"
+)
 
 // This example demonstrates building a dynamic URL using
 // required vars and values retrieve from another source
 func ExampleRoute_GetVarNames() {
-	r := NewRouter()
+	r := mux.NewRouter()
 
 	route := r.Host("{domain}").
 		Path("/{group}/{item_id}").
