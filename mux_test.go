@@ -2828,6 +2828,40 @@ func TestContextMiddleware(t *testing.T) {
 	r.ServeHTTP(rec, req)
 }
 
+func TestGetVarNames(t *testing.T) {
+	r := NewRouter()
+
+	route := r.Host("{domain}").
+		Path("/{group}/{item_id}").
+		Queries("some_data1", "{some_data1}").
+		Queries("some_data2_and_3", "{some_data2}.{some_data3}")
+
+	// Order of vars in the slice is not guaranteed, so just check for existence
+	expected := map[string]bool{
+		"domain":     true,
+		"group":      true,
+		"item_id":    true,
+		"some_data1": true,
+		"some_data2": true,
+		"some_data3": true,
+	}
+
+	varNames, err := route.GetVarNames()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(varNames) != len(expected) {
+		t.Fatalf("expected %d names, got %d", len(expected), len(varNames))
+	}
+
+	for _, varName := range varNames {
+		if !expected[varName] {
+			t.Fatalf("got unexpected %s", varName)
+		}
+	}
+}
+
 // mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int

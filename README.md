@@ -379,6 +379,19 @@ url, err := r.Get("article").URL("subdomain", "news",
                                  "id", "42")
 ```
 
+To find all the required variables for a given route when calling `URL()`, the method `GetVarNames()` is available:
+```go
+r := mux.NewRouter()
+r.Host("{domain}").
+    Path("/{group}/{item_id}").
+    Queries("some_data1", "{some_data1}").
+    Queries("some_data2", "{some_data2}").
+    Name("article")
+
+// Will print [domain group item_id some_data1 some_data2] <nil>
+fmt.Println(r.Get("article").GetVarNames())
+
+```
 ### Walking Routes
 
 The `Walk` function on `mux.Router` can be used to visit all of the routes that are registered on a router. For example,
