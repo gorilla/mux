@@ -197,8 +197,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var handler http.Handler
 	if r.Match(req, &match) {
 		handler = match.Handler
-		req = requestWithVars(req, match.Vars)
-		req = requestWithRoute(req, match.Route)
+		req = requestWithRouteAndVars(req, match.Route, match.Vars)
 	}
 
 	if handler == nil && match.MatchErr == ErrMethodMismatch {
@@ -445,13 +444,24 @@ func CurrentRoute(r *http.Request) *Route {
 	return nil
 }
 
+// requestWithRouteAndVars adds the matched vars to the request ctx.
+// It shortcuts the operation when the vars are empty.
 func requestWithVars(r *http.Request, vars map[string]string) *http.Request {
+	if len(vars) == 0 {
+		return r
+	}
 	ctx := context.WithValue(r.Context(), varsKey, vars)
 	return r.WithContext(ctx)
 }
 
-func requestWithRoute(r *http.Request, route *Route) *http.Request {
+// requestWithRouteAndVars adds the matched route and vars to the request ctx.
+// It saves extra allocations in cloning the request once and skipping the
+//  population of empty vars, which in turn mux.Vars can handle gracefully.
+func requestWithRouteAndVars(r *http.Request, route *Route, vars map[string]string) *http.Request {
 	ctx := context.WithValue(r.Context(), routeKey, route)
+	if len(vars) > 0 {
+		ctx = context.WithValue(ctx, varsKey, vars)
+	}
 	return r.WithContext(ctx)
 }
 
