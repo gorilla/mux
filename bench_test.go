@@ -21,6 +21,19 @@ func BenchmarkMux(b *testing.B) {
 	}
 }
 
+func BenchmarkMuxSimple(b *testing.B) {
+	router := new(Router)
+	handler := func(w http.ResponseWriter, r *http.Request) {}
+	router.HandleFunc("/status", handler)
+
+	request, _ := http.NewRequest("GET", "/status", nil)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		router.ServeHTTP(nil, request)
+	}
+}
+
 func BenchmarkMuxAlternativeInRegexp(b *testing.B) {
 	router := new(Router)
 	handler := func(w http.ResponseWriter, r *http.Request) {}
