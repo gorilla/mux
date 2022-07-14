@@ -98,9 +98,6 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	if match.Handler == nil {
 		match.Handler = r.handler
 	}
-	if match.Vars == nil {
-		match.Vars = make(map[string]string)
-	}
 
 	// Set variables.
 	r.regexp.setMatch(req, match, r)
