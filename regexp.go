@@ -355,13 +355,14 @@ func (v routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
 			p1 := strings.HasSuffix(path, "/")
 			p2 := strings.HasSuffix(v.path.template, "/")
 			if p1 != p2 {
-				u, _ := url.Parse(req.URL.String())
+				p := req.URL.Path
 				if p1 {
-					u.Path = u.Path[:len(u.Path)-1]
+					p = p[:len(p)-1]
 				} else {
-					u.Path += "/"
+					p += "/"
 				}
-				m.Handler = http.RedirectHandler(u.String(), http.StatusMovedPermanently)
+				u := replaceURLPath(req.URL, p)
+				m.Handler = http.RedirectHandler(u, http.StatusMovedPermanently)
 			}
 		}
 	}

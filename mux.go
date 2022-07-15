@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path"
 	"regexp"
 )
@@ -180,15 +181,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		// Clean path to canonical form and redirect.
 		if p := cleanPath(path); p != path {
-
-			// Added 3 lines (Philip Schlump) - It was dropping the query string and #whatever from query.
-			// This matches with fix in go 1.2 r.c. 4 for same problem.  Go Issue:
-			// http://code.google.com/p/go/issues/detail?id=5252
-			url := *req.URL
-			url.Path = p
-			p = url.String()
-
-			w.Header().Set("Location", p)
+			w.Header().Set("Location", replaceURLPath(req.URL, p))
 			w.WriteHeader(http.StatusMovedPermanently)
 			return
 		}
@@ -486,6 +479,14 @@ func cleanPath(p string) string {
 	}
 
 	return np
+}
+
+// replaceURLPath prints an url.URL with a different path.
+func replaceURLPath(u *url.URL, p string) string {
+	// Operate on a copy of the request url.
+	u2 := *u
+	u2.Path = p
+	return u2.String()
 }
 
 // uniqueVars returns an error if two slices contain duplicated strings.
