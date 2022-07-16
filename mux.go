@@ -85,6 +85,9 @@ type routeConf struct {
 	// will not redirect
 	skipClean bool
 
+	// If true, the http.Request context will not contain the Route.
+	omitRouteFromContext bool
+
 	// Manager for the variables from host and path.
 	regexp routeRegexpGroup
 
@@ -190,7 +193,14 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var handler http.Handler
 	if r.Match(req, &match) {
 		handler = match.Handler
-		req = requestWithRouteAndVars(req, match.Route, match.Vars)
+		if handler == nil {
+			// The default handlers do not make use of the context values.
+		} else if r.omitRouteFromContext {
+			// Only populate the match vars (if any) into the context.
+			req = requestWithVars(req, match.Vars)
+		} else {
+			req = requestWithRouteAndVars(req, match.Route, match.Vars)
+		}
 	}
 
 	if handler == nil && match.MatchErr == ErrMethodMismatch {
@@ -249,6 +259,14 @@ func (r *Router) StrictSlash(value bool) *Router {
 // become /fetch/http/xkcd.com/534
 func (r *Router) SkipClean(value bool) *Router {
 	r.skipClean = value
+	return r
+}
+
+// OmitRouteFromContext defines the behavior of omitting the Route from the
+//   http.Request context.
+// CurrentRoute will yield nil with this option.
+func (r *Router) OmitRouteFromContext(value bool) *Router {
+	r.omitRouteFromContext = value
 	return r
 }
 

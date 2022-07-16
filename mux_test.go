@@ -2914,18 +2914,20 @@ func TestGetVarNames(t *testing.T) {
 }
 
 func getPopulateContextTestCases() []struct {
-	name             string
-	path             string
-	wantVar          string
-	wantStaticRoute  bool
-	wantDynamicRoute bool
+	name                 string
+	path                 string
+	omitRouteFromContext bool
+	wantVar              string
+	wantStaticRoute      bool
+	wantDynamicRoute     bool
 } {
 	return []struct {
-		name             string
-		path             string
-		wantVar          string
-		wantStaticRoute  bool
-		wantDynamicRoute bool
+		name                 string
+		path                 string
+		omitRouteFromContext bool
+		wantVar              string
+		wantStaticRoute      bool
+		wantDynamicRoute     bool
 	}{
 		{
 			name:            "no populated vars",
@@ -2938,11 +2940,26 @@ func getPopulateContextTestCases() []struct {
 			path:             "/dynamic/",
 			wantVar:          "",
 			wantDynamicRoute: true,
-		}, {
+		},
+		{
 			name:             "populated vars",
 			path:             "/dynamic/foo",
 			wantVar:          "foo",
 			wantDynamicRoute: true,
+		},
+		{
+			name:                 "omit route /static",
+			path:                 "/static",
+			omitRouteFromContext: true,
+			wantVar:              "",
+			wantStaticRoute:      false,
+		},
+		{
+			name:                 "omit route /dynamic",
+			path:                 "/dynamic/",
+			omitRouteFromContext: true,
+			wantVar:              "",
+			wantDynamicRoute:     false,
 		},
 	}
 }
@@ -2953,6 +2970,7 @@ func TestPopulateContext(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			matched := false
 			r := NewRouter()
+			r.OmitRouteFromContext(tc.omitRouteFromContext)
 			var static *Route
 			var dynamic *Route
 			fn := func(w http.ResponseWriter, r *http.Request) {
@@ -2996,6 +3014,7 @@ func BenchmarkPopulateContext(b *testing.B) {
 		b.Run(tc.name, func(b *testing.B) {
 			matched := false
 			r := NewRouter()
+			r.OmitRouteFromContext(tc.omitRouteFromContext)
 			fn := func(w http.ResponseWriter, r *http.Request) {
 				matched = true
 				w.WriteHeader(http.StatusNoContent)
