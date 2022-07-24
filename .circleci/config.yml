@@ -16,8 +16,8 @@ jobs:
         type: string
         default: ""
     docker:
-      - image: "circleci/golang:<< parameters.version >>"
-    working_directory: /go/src/github.com/gorilla/mux
+      - image: "cimg/go:<< parameters.version >>"
+    working_directory: /home/circleci/project/go/src/github.com/gorilla/mux
     environment:
       GO111MODULE: "on"
       GOPROXY: "<< parameters.goproxy >>"
