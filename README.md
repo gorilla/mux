@@ -252,7 +252,7 @@ type spaHandler struct {
 // is suitable behavior for serving an SPA (single page application).
 func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
     // Join internally call path.Clean to prevent directory traversal
-	path = filepath.Join(h.staticPath, path)
+    path := filepath.Join(h.staticPath, path)
 
     // check whether a file exists at the given path
 	_, err := os.Stat(path)
