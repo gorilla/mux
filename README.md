@@ -576,7 +576,7 @@ func (amw *authenticationMiddleware) Middleware(next http.Handler) http.Handler 
 r := mux.NewRouter()
 r.HandleFunc("/", handler)
 
-amw := authenticationMiddleware{}
+amw := authenticationMiddleware{tokenUsers: make(map[string]string)}
 amw.Populate()
 
 r.Use(amw.Middleware)
