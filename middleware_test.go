@@ -17,7 +17,7 @@ func (tm *testMiddleware) Middleware(h http.Handler) http.Handler {
 	})
 }
 
-func dummyHandler(w http.ResponseWriter, r *http.Request) {}
+func dummyHandler(_ http.ResponseWriter, _ *http.Request) {}
 
 func TestMiddlewareAdd(t *testing.T) {
 	router := NewRouter()
