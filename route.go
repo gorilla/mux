@@ -322,6 +322,10 @@ func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
 // Methods adds a matcher for HTTP methods.
 // It accepts a sequence of one or more methods to be matched, e.g.:
 // "GET", "POST", "PUT".
+//
+// NOTE: Chaining multiple Methods will result in the last added
+// Methods will override the allowed methods specified by the
+// previously Methods calls.
 func (r *Route) Methods(methods ...string) *Route {
 	for k, v := range methods {
 		methods[k] = strings.ToUpper(v)

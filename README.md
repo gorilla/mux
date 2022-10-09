@@ -107,6 +107,8 @@ r.PathPrefix("/products/")
 
 ```go
 r.Methods("GET", "POST")
+// This is equivalent to .Methods("GET")
+r.Methods("GET", "POST").Methods("GET")
 ```
 
 ...or URL schemes:

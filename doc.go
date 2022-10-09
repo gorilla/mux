@@ -81,6 +81,8 @@ There are several other matchers that can be added. To match path prefixes:
 ...or HTTP methods:
 
 	r.Methods("GET", "POST")
+	// This is equivalent to .Methods("GET")
+	r.Methods("GET", "POST").Methods("GET")
 
 ...or URL schemes:
 
