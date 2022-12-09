@@ -8,7 +8,7 @@
 
 ---
 
-⚠️ **[The Gorilla Toolkit is looking for a new maintainer](https://github.com/gorilla/mux/issues/659)**
+The Gorilla project has been archived, and is no longer under active maintainenance. You can read more here: https://github.com/gorilla#gorilla-toolkit
 
 ---
 
