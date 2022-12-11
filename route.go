@@ -44,12 +44,14 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	}
 
 	var matchErr error
+	var allowedMethods []string
 
 	// Match everything.
 	for _, m := range r.matchers {
 		if matched := m.Match(req, match); !matched {
-			if _, ok := m.(methodMatcher); ok {
+			if m, ok := m.(methodMatcher); ok {
 				matchErr = ErrMethodMismatch
+				allowedMethods = m
 				continue
 			}
 
@@ -71,6 +73,9 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 
 	if matchErr != nil {
 		match.MatchErr = matchErr
+		if matchErr == ErrMethodMismatch {
+			match.AllowedMethods = allowedMethods
+		}
 		return false
 	}
 

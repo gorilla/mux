@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"path"
 	"regexp"
+	"strings"
 )
 
 var (
@@ -202,7 +203,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if handler == nil && match.MatchErr == ErrMethodMismatch {
-		handler = methodNotAllowedHandler()
+		handler = methodNotAllowedHandler(match.AllowedMethods)
 	}
 
 	if handler == nil {
@@ -417,6 +418,10 @@ type RouteMatch struct {
 	// It is set to ErrMethodMismatch if there is a mismatch in
 	// the request method and route method
 	MatchErr error
+
+	// AllowedMethods contains the list of methods allowed by a route when
+	// MatchErr is set to ErrMethodMismatch.
+	AllowedMethods []string
 }
 
 type contextKey int
@@ -598,11 +603,11 @@ func matchMapWithRegex(toCheck map[string]*regexp.Regexp, toMatch map[string][]s
 	return true
 }
 
-// methodNotAllowed replies to the request with an HTTP status code 405.
-func methodNotAllowed(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusMethodNotAllowed)
-}
-
 // methodNotAllowedHandler returns a simple request handler
 // that replies to each request with a status code 405.
-func methodNotAllowedHandler() http.Handler { return http.HandlerFunc(methodNotAllowed) }
+func methodNotAllowedHandler(allowed []string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Allow", strings.Join(allowed, ","))
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	})
+}

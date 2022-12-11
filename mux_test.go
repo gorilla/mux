@@ -2052,6 +2052,9 @@ func TestNoMatchMethodErrorHandler(t *testing.T) {
 	if resp.Code != http.StatusMethodNotAllowed {
 		t.Errorf("Expecting code %v", 405)
 	}
+	if hdr := resp.Header().Get("Allow"); hdr != "GET,POST" {
+		t.Errorf(`Expected Allow header to be "GET,POST" (got %q)`, hdr)
+	}
 
 	// Add matching route
 	r.HandleFunc("/", func1).Methods("PUT")
@@ -2721,7 +2724,6 @@ func TestMethodNotAllowed(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
 	router := NewRouter()
 	router.HandleFunc("/thing", handler).Methods(http.MethodGet)
-	router.HandleFunc("/something", handler).Methods(http.MethodGet)
 
 	w := NewRecorder()
 	req := newRequest(http.MethodPut, "/thing")
@@ -2730,6 +2732,9 @@ func TestMethodNotAllowed(t *testing.T) {
 
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+	if hdr := w.Header().Get("Allow"); hdr != http.MethodGet {
+		t.Fatalf(`Expected Allow header to be "GET" (got %q)`, hdr)
 	}
 }
 
