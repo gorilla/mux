@@ -2068,6 +2068,53 @@ func TestNoMatchMethodErrorHandler(t *testing.T) {
 	}
 }
 
+func TestMultipleDefinitionOfSamePathWithDifferentMethods(t *testing.T) {
+	emptyHandler := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	r.HandleFunc("/api", emptyHandler).Methods("POST")
+	r.HandleFunc("/api", emptyHandler).Queries("time", "{time:[0-9]+}").Methods("GET")
+
+	t.Run("Post Method should be matched properly", func(t *testing.T) {
+		req, _ := http.NewRequest("POST", "http://localhost/api", nil)
+		match := new(RouteMatch)
+		matched := r.Match(req, match)
+		if !matched {
+			t.Error("Should have matched route for methods")
+		}
+		if match.MatchErr != nil {
+			t.Error("Should not have any matching error. Found:", match.MatchErr)
+		}
+	})
+
+	t.Run("Get Method with invalid query value should not match", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "http://localhost/api?time=-4", nil)
+		match := new(RouteMatch)
+		matched := r.Match(req, match)
+		if matched {
+			t.Error("Should not have matched route for methods")
+		}
+		if match.MatchErr != ErrNotFound {
+			t.Error("Should have ErrNotFound error. Found:", match.MatchErr)
+		}
+	})
+
+	t.Run("A mismach method of a valid path should return ErrMethodMismatch", func(t *testing.T) {
+		r := NewRouter()
+		r.HandleFunc("/api2", emptyHandler).Methods("POST")
+		req, _ := http.NewRequest("GET", "http://localhost/api2", nil)
+		match := new(RouteMatch)
+		matched := r.Match(req, match)
+		if matched {
+			t.Error("Should not have matched route for methods")
+		}
+		if match.MatchErr != ErrMethodMismatch {
+			t.Error("Should have ErrMethodMismatch error. Found:", match.MatchErr)
+		}
+	})
+
+}
+
 func TestErrMatchNotFound(t *testing.T) {
 	emptyHandler := func(w http.ResponseWriter, r *http.Request) {}
 
