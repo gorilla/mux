@@ -6,12 +6,6 @@
 
 ![Gorilla Logo](https://cloud-cdn.questionable.services/gorilla-icon-64.png)
 
----
-
-**The Gorilla project has been archived, and is no longer under active maintainenance. You can read more here: https://github.com/gorilla#gorilla-toolkit**
-
----
-
 Package `gorilla/mux` implements a request router and dispatcher for matching incoming requests to
 their respective handler.
 
