@@ -1,0 +1,39 @@
+name: Verify and Test
+on: 
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  golangci:
+    strategy:
+      matrix: 
+        go: ['1.19','1.20']
+        os: [ubuntu-latest]
+      fail-fast: true
+    name: verify
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Go ${{ matrix.go }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go }}
+          cache: false
+      
+      - name: Golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with: 
+          version: v1.53
+          args: --timeout=5m
+      
+      - name: Test
+        run: go test -race --coverprofile=coverage.coverprofile --covermode=atomic -v ./...
