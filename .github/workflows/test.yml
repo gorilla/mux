@@ -29,7 +29,10 @@ jobs:
           cache: false
       
       - name: Verify
-        run: make verify
+        uses: golangci/golangci-lint-action@v3
+        with: 
+          version: v1.53
+          args: --timeout=5m
       
       - name: Test
         run: make test
