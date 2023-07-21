@@ -1,4 +1,4 @@
-name: Verify and Test
+name: CI
 on: 
   push:
     branches:
@@ -11,13 +11,12 @@ permissions:
   contents: read
 
 jobs:
-  golangci:
+  verify-and-test:
     strategy:
       matrix: 
         go: ['1.18', '1.19','1.20']
         os: [ubuntu-latest, macos-latest, windows-latest]
       fail-fast: true
-    name: verify
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Code
@@ -29,11 +28,8 @@ jobs:
           go-version: ${{ matrix.go }}
           cache: false
       
-      - name: Golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with: 
-          version: v1.53
-          args: --timeout=5m
+      - name: Verify
+        run: make verify
       
       - name: Test
         run: make test
