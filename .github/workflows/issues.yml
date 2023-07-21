@@ -13,5 +13,5 @@ jobs:
       - name: Add issue to project
         uses: actions/add-to-project@v0.5.0
         with:
-          project-url: https://github.com/orgs/gorilla/projects/mux
+          project-url: https://github.com/orgs/gorilla/projects/4
           github-token: ${{ secrets.GITHUB_TOKEN }}
