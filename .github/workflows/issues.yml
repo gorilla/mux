@@ -1,8 +1,11 @@
-# Add all the issues created to the project. 
-name: Add all issues to Project
+# Add issues or pull-requests created to the project. 
+name: Add issue or pull request to Project
 
 on:
   issues:
+    types:
+      - opened
+  pull_request:
     types:
       - opened
 

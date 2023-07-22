@@ -1,33 +1,34 @@
-SHELL := /bin/bash
+GO_LINT=$(shell which golangci-lint 2> /dev/null || echo '')
+GO_LINT_URI=github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
+GO_SEC=$(shell which gosec 2> /dev/null || echo '')
+GO_SEC_URI=github.com/securego/gosec/v2/cmd/gosec@latest
 
-# LINT is the path to the golangci-lint binary
-LINT = $(shell which golangci-lint)
+GO_VULNCHECK=$(shell which govulncheck 2> /dev/null || echo '')
+GO_VULNCHECK_URI=golang.org/x/vuln/cmd/govulncheck@latest
 
 .PHONY: golangci-lint
 golangci-lint:
-ifeq (, $(LINT))
-  ifeq (, $(shell which golangci-lint))
-	@{ \
-	set -e ;\
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest ;\
-	}
-  override LINT=$(GOBIN)/golangci-lint
-  else
-  override LINT=$(shell which golangci-lint)
-  endif
-endif
+	$(if $(GO_LINT), ,go install $(GO_LINT_URI))
+	@echo "##### Running golangci-lint"
+	golangci-lint run -v
+	
+.PHONY: gosec
+gosec:
+	$(if $(GO_SEC), ,go install $(GO_SEC_URI))
+	@echo "##### Running gosec"
+	gosec ./...
+
+.PHONY: govulncheck
+govulncheck:
+	$(if $(GO_VULNCHECK), ,go install $(GO_VULNCHECK_URI))
+	@echo "##### Running govulncheck"
+	govulncheck ./...
 
 .PHONY: verify
-verify: golangci-lint
-	$(LINT) run
+verify: golangci-lint gosec govulncheck
 
 .PHONY: test
 test:
-	go test -race --coverprofile=coverage.coverprofile --covermode=atomic -v ./...
+	@echo "##### Running tests"
+	go test -race -cover -coverprofile=coverage.coverprofile -covermode=atomic -v ./...
