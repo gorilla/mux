@@ -35,4 +35,6 @@ jobs:
           args: --timeout=5m
       
       - name: Test
-        run: make test
+        run: go test -race --coverprofile=coverage.txt --covermode=atomic -v ./...
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
