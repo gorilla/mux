@@ -1,8 +1,10 @@
 # gorilla/mux
 
-[![GoDoc](https://godoc.org/github.com/gorilla/mux?status.svg)](https://godoc.org/github.com/gorilla/mux)
-[![CircleCI](https://circleci.com/gh/gorilla/mux.svg?style=svg)](https://circleci.com/gh/gorilla/mux)
-[![Sourcegraph](https://sourcegraph.com/github.com/gorilla/mux/-/badge.svg)](https://sourcegraph.com/github.com/gorilla/mux?badge)
+![testing](https://github.com/gorilla/mux/actions/workflows/test.yml/badge.svg)
+[![codecov](https://codecov.io/github/gorilla/mux/branch/main/graph/badge.svg)](https://codecov.io/github/gorilla/mux)
+[![godoc](https://godoc.org/github.com/gorilla/mux?status.svg)](https://godoc.org/github.com/gorilla/mux)
+[![sourcegraph](https://sourcegraph.com/github.com/gorilla/mux/-/badge.svg)](https://sourcegraph.com/github.com/gorilla/mux?badge)
+
 
 ![Gorilla Logo](https://cloud-cdn.questionable.services/gorilla-icon-64.png)
 
