@@ -6,7 +6,7 @@
 [![sourcegraph](https://sourcegraph.com/github.com/gorilla/mux/-/badge.svg)](https://sourcegraph.com/github.com/gorilla/mux?badge)
 
 
-![Gorilla Logo](https://cloud-cdn.questionable.services/gorilla-icon-64.png)
+![Gorilla Logo](https://github.com/gorilla/.github/assets/53367916/d92caabf-98e0-473e-bfbf-ab554ba435e5)
 
 Package `gorilla/mux` implements a request router and dispatcher for matching incoming requests to
 their respective handler.
