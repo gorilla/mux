@@ -54,7 +54,7 @@ func Benchmark_findQueryKey(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				for key, _ := range all {
+				for key := range all {
 					_, _ = findFirstQueryKey(query, key)
 				}
 			}
@@ -79,7 +79,7 @@ func Benchmark_findQueryKeyGoLib(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				for key, _ := range all {
+				for key := range all {
 					v := u.Query()[key]
 					if len(v) > 0 {
 						_ = v[0]
