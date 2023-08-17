@@ -5,7 +5,7 @@ package mux
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,10 +14,16 @@ import (
 func TestSchemeMatchers(t *testing.T) {
 	router := NewRouter()
 	router.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Write([]byte("hello http world"))
+		_, err := rw.Write([]byte("hello http world"))
+		if err != nil {
+			t.Fatalf("Failed writing HTTP response: %v", err)
+		}
 	}).Schemes("http")
 	router.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Write([]byte("hello https world"))
+		_, err := rw.Write([]byte("hello https world"))
+		if err != nil {
+			t.Fatalf("Failed writing HTTP response: %v", err)
+		}
 	}).Schemes("https")
 
 	assertResponseBody := func(t *testing.T, s *httptest.Server, expectedBody string) {
@@ -28,7 +34,7 @@ func TestSchemeMatchers(t *testing.T) {
 		if resp.StatusCode != 200 {
 			t.Fatalf("expected a status code of 200, got %v", resp.StatusCode)
 		}
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Fatalf("unexpected error reading body: %v", err)
 		}
