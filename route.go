@@ -240,7 +240,7 @@ func (m headerMatcher) Match(r *http.Request, match *RouteMatch) bool {
 // Headers adds a matcher for request header values.
 // It accepts a sequence of key/value pairs to be matched. For example:
 //
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	r.Headers("Content-Type", "application/json",
 //	          "X-Requested-With", "XMLHttpRequest")
 //
@@ -265,7 +265,7 @@ func (m headerRegexMatcher) Match(r *http.Request, match *RouteMatch) bool {
 // HeadersRegexp accepts a sequence of key/value pairs, where the value has regex
 // support. For example:
 //
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	r.HeadersRegexp("Content-Type", "application/(text|json)",
 //	          "X-Requested-With", "XMLHttpRequest")
 //
@@ -293,7 +293,7 @@ func (r *Route) HeadersRegexp(pairs ...string) *Route {
 //
 // For example:
 //
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	r.Host("www.example.com")
 //	r.Host("{subdomain}.domain.com")
 //	r.Host("{subdomain:[a-z]+}.domain.com")
@@ -352,7 +352,7 @@ func (r *Route) Methods(methods ...string) *Route {
 //
 // For example:
 //
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	r.Path("/products/").Handler(ProductsHandler)
 //	r.Path("/products/{key}").Handler(ProductsHandler)
 //	r.Path("/articles/{category}/{id:[0-9]+}").
@@ -387,7 +387,7 @@ func (r *Route) PathPrefix(tpl string) *Route {
 // It accepts a sequence of key/value pairs. Values may define variables.
 // For example:
 //
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	r.Queries("foo", "bar", "id", "{id:[0-9]+}")
 //
 // The above route will only match if the URL contains the defined queries
@@ -483,7 +483,7 @@ func (r *Route) BuildVarsFunc(f BuildVarsFunc) *Route {
 //
 // It will test the inner routes only if the parent route matched. For example:
 //
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	s := r.Host("www.example.com").Subrouter()
 //	s.HandleFunc("/products/", ProductsHandler)
 //	s.HandleFunc("/products/{key}", ProductHandler)
@@ -534,7 +534,7 @@ func (r *Route) Subrouter() *Router {
 // The scheme of the resulting url will be the first argument that was passed to Schemes:
 //
 //	// url.String() will be "https://example.com"
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	url, err := r.Host("example.com")
 //	             .Schemes("https", "http").URL()
 //
