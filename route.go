@@ -66,6 +66,16 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 
 			matchErr = nil // nolint:ineffassign
 			return false
+		} else {
+			// Multiple routes may share the same path but use different HTTP methods. For instance:
+			// Route 1: POST "/users/{id}".
+			// Route 2: GET "/users/{id}", parameters: "id": "[0-9]+".
+			//
+			// The router must handle these cases correctly. For a GET request to "/users/abc" with "id" as "-2",
+			// The router should return a "Not Found" error as no route fully matches this request.
+			if match.MatchErr == ErrMethodMismatch {
+				match.MatchErr = nil
+			}
 		}
 	}
 
@@ -230,7 +240,7 @@ func (m headerMatcher) Match(r *http.Request, match *RouteMatch) bool {
 // Headers adds a matcher for request header values.
 // It accepts a sequence of key/value pairs to be matched. For example:
 //
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	r.Headers("Content-Type", "application/json",
 //	          "X-Requested-With", "XMLHttpRequest")
 //
@@ -284,7 +294,7 @@ func (r *Route) HeadersRegexp(pairs ...string) *Route {
 //
 // For example:
 //
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	r.Host("www.example.com")
 //	r.Host("{subdomain}.domain.com")
 //	r.Host("{subdomain:[a-z]+}.domain.com")
@@ -343,7 +353,7 @@ func (r *Route) Methods(methods ...string) *Route {
 //
 // For example:
 //
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	r.Path("/products/").Handler(ProductsHandler)
 //	r.Path("/products/{key}").Handler(ProductsHandler)
 //	r.Path("/articles/{category}/{id:[0-9]+}").
@@ -378,7 +388,7 @@ func (r *Route) PathPrefix(tpl string) *Route {
 // It accepts a sequence of key/value pairs. Values may define variables.
 // For example:
 //
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	r.Queries("foo", "bar", "id", "{id:[0-9]+}")
 //
 // The above route will only match if the URL contains the defined queries
@@ -474,7 +484,7 @@ func (r *Route) BuildVarsFunc(f BuildVarsFunc) *Route {
 //
 // It will test the inner routes only if the parent route matched. For example:
 //
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	s := r.Host("www.example.com").Subrouter()
 //	s.HandleFunc("/products/", ProductsHandler)
 //	s.HandleFunc("/products/{key}", ProductHandler)
@@ -525,7 +535,7 @@ func (r *Route) Subrouter() *Router {
 // The scheme of the resulting url will be the first argument that was passed to Schemes:
 //
 //	// url.String() will be "https://example.com"
-//	r := mux.NewRouter()
+//	r := mux.NewRouter().NewRoute()
 //	url, err := r.Host("example.com")
 //	             .Schemes("https", "http").URL()
 //
