@@ -197,8 +197,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		// http://code.google.com/p/go/issues/detail?id=5252
 		url := *req.URL
 		url.Path = match.CleanPath
-		w.Header().Set("Location", url.String())
-		w.WriteHeader(http.StatusMovedPermanently)
+		http.Redirect(w, req, url.String(), http.StatusMovedPermanently)
 		return
 	}
 
