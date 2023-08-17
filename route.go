@@ -84,11 +84,14 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 		return false
 	}
 
-	if match.MatchErr == ErrMethodMismatch && r.handler != nil {
+	// If a route matches, but the HTTP method does not, we do one of two (2) things:
+	// 1. Reset the match error if we find a matching method later.
+	// 2. Else, we override the matched handler in the event we have a possible fallback handler for that route.
+	//
+	// This prevents propagation of ErrMethodMismatch once a suitable match is found for a Method-Path combination
+	if match.MatchErr == ErrMethodMismatch {
 		// We found a route which matches request method, clear MatchErr
 		match.MatchErr = nil
-		// Then override the mis-matched handler
-		match.Handler = r.handler
 	}
 
 	// Yay, we have a match. Let's collect some info about it.

@@ -2879,6 +2879,163 @@ func TestContextMiddleware(t *testing.T) {
 	r.ServeHTTP(rec, req)
 }
 
+// testOptionsMiddleWare returns 200 on an OPTIONS request
+func testOptionsMiddleWare(inner http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		inner.ServeHTTP(w, r)
+	})
+}
+
+// TestRouterOrder Should Pass whichever order route is defined
+func TestRouterOrder(t *testing.T) {
+	type requestCase struct {
+		request *http.Request
+		expCode int
+	}
+
+	tests := []struct {
+		name             string
+		routes           []*Route
+		customMiddleware MiddlewareFunc
+		requests         []requestCase
+	}{
+		{
+			name: "Routes added with same method and intersecting path regex",
+			routes: []*Route{
+				new(Route).Path("/a/b").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusNotFound)
+				})).Methods(http.MethodGet),
+				new(Route).Path("/a/{a}").Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				})).Methods(http.MethodGet),
+			},
+			requests: []requestCase{
+				{
+					request: newRequest(http.MethodGet, "/a/b"),
+					expCode: http.StatusNotFound,
+				},
+				{
+					request: newRequest(http.MethodGet, "/a/a"),
+					expCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name: "Routes added with same method and intersecting path regex, path with pathVariable first",
+			routes: []*Route{
+				new(Route).Path("/a/{a}").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})).Methods(http.MethodGet),
+				new(Route).Path("/a/b").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusNotFound)
+					})).Methods(http.MethodGet),
+			},
+			requests: []requestCase{
+				{
+					request: newRequest(http.MethodGet, "/a/b"),
+					expCode: http.StatusOK,
+				},
+				{
+					request: newRequest(http.MethodGet, "/a/a"),
+					expCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name: "Routes added same path - different methods, no path variables",
+			routes: []*Route{
+				new(Route).Path("/a/b").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					})).Methods(http.MethodGet),
+				new(Route).Path("/a/b").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusNotFound)
+					})).Methods(http.MethodOptions),
+			},
+			requests: []requestCase{
+				{
+					request: newRequest(http.MethodGet, "/a/b"),
+					expCode: http.StatusOK,
+				},
+				{
+					request: newRequest(http.MethodOptions, "/a/b"),
+					expCode: http.StatusNotFound,
+				},
+			},
+		},
+		{
+			name: "Routes added same path - different methods, with path variables and middleware",
+			routes: []*Route{
+				new(Route).Path("/a/{a}").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusNotFound)
+					})).Methods(http.MethodGet),
+				new(Route).Path("/a/b").Handler(nil).Methods(http.MethodOptions),
+			},
+			customMiddleware: testOptionsMiddleWare,
+			requests: []requestCase{
+				{
+					request: newRequest(http.MethodGet, "/a/b"),
+					expCode: http.StatusNotFound,
+				},
+				{
+					request: newRequest(http.MethodOptions, "/a/b"),
+					expCode: http.StatusOK,
+				},
+			},
+		},
+		{
+			name: "Routes added same path - different methods, with path variables and middleware order reversed",
+			routes: []*Route{
+				new(Route).Path("/a/b").Handler(nil).Methods(http.MethodOptions),
+				new(Route).Path("/a/{a}").Handler(http.HandlerFunc(
+					func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusNotFound)
+					})).Methods(http.MethodGet),
+			},
+			customMiddleware: testOptionsMiddleWare,
+			requests: []requestCase{
+				{
+					request: newRequest(http.MethodGet, "/a/b"),
+					expCode: http.StatusNotFound,
+				},
+				{
+					request: newRequest(http.MethodOptions, "/a/b"),
+					expCode: http.StatusOK,
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			router := NewRouter()
+
+			if test.customMiddleware != nil {
+				router.Use(test.customMiddleware)
+			}
+
+			router.routes = test.routes
+			w := NewRecorder()
+
+			for _, requestCase := range test.requests {
+				router.ServeHTTP(w, requestCase.request)
+
+				if w.Code != requestCase.expCode {
+					t.Fatalf("Expected status code %d (got %d)", requestCase.expCode, w.Code)
+				}
+			}
+		})
+	}
+}
+
 // mapToPairs converts a string map to a slice of string pairs
 func mapToPairs(m map[string]string) []string {
 	var i int
