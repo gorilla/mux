@@ -728,6 +728,25 @@ func (r *Route) GetHostTemplate() (string, error) {
 	return r.regexp.host.template, nil
 }
 
+// GetVarNames returns the names of all variables added by regexp matchers
+// These can be used to know which route variables should be passed into r.URL()
+func (r *Route) GetVarNames() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	var varNames []string
+	if r.regexp.host != nil {
+		varNames = append(varNames, r.regexp.host.varsN...)
+	}
+	if r.regexp.path != nil {
+		varNames = append(varNames, r.regexp.path.varsN...)
+	}
+	for _, regx := range r.regexp.queries {
+		varNames = append(varNames, regx.varsN...)
+	}
+	return varNames, nil
+}
+
 // prepareVars converts the route variable pairs into a map. If the route has a
 // BuildVarsFunc, it is invoked.
 func (r *Route) prepareVars(pairs ...string) (map[string]string, error) {
