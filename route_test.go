@@ -57,7 +57,7 @@ func BenchmarkNewRouterRegexpFunc(b *testing.B) {
 	}
 }
 
-func testNewRouter(tb testing.TB, handler http.Handler) {
+func testNewRouter(_ testing.TB, handler http.Handler) {
 	r := NewRouter()
 	// A route with a route variable:
 	r.Handle("/metrics/{type}", handler)
