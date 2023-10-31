@@ -233,8 +233,8 @@ func (r *Router) GetRoute(name string) *Route {
 // When false, if the route path is "/path", accessing "/path/" will not match
 // this route and vice versa.
 //
-// The re-direct is a HTTP 301 (Moved Permanently). Note that when this is set for
-// routes with a non-idempotent method (e.g. POST, PUT), the subsequent re-directed
+// The redirect is a HTTP 301 (Moved Permanently). Note that when this is set for
+// routes with a non-idempotent method (e.g. POST, PUT), the subsequent redirected
 // request will be made as a GET by most clients. Use middleware or client settings
 // to modify this behaviour as needed.
 //
