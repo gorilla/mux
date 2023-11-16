@@ -193,13 +193,14 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var handler http.Handler
 	if r.Match(req, &match) {
 		handler = match.Handler
-		if handler == nil {
-			// The default handlers do not make use of the context values.
-		} else if r.omitRouteFromContext {
-			// Only populate the match vars (if any) into the context.
-			req = requestWithVars(req, match.Vars)
-		} else {
-			req = requestWithRouteAndVars(req, match.Route, match.Vars)
+		if handler != nil {
+			// Populate context for custom handlers
+			if r.omitRouteFromContext {
+				// Only populate the match vars (if any) into the context.
+				req = requestWithVars(req, match.Vars)
+			} else {
+				req = requestWithRouteAndVars(req, match.Route, match.Vars)
+			}
 		}
 	}
 
@@ -263,7 +264,9 @@ func (r *Router) SkipClean(value bool) *Router {
 }
 
 // OmitRouteFromContext defines the behavior of omitting the Route from the
-//   http.Request context.
+//
+//	http.Request context.
+//
 // CurrentRoute will yield nil with this option.
 func (r *Router) OmitRouteFromContext(value bool) *Router {
 	r.omitRouteFromContext = value
@@ -467,7 +470,8 @@ func requestWithVars(r *http.Request, vars map[string]string) *http.Request {
 
 // requestWithRouteAndVars adds the matched route and vars to the request ctx.
 // It saves extra allocations in cloning the request once and skipping the
-//  population of empty vars, which in turn mux.Vars can handle gracefully.
+//
+//	population of empty vars, which in turn mux.Vars can handle gracefully.
 func requestWithRouteAndVars(r *http.Request, route *Route, vars map[string]string) *http.Request {
 	ctx := context.WithValue(r.Context(), routeKey, route)
 	if len(vars) > 0 {
