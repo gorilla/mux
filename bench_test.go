@@ -21,6 +21,38 @@ func BenchmarkMux(b *testing.B) {
 	}
 }
 
+func BenchmarkMuxSimple(b *testing.B) {
+	router := new(Router)
+	handler := func(w http.ResponseWriter, r *http.Request) {}
+	router.HandleFunc("/status", handler)
+
+	testCases := []struct {
+		name                 string
+		omitRouteFromContext bool
+	}{
+		{
+			name:                 "default",
+			omitRouteFromContext: false,
+		},
+		{
+			name:                 "omit route from ctx",
+			omitRouteFromContext: true,
+		},
+	}
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			router.OmitRouteFromContext(tc.omitRouteFromContext)
+
+			request, _ := http.NewRequest("GET", "/status", nil)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				router.ServeHTTP(nil, request)
+			}
+		})
+	}
+}
+
 func BenchmarkMuxAlternativeInRegexp(b *testing.B) {
 	router := new(Router)
 	handler := func(w http.ResponseWriter, r *http.Request) {}

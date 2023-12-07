@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"path"
 	"regexp"
 )
@@ -83,6 +84,9 @@ type routeConf struct {
 	// If true, when the path pattern is "/path//to", accessing "/path//to"
 	// will not redirect
 	skipClean bool
+
+	// If true, the http.Request context will not contain the Route.
+	omitRouteFromContext bool
 
 	// Manager for the variables from host and path.
 	regexp routeRegexpGroup
@@ -180,15 +184,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 		// Clean path to canonical form and redirect.
 		if p := cleanPath(path); p != path {
-
-			// Added 3 lines (Philip Schlump) - It was dropping the query string and #whatever from query.
-			// This matches with fix in go 1.2 r.c. 4 for same problem.  Go Issue:
-			// http://code.google.com/p/go/issues/detail?id=5252
-			url := *req.URL
-			url.Path = p
-			p = url.String()
-
-			w.Header().Set("Location", p)
+			w.Header().Set("Location", replaceURLPath(req.URL, p))
 			w.WriteHeader(http.StatusMovedPermanently)
 			return
 		}
@@ -197,8 +193,15 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var handler http.Handler
 	if r.Match(req, &match) {
 		handler = match.Handler
-		req = requestWithVars(req, match.Vars)
-		req = requestWithRoute(req, match.Route)
+		if handler != nil {
+			// Populate context for custom handlers
+			if r.omitRouteFromContext {
+				// Only populate the match vars (if any) into the context.
+				req = requestWithVars(req, match.Vars)
+			} else {
+				req = requestWithRouteAndVars(req, match.Route, match.Vars)
+			}
+		}
 	}
 
 	if handler == nil && match.MatchErr == ErrMethodMismatch {
@@ -257,6 +260,16 @@ func (r *Router) StrictSlash(value bool) *Router {
 // become /fetch/http/xkcd.com/534
 func (r *Router) SkipClean(value bool) *Router {
 	r.skipClean = value
+	return r
+}
+
+// OmitRouteFromContext defines the behavior of omitting the Route from the
+//
+//	http.Request context.
+//
+// CurrentRoute will yield nil with this option.
+func (r *Router) OmitRouteFromContext(value bool) *Router {
+	r.omitRouteFromContext = value
 	return r
 }
 
@@ -445,13 +458,25 @@ func CurrentRoute(r *http.Request) *Route {
 	return nil
 }
 
+// requestWithRouteAndVars adds the matched vars to the request ctx.
+// It shortcuts the operation when the vars are empty.
 func requestWithVars(r *http.Request, vars map[string]string) *http.Request {
+	if len(vars) == 0 {
+		return r
+	}
 	ctx := context.WithValue(r.Context(), varsKey, vars)
 	return r.WithContext(ctx)
 }
 
-func requestWithRoute(r *http.Request, route *Route) *http.Request {
+// requestWithRouteAndVars adds the matched route and vars to the request ctx.
+// It saves extra allocations in cloning the request once and skipping the
+//
+//	population of empty vars, which in turn mux.Vars can handle gracefully.
+func requestWithRouteAndVars(r *http.Request, route *Route, vars map[string]string) *http.Request {
 	ctx := context.WithValue(r.Context(), routeKey, route)
+	if len(vars) > 0 {
+		ctx = context.WithValue(ctx, varsKey, vars)
+	}
 	return r.WithContext(ctx)
 }
 
@@ -476,6 +501,14 @@ func cleanPath(p string) string {
 	}
 
 	return np
+}
+
+// replaceURLPath prints an url.URL with a different path.
+func replaceURLPath(u *url.URL, p string) string {
+	// Operate on a copy of the request url.
+	u2 := *u
+	u2.Path = p
+	return u2.String()
 }
 
 // uniqueVars returns an error if two slices contain duplicated strings.
