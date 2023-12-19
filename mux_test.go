@@ -2095,8 +2095,8 @@ func TestMultipleDefinitionOfSamePathWithDifferentMethods(t *testing.T) {
 		if matched {
 			t.Error("Should not have matched route for methods")
 		}
-		if match.MatchErr != ErrNotFound {
-			t.Error("Should have ErrNotFound error. Found:", match.MatchErr)
+		if match.MatchErr != ErrMethodMismatch {
+			t.Error("Should have ErrMethodMismatch error. Found:", match.MatchErr)
 		}
 	})
 
@@ -2111,6 +2111,30 @@ func TestMultipleDefinitionOfSamePathWithDifferentMethods(t *testing.T) {
 		}
 		if match.MatchErr != ErrMethodMismatch {
 			t.Error("Should have ErrMethodMismatch error. Found:", match.MatchErr)
+		}
+	})
+
+	t.Run("A mismach method of a valid path on subrouter should return ErrMethodMismatch", func(t *testing.T) {
+		r := NewRouter()
+		r.MethodNotAllowedHandler = http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			rw.WriteHeader(http.StatusMethodNotAllowed)
+			_, _ = rw.Write([]byte("Method not allowed"))
+		})
+
+		subrouter := r.PathPrefix("/v1").Subrouter()
+		subrouter.HandleFunc("/api", func(w http.ResponseWriter, e *http.Request) {
+			_, _ = w.Write([]byte("Logic"))
+		}).Methods("GET")
+		subrouter.HandleFunc("/api/{id}", func(w http.ResponseWriter, e *http.Request) {
+			_, _ = w.Write([]byte("Logic"))
+		}).Methods("GET")
+
+		rw := NewRecorder()
+		req, _ := http.NewRequest("POST", "/v1/api", nil)
+		r.ServeHTTP(rw, req)
+
+		if rw.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("Should have status code 405 (StatusMethodNotAllowed). Got %v\n", rw.Code)
 		}
 	})
 
