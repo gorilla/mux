@@ -2887,6 +2887,99 @@ func TestSubrouterCustomMethodNotAllowed(t *testing.T) {
 	}
 }
 
+func TestQueryMismatchError(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		fmt.Fprint(w, "OK")
+	}
+
+	router := NewRouter()
+	router.HandleFunc("/test", handler).Queries("time", "{time:[0-9]+}").Methods("GET")
+	router.MethodNotAllowedHandler = customMethodNotAllowedHandler{msg: "custom router handler"}
+
+	subrouter := router.PathPrefix("/sub").Subrouter()
+	subrouter.HandleFunc("/test", handler).Queries("time", "{time:[0-9]+}").Methods("GET")
+	subrouter.MethodNotAllowedHandler = customMethodNotAllowedHandler{msg: "custom sub router handler"}
+
+	testCases := map[string]struct {
+		method    string
+		path      string
+		expMsg    string
+		expStatus int
+	}{
+		"router method not allowed with valid query": {
+			method:    "POST",
+			path:      "/test?time=2",
+			expMsg:    "custom router handler",
+			expStatus: 405,
+		},
+		"router method not allowed with invalid query": {
+			method:    "POST",
+			path:      "/test?time=-2",
+			expMsg:    "404 page not found\n",
+			expStatus: 404,
+		},
+		"router method allowed with valid query": {
+			method:    "GET",
+			path:      "/test?time=2",
+			expMsg:    "OK",
+			expStatus: 200,
+		},
+		"router method allowed with invalid query": {
+			method:    "GET",
+			path:      "/test?time=-2",
+			expMsg:    "404 page not found\n",
+			expStatus: 404,
+		},
+		"subrouter method not allowed with valid query": {
+			method:    "POST",
+			path:      "/sub/test?time=2",
+			expMsg:    "custom sub router handler",
+			expStatus: 405,
+		},
+		"subrouter method not allowed with invalid query": {
+			method:    "POST",
+			path:      "/sub/test?time=-2",
+			expMsg:    "404 page not found\n",
+			expStatus: 404,
+		},
+		"subrouter method allowed with valid query": {
+			method:    "GET",
+			path:      "/sub/test?time=2",
+			expMsg:    "OK",
+			expStatus: 200,
+		},
+		"subrouter method allowed with invalid query": {
+			method:    "GET",
+			path:      "/sub/test?time=-2",
+			expMsg:    "404 page not found\n",
+			expStatus: 404,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(tt *testing.T) {
+			w := NewRecorder()
+			req := newRequest(tc.method, tc.path)
+
+			router.ServeHTTP(w, req)
+
+			if w.Code != tc.expStatus {
+				tt.Errorf("Expected status code %d (got %d)", tc.expStatus, w.Code)
+			}
+
+			b, err := io.ReadAll(w.Body)
+			if err != nil {
+				tt.Errorf("failed to read body: %v", err)
+			}
+
+			if string(b) != tc.expMsg {
+				tt.Errorf("expected msg %q, got %q", tc.expMsg, string(b))
+			}
+		})
+	}
+}
+
 func TestSubrouterNotFound(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
 	router := NewRouter()
