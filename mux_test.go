@@ -2784,6 +2784,23 @@ func TestMethodNotAllowed(t *testing.T) {
 	}
 }
 
+func TestMethodNotAllowedSubrouterWithSeveralRoutes(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+
+	router := NewRouter()
+	subrouter := router.PathPrefix("/v1").Subrouter()
+	subrouter.HandleFunc("/api", handler).Methods(http.MethodGet)
+	subrouter.HandleFunc("/api/{id}", handler).Methods(http.MethodGet)
+
+	w := NewRecorder()
+	req := newRequest(http.MethodPut, "/v1/api")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
 type customMethodNotAllowedHandler struct {
 	msg string
 }
