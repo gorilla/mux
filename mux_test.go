@@ -2116,6 +2116,24 @@ func TestMultipleDefinitionOfSamePathWithDifferentMethods(t *testing.T) {
 
 }
 
+func TestMultipleDefinitionOfSamePathWithDifferentQueries(t *testing.T) {
+	emptyHandler := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	r.HandleFunc("/api", emptyHandler).Queries("foo", "{foo:[0-9]+}").Methods(http.MethodGet)
+	r.HandleFunc("/api", emptyHandler).Queries("bar", "{bar:[0-9]+}").Methods(http.MethodGet)
+
+	req := newRequest(http.MethodGet, "/api?bar=4")
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+	if !matched {
+		t.Error("Should have matched route for methods")
+	}
+	if match.MatchErr != nil {
+		t.Error("Should have no error. Found:", match.MatchErr)
+	}
+}
+
 func TestErrMatchNotFound(t *testing.T) {
 	emptyHandler := func(w http.ResponseWriter, r *http.Request) {}
 
