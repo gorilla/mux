@@ -2825,32 +2825,54 @@ func TestSubrouterCustomMethodNotAllowed(t *testing.T) {
 	router.MethodNotAllowedHandler = customMethodNotAllowedHandler{msg: "custom router handler"}
 
 	subrouter := router.PathPrefix("/sub").Subrouter()
-	subrouter.HandleFunc("/test", handler).Methods(http.MethodGet)
+	subrouter.HandleFunc("/test", handler).Queries("time", "{time:[0-9]+}").Methods(http.MethodGet)
 	subrouter.MethodNotAllowedHandler = customMethodNotAllowedHandler{msg: "custom sub router handler"}
+	subrouter.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "page not found")
+	})
 
 	testCases := map[string]struct {
-		path   string
-		expMsg string
+		method    string
+		path      string
+		expMsg    string
+		expStatus int
 	}{
 		"router method not allowed": {
-			path:   "/test",
-			expMsg: "custom router handler",
+			method:    "POST",
+			path:      "/test",
+			expMsg:    "custom router handler",
+			expStatus: 405,
 		},
 		"subrouter method not allowed": {
-			path:   "/sub/test",
-			expMsg: "custom sub router handler",
+			method:    "POST",
+			path:      "/sub/test?time=2",
+			expMsg:    "custom sub router handler",
+			expStatus: 405,
+		},
+		"subrouter method not allowed with invalid query": {
+			method:    "POST",
+			path:      "/sub/test?time=-2",
+			expMsg:    "page not found",
+			expStatus: 404,
+		},
+		"subrouter method allowed with invalid query": {
+			method:    "GET",
+			path:      "/sub/test?time=-2",
+			expMsg:    "page not found",
+			expStatus: 404,
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(tt *testing.T) {
 			w := NewRecorder()
-			req := newRequest(http.MethodPut, tc.path)
+			req := newRequest(tc.method, tc.path)
 
 			router.ServeHTTP(w, req)
 
-			if w.Code != http.StatusMethodNotAllowed {
-				tt.Errorf("Expected status code 405 (got %d)", w.Code)
+			if w.Code != tc.expStatus {
+				tt.Errorf("Expected status code %d (got %d)", tc.expStatus, w.Code)
 			}
 
 			b, err := io.ReadAll(w.Body)
