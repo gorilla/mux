@@ -53,6 +53,19 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 				continue
 			}
 
+			// Multiple routes may share the same path but use different HTTP methods. For instance:
+			// Route 1: POST "/users/{id}".
+			// Route 2: GET "/users/{id}", parameters: "id": "[0-9]+".
+			//
+			// The router must handle these cases correctly. For a GET request to "/users/abc" with "id" as "-2",
+			// The router should return a "Not Found" error as no route fully matches this request.
+			if rr, ok := m.(*routeRegexp); ok {
+				if rr.regexpType == regexpTypeQuery {
+					matchErr = ErrNotFound
+					break
+				}
+			}
+
 			// Ignore ErrNotFound errors. These errors arise from match call
 			// to Subrouters.
 			//
@@ -66,16 +79,6 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 
 			matchErr = nil // nolint:ineffassign
 			return false
-		} else {
-			// Multiple routes may share the same path but use different HTTP methods. For instance:
-			// Route 1: POST "/users/{id}".
-			// Route 2: GET "/users/{id}", parameters: "id": "[0-9]+".
-			//
-			// The router must handle these cases correctly. For a GET request to "/users/abc" with "id" as "-2",
-			// The router should return a "Not Found" error as no route fully matches this request.
-			if match.MatchErr == ErrMethodMismatch {
-				match.MatchErr = nil
-			}
 		}
 	}
 
