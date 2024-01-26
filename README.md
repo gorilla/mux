@@ -28,6 +28,7 @@ The name mux stands for "HTTP request multiplexer". Like the standard `http.Serv
 * [Serving Single Page Applications](#serving-single-page-applications) (e.g. React, Vue, Ember.js, etc.)
 * [Registered URLs](#registered-urls)
 * [Walking Routes](#walking-routes)
+* [Re-using Regular Expressions](#re-using-regular-expressions)
 * [Graceful Shutdown](#graceful-shutdown)
 * [Middleware](#middleware)
 * [Handling CORS Requests](#handling-cors-requests)
@@ -440,6 +441,32 @@ func main() {
 	http.Handle("/", r)
 }
 ```
+
+### Re-using Regular Expressions
+
+There can be a situation when you often need to specify some complex regular expressions inside your paths, e.g. uuid. This can be easily shorthanded:
+
+```go
+
+package main
+
+import (
+    "net/http"
+    "github.com/gorilla/mux"
+)
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	return
+}
+
+func main() {
+    r := mux.NewRouter().RegisterPattern("uuid", "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}")
+    r.HandleFunc("/products/{id:uuid}", handler)
+    r.HandleFunc("/articles/{id:uuid}", handler)
+    r.HandleFunc("/authors/{id:uuid}", handler)
+}
+```
+
 
 ### Graceful Shutdown
 
