@@ -93,7 +93,7 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 
 		// Append variable name and compiled pattern.
 		varsN[i/2] = name
-		varsR[i/2], err = regexp.Compile(fmt.Sprintf("^%s$", patt))
+		varsR[i/2], err = RegexpCompileFunc(fmt.Sprintf("^%s$", patt))
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +125,7 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 		reverse.WriteByte('/')
 	}
 	// Compile full regexp.
-	reg, errCompile := regexp.Compile(pattern.String())
+	reg, errCompile := RegexpCompileFunc(pattern.String())
 	if errCompile != nil {
 		return nil, errCompile
 	}
