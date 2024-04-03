@@ -135,7 +135,7 @@ func copyRouteRegexp(r *routeRegexp) *routeRegexp {
 // Match attempts to match the given request against the router's registered routes.
 //
 // If the request matches a route of this router or one of its subrouters the Route,
-// Handler, and Vars fields of the the match argument are filled and this function
+// Handler, and Vars fields of the match argument are filled and this function
 // returns true.
 //
 // If the request does not match any of this router's or its subrouters' routes
