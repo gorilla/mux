@@ -462,7 +462,7 @@ func CurrentRoute(r *http.Request) *Route {
 	return nil
 }
 
-// requestWithRouteAndVars adds the matched vars to the request ctx.
+// requestWithVars adds the matched vars to the request ctx.
 // It shortcuts the operation when the vars are empty.
 func requestWithVars(r *http.Request, vars map[string]string) *http.Request {
 	if len(vars) == 0 {
