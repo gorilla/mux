@@ -13,6 +13,8 @@ func Test_newRouteRegexp_Errors(t *testing.T) {
 		in, out string
 	}{
 		{"/{}", `mux: missing name or pattern in "{}"`},
+		{"/{:.}", `mux: missing name or pattern in "{:.}"`},
+		{"/{a:}", `mux: missing name or pattern in "{a:}"`},
 		{"/{id:abc(}", `mux: error compiling regex for "{id:abc(}":`},
 	}
 

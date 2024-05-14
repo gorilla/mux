@@ -80,7 +80,9 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 		end = idxs[i+1]
 		tag := tpl[idxs[i]:end]
 
-		param = tpl[idxs[i]+1 : end-1]
+		// trim braces from tag
+		param = tag[1 : len(tag)-1]
+
 		colonIdx = strings.Index(param, ":")
 		if colonIdx == -1 {
 			name = param
@@ -88,9 +90,6 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 		} else {
 			name = param[0:colonIdx]
 			patt = param[colonIdx+1:]
-		}
-		if patt == "" {
-			patt = defaultPattern
 		}
 
 		// Name or pattern can't be empty.
