@@ -114,18 +114,15 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 	// Add the remaining.
 	raw := tpl[end:]
 	pattern.WriteString(regexp.QuoteMeta(raw))
-
 	if options.strictSlash {
 		pattern.WriteString("[/]?")
 	}
-
 	if typ == regexpTypeQuery {
 		// Add the default pattern if the query value is empty
 		if queryVal := strings.SplitN(template, "=", 2)[1]; queryVal == "" {
 			pattern.WriteString(defaultPattern)
 		}
 	}
-
 	if typ != regexpTypePrefix {
 		pattern.WriteByte('$')
 	}
@@ -138,9 +135,7 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 			wildcardHostPort = true
 		}
 	}
-
 	reverse.WriteString(raw)
-
 	if endSlash {
 		reverse.WriteByte('/')
 	}
