@@ -74,10 +74,11 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 	var patt, param, name string
 	for i := 0; i < len(idxs); i += 2 {
 		// Set all values we are interested in.
-		groupIdx = i/2
+		groupIdx = i / 2
 
 		raw := tpl[end:idxs[i]]
 		end = idxs[i+1]
+		tag := tpl[idxs[i]:end]
 
 		param = tpl[idxs[i]+1 : end-1]
 		colonIdx = strings.Index(param, ":")
@@ -94,21 +95,21 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 
 		// Name or pattern can't be empty.
 		if name == "" || patt == "" {
-			return nil, fmt.Errorf("mux: missing name or pattern in %q", param)
+			return nil, fmt.Errorf("mux: missing name or pattern in %q", tag)
 		}
 		// Build the regexp pattern.
 		groupName := varGroupName(groupIdx)
 
-		pattern.WriteString(regexp.QuoteMeta(raw)+"(?P<" + groupName + ">" + patt + ")")
+		pattern.WriteString(regexp.QuoteMeta(raw) + "(?P<" + groupName + ">" + patt + ")")
 
 		// Build the reverse template.
-		reverse.WriteString(raw+"%s")
+		reverse.WriteString(raw + "%s")
 
 		// Append variable name and compiled pattern.
 		varsN[groupIdx] = name
 		varsR[groupIdx], err = RegexpCompileFunc("^" + patt + "$")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("mux: error compiling regex for %q: %w", tag, err)
 		}
 	}
 	// Add the remaining.
