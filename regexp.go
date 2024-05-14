@@ -127,7 +127,18 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 		pattern.WriteByte('$')
 	}
 
+	// Compile full regexp.
 	patternStr := pattern.String()
+	reg, errCompile := RegexpCompileFunc(patternStr)
+	if errCompile != nil {
+		return nil, errCompile
+	}
+
+	// Check for capturing groups which used to work in older versions
+	if reg.NumSubexp() != len(idxs)/2 {
+		panic(fmt.Sprintf("route %s contains capture groups in its regexp. ", template) +
+			"Only non-capturing groups are accepted: e.g. (?:pattern) instead of (pattern)")
+	}
 
 	var wildcardHostPort bool
 	if typ == regexpTypeHost {
@@ -138,18 +149,6 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 	reverse.WriteString(raw)
 	if endSlash {
 		reverse.WriteByte('/')
-	}
-
-	// Compile full regexp.
-	reg, errCompile := RegexpCompileFunc(patternStr)
-	if errCompile != nil {
-		return nil, errCompile
-	}
-
-	// Check for capturing groups which used to work in older versions
-	if reg.NumSubexp() != len(idxs)/2 {
-		panic(fmt.Sprintf("route %s contains capture groups in its regexp. ", template) +
-			"Only non-capturing groups are accepted: e.g. (?:pattern) instead of (pattern)")
 	}
 
 	// Done!
