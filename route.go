@@ -27,6 +27,9 @@ type Route struct {
 	// "global" reference to all named routes
 	namedRoutes map[string]*Route
 
+	// route specific middleware
+	middlewares []middleware
+
 	// config possibly passed in from `Router`
 	routeConf
 }
@@ -99,7 +102,8 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 		match.Route = r
 	}
 	if match.Handler == nil {
-		match.Handler = r.handler
+		// for the matched handler, wrap it in the assigned middleware
+		match.Handler = r.WrapHandlerInMiddleware(r.handler)
 	}
 
 	// Set variables.
@@ -140,6 +144,19 @@ func (r *Route) HandlerFunc(f func(http.ResponseWriter, *http.Request)) *Route {
 // GetHandler returns the handler for the route, if any.
 func (r *Route) GetHandler() http.Handler {
 	return r.handler
+}
+
+// WrapHandlerInMiddleware wraps the supplied handler in the middleware
+// that were assigned to this route. If no middleware specified
+// the handler is returned
+func (r *Route) WrapHandlerInMiddleware(handler http.Handler) http.Handler {
+	if len(r.middlewares) > 0 {
+		for i := len(r.middlewares) - 1; i >= 0; i-- {
+			handler = r.middlewares[i].Middleware(handler)
+		}
+	}
+
+	return handler
 }
 
 // Name -----------------------------------------------------------------------
