@@ -34,10 +34,12 @@ func (r *Router) useInterface(mw middleware) {
 
 // RouteMiddleware -------------------------------------------------------------
 
-func (r *Route) Use(mwf ...MiddlewareFunc) {
+func (r *Route) Use(mwf ...MiddlewareFunc) *Route {
 	for _, fn := range mwf {
 		r.middlewares = append(r.middlewares, fn)
 	}
+
+	return r
 }
 
 // useInterface appends a middleware to the chain. Middleware can be used to intercept or otherwise modify requests and/or responses, and are executed in the order that they are applied to the Router.
