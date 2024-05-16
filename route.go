@@ -102,8 +102,7 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 		match.Route = r
 	}
 	if match.Handler == nil {
-		// for the matched handler, wrap it in the assigned middlewares
-		match.Handler = r.WrapHandlerInMiddlewares(r.handler)
+		match.Handler = r.GetHandlerWithMiddlewares()
 	}
 
 	// Set variables.
@@ -146,10 +145,12 @@ func (r *Route) GetHandler() http.Handler {
 	return r.handler
 }
 
-// WrapHandlerInMiddleware wraps the route handler in the assigned middlewares.
-// If no middlewares are specified, just the handler is returned.
-func (r *Route) WrapHandlerInMiddlewares(handler http.Handler) http.Handler {
-	if len(r.middlewares) > 0 {
+// GetHandlerWithMiddleware returns the route handler wrapped in the assigned middlewares.
+// If no middlewares are specified, just the handler, if any, is returned.
+func (r *Route) GetHandlerWithMiddlewares() http.Handler {
+	handler := r.handler
+
+	if handler != nil && len(r.middlewares) > 0 {
 		for i := len(r.middlewares) - 1; i >= 0; i-- {
 			handler = r.middlewares[i].Middleware(handler)
 		}
