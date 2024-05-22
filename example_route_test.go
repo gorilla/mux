@@ -7,18 +7,26 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// This example demonstrates setting a regular expression matcher for
+// ExampleRouteHeadersRegexp demonstrates setting a regular expression matcher for
 // the header value. A plain word will match any value that contains a
 // matching substring as if the pattern was wrapped with `.*`.
 func ExampleRoute_HeadersRegexp() {
 	r := mux.NewRouter()
 	route := r.NewRoute().HeadersRegexp("Accept", "html")
 
-	req1, _ := http.NewRequest("GET", "example.com", nil)
+	req1, err := http.NewRequest("GET", "example.com", nil)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return
+	}
 	req1.Header.Add("Accept", "text/plain")
 	req1.Header.Add("Accept", "text/html")
 
-	req2, _ := http.NewRequest("GET", "example.com", nil)
+	req2, err := http.NewRequest("GET", "example.com", nil)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return
+	}
 	req2.Header.Set("Accept", "application/xhtml+xml")
 
 	matchInfo := &mux.RouteMatch{}
@@ -29,17 +37,25 @@ func ExampleRoute_HeadersRegexp() {
 	// Match: true ["application/xhtml+xml"]
 }
 
-// This example demonstrates setting a strict regular expression matcher
+// ExampleRouteHeadersRegexpExactMatch demonstrates setting a strict regular expression matcher
 // for the header value. Using the start and end of string anchors, the
 // value must be an exact match.
 func ExampleRoute_HeadersRegexp_exactMatch() {
 	r := mux.NewRouter()
 	route := r.NewRoute().HeadersRegexp("Origin", "^https://example.co$")
 
-	yes, _ := http.NewRequest("GET", "example.co", nil)
+	yes, err := http.NewRequest("GET", "example.co", nil)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return
+	}
 	yes.Header.Set("Origin", "https://example.co")
 
-	no, _ := http.NewRequest("GET", "example.co.uk", nil)
+	no, err := http.NewRequest("GET", "example.co.uk", nil)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return
+	}
 	no.Header.Set("Origin", "https://example.co.uk")
 
 	matchInfo := &mux.RouteMatch{}
