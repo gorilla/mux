@@ -24,6 +24,9 @@ type Route struct {
 	// Error resulted from building a route.
 	err error
 
+	// The meta data associated with this route
+	metadata map[any]any
+
 	// "global" reference to all named routes
 	namedRoutes map[string]*Route
 
@@ -123,6 +126,49 @@ func (r *Route) GetError() error {
 func (r *Route) BuildOnly() *Route {
 	r.buildOnly = true
 	return r
+}
+
+// MetaData -------------------------------------------------------------------
+
+// Metadata is used to set metadata on a route
+func (r *Route) Metadata(key any, value any) *Route {
+	if r.metadata == nil {
+		r.metadata = make(map[any]any)
+	}
+
+	r.metadata[key] = value
+	return r
+}
+
+// GetMetadata returns the metadata map for route
+func (r *Route) GetMetadata() map[any]any {
+	return r.metadata
+}
+
+// MetadataContains returns whether or not the key is present in the metadata map
+func (r *Route) MetadataContains(key any) bool {
+	_, ok := r.metadata[key]
+	return ok
+}
+
+// GetMetadataValue returns the value of a specific key in the metadata map. If the key is not present in the map mux.ErrMetadataKeyNotFound is returned
+func (r *Route) GetMetadataValue(key any) (any, error) {
+	value, ok := r.metadata[key]
+	if !ok {
+		return nil, ErrMetadataKeyNotFound
+	}
+
+	return value, nil
+}
+
+// GetMetadataValueOr returns the value of a specific key in the metadata map. If the key is not present in the metadata the fallback value is returned
+func (r *Route) GetMetadataValueOr(key any, fallbackValue any) any {
+	value, ok := r.metadata[key]
+	if !ok {
+		return fallbackValue
+	}
+
+	return value
 }
 
 // Handler --------------------------------------------------------------------
