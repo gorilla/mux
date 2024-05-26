@@ -24,6 +24,8 @@ var (
 	// Do not run this function from `init()` in importable packages.
 	// Changing this value is not safe for concurrent use.
 	RegexpCompileFunc = regexp.Compile
+	// ErrMetadataKeyNotFound is returned when the specified metadata key is not present in the map
+	ErrMetadataKeyNotFound = errors.New("key not found in metadata")
 )
 
 // NewRouter returns a new router instance.
