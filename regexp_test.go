@@ -4,8 +4,34 @@ import (
 	"net/url"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 )
+
+func Test_newRouteRegexp_Errors(t *testing.T) {
+	tests := []struct {
+		in, out string
+	}{
+		{"/{}", `mux: missing name or pattern in "{}"`},
+		{"/{:.}", `mux: missing name or pattern in "{:.}"`},
+		{"/{a:}", `mux: missing name or pattern in "{a:}"`},
+		{"/{id:abc(}", `mux: error compiling regex for "{id:abc(}":`},
+	}
+
+	for _, tc := range tests {
+		t.Run("Test case for "+tc.in, func(t *testing.T) {
+			_, err := newRouteRegexp(tc.in, 0, routeRegexpOptions{})
+			if err != nil {
+				if strings.HasPrefix(err.Error(), tc.out) {
+					return
+				}
+				t.Errorf("Resulting error does not contain %q as expected, error: %s", tc.out, err)
+			} else {
+				t.Error("Expected error, got nil")
+			}
+		})
+	}
+}
 
 func Test_findFirstQueryKey(t *testing.T) {
 	tests := []string{

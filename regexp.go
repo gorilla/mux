@@ -65,37 +65,50 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 	}
 	varsN := make([]string, len(idxs)/2)
 	varsR := make([]*regexp.Regexp, len(idxs)/2)
-	pattern := bytes.NewBufferString("")
+
+	var pattern, reverse strings.Builder
 	pattern.WriteByte('^')
-	reverse := bytes.NewBufferString("")
-	var end int
+
+	var end, colonIdx, groupIdx int
 	var err error
+	var patt, param, name string
 	for i := 0; i < len(idxs); i += 2 {
 		// Set all values we are interested in.
+		groupIdx = i / 2
+
 		raw := tpl[end:idxs[i]]
 		end = idxs[i+1]
-		parts := strings.SplitN(tpl[idxs[i]+1:end-1], ":", 2)
-		name := parts[0]
-		patt := defaultPattern
-		if len(parts) == 2 {
-			patt = parts[1]
+		tag := tpl[idxs[i]:end]
+
+		// trim braces from tag
+		param = tag[1 : len(tag)-1]
+
+		colonIdx = strings.Index(param, ":")
+		if colonIdx == -1 {
+			name = param
+			patt = defaultPattern
+		} else {
+			name = param[0:colonIdx]
+			patt = param[colonIdx+1:]
 		}
+
 		// Name or pattern can't be empty.
 		if name == "" || patt == "" {
-			return nil, fmt.Errorf("mux: missing name or pattern in %q",
-				tpl[idxs[i]:end])
+			return nil, fmt.Errorf("mux: missing name or pattern in %q", tag)
 		}
 		// Build the regexp pattern.
-		fmt.Fprintf(pattern, "%s(?P<%s>%s)", regexp.QuoteMeta(raw), varGroupName(i/2), patt)
+		groupName := varGroupName(groupIdx)
+
+		pattern.WriteString(regexp.QuoteMeta(raw) + "(?P<" + groupName + ">" + patt + ")")
 
 		// Build the reverse template.
-		fmt.Fprintf(reverse, "%s%%s", raw)
+		reverse.WriteString(raw + "%s")
 
 		// Append variable name and compiled pattern.
-		varsN[i/2] = name
-		varsR[i/2], err = RegexpCompileFunc(fmt.Sprintf("^%s$", patt))
+		varsN[groupIdx] = name
+		varsR[groupIdx], err = RegexpCompileFunc("^" + patt + "$")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("mux: error compiling regex for %q: %w", tag, err)
 		}
 	}
 	// Add the remaining.
@@ -114,18 +127,9 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 		pattern.WriteByte('$')
 	}
 
-	var wildcardHostPort bool
-	if typ == regexpTypeHost {
-		if !strings.Contains(pattern.String(), ":") {
-			wildcardHostPort = true
-		}
-	}
-	reverse.WriteString(raw)
-	if endSlash {
-		reverse.WriteByte('/')
-	}
 	// Compile full regexp.
-	reg, errCompile := RegexpCompileFunc(pattern.String())
+	patternStr := pattern.String()
+	reg, errCompile := RegexpCompileFunc(patternStr)
 	if errCompile != nil {
 		return nil, errCompile
 	}
@@ -134,6 +138,17 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 	if reg.NumSubexp() != len(idxs)/2 {
 		panic(fmt.Sprintf("route %s contains capture groups in its regexp. ", template) +
 			"Only non-capturing groups are accepted: e.g. (?:pattern) instead of (pattern)")
+	}
+
+	var wildcardHostPort bool
+	if typ == regexpTypeHost {
+		if !strings.Contains(patternStr, ":") {
+			wildcardHostPort = true
+		}
+	}
+	reverse.WriteString(raw)
+	if endSlash {
+		reverse.WriteByte('/')
 	}
 
 	// Done!
