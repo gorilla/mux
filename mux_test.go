@@ -1768,6 +1768,10 @@ func TestPanicOnCapturingGroups(t *testing.T) {
 	NewRouter().NewRoute().Path("/{type:(promo|special)}/{promoId}.json")
 }
 
+func TestRouterInContext(t *testing.T) {
+	// TODO Write tests for router in context
+}
+
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------

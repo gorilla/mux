@@ -286,6 +286,15 @@ func (r *Router) OmitRouteFromContext(value bool) *Router {
 	return r
 }
 
+// OmitRouterFromContext defines the behavior of omitting the Router from the
+// http.Request context.
+//
+// RouterFromRequest will yield nil with this option.
+func (r *Router) OmitRouterFromContext(value bool) *Router {
+	r.omitRouterFromContext = value
+	return r
+}
+
 // UseEncodedPath tells the router to match the encoded original path
 // to the routes.
 // For eg. "/path/foo%2Fbar/to" will match the path "/path/{var}/to".
