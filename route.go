@@ -48,10 +48,13 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	// Match everything.
 	for _, m := range r.matchers {
 		if matched := m.Match(req, match); !matched {
-			if _, ok := m.(methodMatcher); ok {
+			if _, ok := m.(methodDefaultMatcher); ok {
 				matchErr = ErrMethodMismatch
 				continue
 			} else if _, ok := m.(methodCaseInsensitiveMatcher); ok {
+				matchErr = ErrMethodMismatch
+				continue
+			} else if _, ok := m.(methodCaseExactMatcher); ok {
 				matchErr = ErrMethodMismatch
 				continue
 			}
@@ -325,28 +328,48 @@ func (r *Route) MatcherFunc(f MatcherFunc) *Route {
 
 // Methods --------------------------------------------------------------------
 
-// methodMatcher matches the request against HTTP methods.
-type methodMatcher []string
+// methodDefaultMatcher matches the request against HTTP methods.
+// The supplied methods will be transformed to uppercase. The request method not.
+type methodDefaultMatcher []string
 
-func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
+func (m methodDefaultMatcher) Match(r *http.Request, match *RouteMatch) bool {
 	return matchInArray(m, r.Method)
 }
 
+// methodMatcher matches the request against HTTP methods without case sensitivity.
+// Both the supplied methods as well as the request method will be transformed to uppercase.
 type methodCaseInsensitiveMatcher []string
 
 func (m methodCaseInsensitiveMatcher) Match(r *http.Request, match *RouteMatch) bool {
 	return matchInArray(m, strings.ToUpper(r.Method))
 }
 
+// methodCaseExactMatcher matches the request against HTTP methods exactly.
+// No transformation of supplied methods or the request method is applied.
+type methodCaseExactMatcher []string
+
+func (m methodCaseExactMatcher) Match(r *http.Request, match *RouteMatch) bool {
+	return matchInArray(m, r.Method)
+}
+
 // Methods adds a matcher for HTTP methods.
 // It accepts a sequence of one or more methods to be matched, e.g.:
 // "GET", "POST", "PUT".
 func (r *Route) Methods(methods ...string) *Route {
-	if r.routeConf.matchMethodCaseInsensitive {
+	if _, ok := r.methodMatcher.(methodCaseInsensitiveMatcher); ok {
 		return r.MethodsCaseInsensitive(methods...)
+	} else if _, ok := r.methodMatcher.(methodCaseExactMatcher); ok {
+		return r.MethodsCaseExact(methods...)
 	} else {
-		return r.MethodsCaseSensitive(methods...)
+		return r.MethodsDefault(methods...)
 	}
+}
+
+// Methods adds a matcher for HTTP methods.
+// It accepts a sequence of one or more methods to be matched, e.g.:
+// "GET", "POST", "PUT".
+func (r *Route) MethodsDefault(methods ...string) *Route {
+	return r.addMatcher(methodDefaultMatcher(sliceToUpper(methods)))
 }
 
 // MethodsCaseInsensitive adds a matcher for HTTP methods without case sensitivity.
@@ -357,12 +380,12 @@ func (r *Route) MethodsCaseInsensitive(methods ...string) *Route {
 	return r.addMatcher(methodCaseInsensitiveMatcher(sliceToUpper(methods)))
 }
 
-// MethodsCaseInsensitive adds a matcher for HTTP methods with case sensitivity.
+// MethodsCaseInsensitive adds a matcher for exact HTTP methods with no transformation.
 // This will override the initial config on the router for 'matchMethodCaseInsensitive'
 // It accepts a sequence of one or more methods to be matched, e.g.:
 // "GET", "POST", "PUT".
-func (r *Route) MethodsCaseSensitive(methods ...string) *Route {
-	return r.addMatcher(methodMatcher(sliceToUpper(methods)))
+func (r *Route) MethodsCaseExact(methods ...string) *Route {
+	return r.addMatcher(methodCaseExactMatcher(methods))
 }
 
 // Path -----------------------------------------------------------------------
@@ -732,7 +755,11 @@ func (r *Route) GetMethods() ([]string, error) {
 		return nil, r.err
 	}
 	for _, m := range r.matchers {
-		if methods, ok := m.(methodMatcher); ok {
+		if methods, ok := m.(methodDefaultMatcher); ok {
+			return []string(methods), nil
+		} else if methods, ok := m.(methodCaseInsensitiveMatcher); ok {
+			return []string(methods), nil
+		} else if methods, ok := m.(methodCaseExactMatcher); ok {
 			return []string(methods), nil
 		}
 	}
@@ -790,8 +817,20 @@ func (r *Route) buildVars(m map[string]string) map[string]string {
 	return m
 }
 
+// MatchMethodDefault defines the behaviour of matching request methods with the default matcher on this route.
+func (r *Route) MatchMethodDefault() *Route {
+	r.methodMatcher = methodDefaultMatcher{}
+	return r
+}
+
 // MatchMethodCaseInsensitive defines the behaviour of ignoring casing for request methods on this route.
-func (r *Route) MatchMethodCaseInsensitive(value bool) *Route {
-	r.matchMethodCaseInsensitive = value
+func (r *Route) MatchMethodCaseInsensitive() *Route {
+	r.methodMatcher = methodCaseInsensitiveMatcher{}
+	return r
+}
+
+// MatchMethodCaseExact defines the behaviour of matching exact request methods on this route.
+func (r *Route) MatchMethodCaseExact(value bool) *Route {
+	r.methodMatcher = methodCaseExactMatcher{}
 	return r
 }

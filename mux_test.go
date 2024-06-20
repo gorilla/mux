@@ -2132,10 +2132,72 @@ func TestMethodMatchingCaseInsensitiveOnRouter(t *testing.T) {
 		t.Errorf("Expecting code %v", 405)
 	}
 
-	r.MatchMethodCaseInsensitive(true)
-	r.HandleFunc("/a", func1).Methods("get")
+	r.MatchMethodCaseInsensitive()
+	r.HandleFunc("/a", func1).Methods("get").Name("t")
 	req, _ = http.NewRequest("get", "http://localhost/a", nil)
 
+	match = new(RouteMatch)
+	matched = r.Match(req, match)
+
+	if !matched {
+		t.Error("Should have matched route")
+	}
+
+	if match.MatchErr != nil {
+		t.Error("Should not have any matching error. Found:", match.MatchErr)
+	}
+}
+
+func TestMethodMatchingCaseExact(t *testing.T) {
+	func1 := func(w http.ResponseWriter, r *http.Request) {}
+
+	r := NewRouter()
+	r.HandleFunc("/a", func1).Methods("get")
+	r.HandleFunc("/b", func1).MethodsCaseExact("get")
+
+	req, _ := http.NewRequest("get", "http://localhost/a", nil)
+	match := new(RouteMatch)
+	matched := r.Match(req, match)
+
+	if matched {
+		t.Error("Should not have matched route for method")
+	}
+
+	if match.MatchErr != ErrMethodMismatch {
+		t.Error("Should get ErrMethodMismatch error")
+	}
+
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != http.StatusMethodNotAllowed {
+		t.Errorf("Expecting code %v", 405)
+	}
+
+	req, _ = http.NewRequest("GET", "http://localhost/b", nil)
+	match = new(RouteMatch)
+	matched = r.Match(req, match)
+
+	if matched {
+		t.Error("Should not have matched route for method")
+	}
+
+	if match.MatchErr != ErrMethodMismatch {
+		t.Error("Should get ErrMethodMismatch error")
+	}
+
+	resp = NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != http.StatusMethodNotAllowed {
+		t.Errorf("Expecting code %v", 405)
+	}
+
+	resp = NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != http.StatusMethodNotAllowed {
+		t.Errorf("Expecting code %v", 405)
+	}
+
+	req, _ = http.NewRequest("get", "http://localhost/b", nil)
 	match = new(RouteMatch)
 	matched = r.Match(req, match)
 

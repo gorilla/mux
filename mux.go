@@ -29,7 +29,12 @@ var (
 
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
-	return &Router{namedRoutes: make(map[string]*Route)}
+	return &Router{
+		namedRoutes: make(map[string]*Route),
+		routeConf: routeConf{
+			methodMatcher: methodDefaultMatcher{},
+		},
+	}
 }
 
 // Router registers routes to be matched and dispatches a handler.
@@ -104,9 +109,8 @@ type routeConf struct {
 
 	buildVarsFunc BuildVarsFunc
 
-	// If true, methods will be matched case insensitive.
-	// The methodCaseInsensitiveMatcher will be used instead of methodMatcher
-	matchMethodCaseInsensitive bool
+	// Holds the default method matcher
+	methodMatcher matcher
 }
 
 // returns an effective deep copy of `routeConf`
@@ -282,12 +286,6 @@ func (r *Router) OmitRouteFromContext(value bool) *Router {
 	return r
 }
 
-// MatchMethodCaseInsensitive defines the behaviour of ignoring casing for request methods.
-func (r *Router) MatchMethodCaseInsensitive(value bool) *Router {
-	r.matchMethodCaseInsensitive = value
-	return r
-}
-
 // UseEncodedPath tells the router to match the encoded original path
 // to the routes.
 // For eg. "/path/foo%2Fbar/to" will match the path "/path/{var}/to".
@@ -296,6 +294,24 @@ func (r *Router) MatchMethodCaseInsensitive(value bool) *Router {
 // For eg. "/path/foo%2Fbar/to" will match the path "/path/foo/bar/to"
 func (r *Router) UseEncodedPath() *Router {
 	r.useEncodedPath = true
+	return r
+}
+
+// MatchMethodCaseInsensitive defines the behaviour of ignoring casing for request methods.
+func (r *Router) MatchMethodDefault() *Router {
+	r.methodMatcher = methodDefaultMatcher{}
+	return r
+}
+
+// MatchMethodCaseInsensitive defines the behaviour of ignoring casing for request methods.
+func (r *Router) MatchMethodCaseInsensitive() *Router {
+	r.methodMatcher = methodCaseInsensitiveMatcher{}
+	return r
+}
+
+// MatchMethodExact defines the behaviour of matching exact request methods.
+func (r *Router) MatchMethodExact() *Router {
+	r.methodMatcher = methodCaseExactMatcher{}
 	return r
 }
 
