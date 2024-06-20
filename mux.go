@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"strings"
 )
 
 var (
@@ -102,6 +103,10 @@ type routeConf struct {
 	buildScheme string
 
 	buildVarsFunc BuildVarsFunc
+
+	// If true, methods will be matched case insensitive.
+	// The methodCaseInsensitiveMatcher will be used instead of methodMatcher
+	matchMethodCaseInsensitive bool
 }
 
 // returns an effective deep copy of `routeConf`
@@ -274,6 +279,12 @@ func (r *Router) SkipClean(value bool) *Router {
 // CurrentRoute will yield nil with this option.
 func (r *Router) OmitRouteFromContext(value bool) *Router {
 	r.omitRouteFromContext = value
+	return r
+}
+
+// MatchMethodCaseInsensitive defines the behaviour of ignoring casing for request methods.
+func (r *Router) MatchMethodCaseInsensitive(value bool) *Router {
+	r.matchMethodCaseInsensitive = value
 	return r
 }
 
@@ -578,6 +589,13 @@ func matchInArray(arr []string, value string) bool {
 		}
 	}
 	return false
+}
+
+func sliceToUpper(slice []string) []string {
+	for k, v := range slice {
+		slice[k] = strings.ToUpper(v)
+	}
+	return slice
 }
 
 // matchMapWithString returns true if the given key/value pairs exist in a given map.

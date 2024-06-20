@@ -51,6 +51,9 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 			if _, ok := m.(methodMatcher); ok {
 				matchErr = ErrMethodMismatch
 				continue
+			} else if _, ok := m.(methodCaseInsensitiveMatcher); ok {
+				matchErr = ErrMethodMismatch
+				continue
 			}
 
 			// Multiple routes may share the same path but use different HTTP methods. For instance:
@@ -329,14 +332,37 @@ func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
 	return matchInArray(m, r.Method)
 }
 
+type methodCaseInsensitiveMatcher []string
+
+func (m methodCaseInsensitiveMatcher) Match(r *http.Request, match *RouteMatch) bool {
+	return matchInArray(m, strings.ToUpper(r.Method))
+}
+
 // Methods adds a matcher for HTTP methods.
 // It accepts a sequence of one or more methods to be matched, e.g.:
 // "GET", "POST", "PUT".
 func (r *Route) Methods(methods ...string) *Route {
-	for k, v := range methods {
-		methods[k] = strings.ToUpper(v)
+	if r.routeConf.matchMethodCaseInsensitive {
+		return r.MethodsCaseInsensitive(methods...)
+	} else {
+		return r.MethodsCaseSensitive(methods...)
 	}
-	return r.addMatcher(methodMatcher(methods))
+}
+
+// MethodsCaseInsensitive adds a matcher for HTTP methods without case sensitivity.
+// This will override the initial config on the router for 'matchMethodCaseInsensitive'
+// It accepts a sequence of one or more methods to be matched, e.g.:
+// "GET", "POST", "PUT".
+func (r *Route) MethodsCaseInsensitive(methods ...string) *Route {
+	return r.addMatcher(methodCaseInsensitiveMatcher(sliceToUpper(methods)))
+}
+
+// MethodsCaseInsensitive adds a matcher for HTTP methods with case sensitivity.
+// This will override the initial config on the router for 'matchMethodCaseInsensitive'
+// It accepts a sequence of one or more methods to be matched, e.g.:
+// "GET", "POST", "PUT".
+func (r *Route) MethodsCaseSensitive(methods ...string) *Route {
+	return r.addMatcher(methodMatcher(sliceToUpper(methods)))
 }
 
 // Path -----------------------------------------------------------------------
@@ -762,4 +788,10 @@ func (r *Route) buildVars(m map[string]string) map[string]string {
 		m = r.buildVarsFunc(m)
 	}
 	return m
+}
+
+// MatchMethodCaseInsensitive defines the behaviour of ignoring casing for request methods on this route.
+func (r *Route) MatchMethodCaseInsensitive(value bool) *Route {
+	r.matchMethodCaseInsensitive = value
+	return r
 }
