@@ -281,29 +281,29 @@ var hostMatcherTests = []hostMatcherTest{
 }
 
 type methodMatcherTest struct {
-	matcher methodMatcher
+	matcher methodDefaultMatcher
 	method  string
 	result  bool
 }
 
 var methodMatcherTests = []methodMatcherTest{
 	{
-		matcher: methodMatcher([]string{"GET", "POST", "PUT"}),
+		matcher: ([]string{"GET", "POST", "PUT"}),
 		method:  "GET",
 		result:  true,
 	},
 	{
-		matcher: methodMatcher([]string{"GET", "POST", "PUT"}),
+		matcher: methodDefaultMatcher([]string{"GET", "POST", "PUT"}),
 		method:  "POST",
 		result:  true,
 	},
 	{
-		matcher: methodMatcher([]string{"GET", "POST", "PUT"}),
+		matcher: methodDefaultMatcher([]string{"GET", "POST", "PUT"}),
 		method:  "PUT",
 		result:  true,
 	},
 	{
-		matcher: methodMatcher([]string{"GET", "POST", "PUT"}),
+		matcher: methodDefaultMatcher([]string{"GET", "POST", "PUT"}),
 		method:  "DELETE",
 		result:  false,
 	},

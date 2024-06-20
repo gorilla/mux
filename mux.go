@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"strings"
 )
 
 var (
@@ -30,7 +31,12 @@ var (
 
 // NewRouter returns a new router instance.
 func NewRouter() *Router {
-	return &Router{namedRoutes: make(map[string]*Route)}
+	return &Router{
+		namedRoutes: make(map[string]*Route),
+		routeConf: routeConf{
+			methodMatcher: methodDefaultMatcher{},
+		},
+	}
 }
 
 // Router registers routes to be matched and dispatches a handler.
@@ -107,6 +113,9 @@ type routeConf struct {
 	buildScheme string
 
 	buildVarsFunc BuildVarsFunc
+
+	// Holds the default method matcher
+	methodMatcher matcher
 }
 
 // returns an effective deep copy of `routeConf`
@@ -303,6 +312,24 @@ func (r *Router) OmitRouterFromContext(value bool) *Router {
 // For eg. "/path/foo%2Fbar/to" will match the path "/path/foo/bar/to"
 func (r *Router) UseEncodedPath() *Router {
 	r.useEncodedPath = true
+	return r
+}
+
+// MatchMethodCaseInsensitive defines the behaviour of ignoring casing for request methods.
+func (r *Router) MatchMethodDefault() *Router {
+	r.methodMatcher = methodDefaultMatcher{}
+	return r
+}
+
+// MatchMethodCaseInsensitive defines the behaviour of ignoring casing for request methods.
+func (r *Router) MatchMethodCaseInsensitive() *Router {
+	r.methodMatcher = methodCaseInsensitiveMatcher{}
+	return r
+}
+
+// MatchMethodExact defines the behaviour of matching exact request methods.
+func (r *Router) MatchMethodExact() *Router {
+	r.methodMatcher = methodCaseExactMatcher{}
 	return r
 }
 
@@ -609,6 +636,13 @@ func matchInArray(arr []string, value string) bool {
 		}
 	}
 	return false
+}
+
+func sliceToUpper(slice []string) []string {
+	for k, v := range slice {
+		slice[k] = strings.ToUpper(v)
+	}
+	return slice
 }
 
 // matchMapWithString returns true if the given key/value pairs exist in a given map.
