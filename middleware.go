@@ -32,6 +32,22 @@ func (r *Router) useInterface(mw middleware) {
 	r.middlewares = append(r.middlewares, mw)
 }
 
+// RouteMiddleware -------------------------------------------------------------
+
+// Use appends a MiddlewareFunc to the chain. Middleware can be used to intercept or otherwise modify requests and/or responses, and are executed in the order that they are applied to the Route. Route middleware are executed after the Router middleware but before the Route handler.
+func (r *Route) Use(mwf ...MiddlewareFunc) *Route {
+	for _, fn := range mwf {
+		r.middlewares = append(r.middlewares, fn)
+	}
+
+	return r
+}
+
+// useInterface appends a MiddlewareFunc to the chain. Middleware can be used to intercept or otherwise modify requests and/or responses, and are executed in the order that they are applied to the Route. Route middleware are executed after the Router middleware but before the Route handler.
+func (r *Route) useInterface(mw middleware) {
+	r.middlewares = append(r.middlewares, mw)
+}
+
 // CORSMethodMiddleware automatically sets the Access-Control-Allow-Methods response header
 // on requests for routes that have an OPTIONS method matcher to all the method matchers on
 // the route. Routes that do not explicitly handle OPTIONS requests will not be processed

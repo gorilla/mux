@@ -2,6 +2,7 @@ package mux
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"testing"
 )
@@ -41,6 +42,17 @@ func TestMiddlewareAdd(t *testing.T) {
 	router.Use(banalMw)
 	if len(router.middlewares) != 3 {
 		t.Fatal("Middleware function was not added correctly")
+	}
+
+	route := router.HandleFunc("/route", dummyHandler)
+	route.useInterface(mw)
+	if len(route.middlewares) != 1 {
+		t.Fatal("Route middleware function was not added correctly")
+	}
+
+	route.Use(banalMw)
+	if len(route.middlewares) != 2 {
+		t.Fatal("Route middleware function was not added correctly")
 	}
 }
 
@@ -83,6 +95,24 @@ func TestMiddleware(t *testing.T) {
 		router.ServeHTTP(rw, req)
 		if mw.timesCalled != 3 {
 			t.Fatalf("Expected %d calls, but got only %d", 3, mw.timesCalled)
+		}
+	})
+
+	t.Run("regular call using route middleware func", func(t *testing.T) {
+		router.HandleFunc("/route", dummyHandler).Use(mw.Middleware)
+		req = newRequest("GET", "/route")
+		router.ServeHTTP(rw, req)
+		if mw.timesCalled != 6 {
+			t.Fatalf("Expected %d calls, but got only %d", 6, mw.timesCalled)
+		}
+	})
+
+	t.Run("regular call using route middleware interface", func(t *testing.T) {
+		router.HandleFunc("/route", dummyHandler).useInterface(mw)
+		req = newRequest("GET", "/route")
+		router.ServeHTTP(rw, req)
+		if mw.timesCalled != 9 {
+			t.Fatalf("Expected %d calls, but got only %d", 9, mw.timesCalled)
 		}
 	})
 }
@@ -156,13 +186,15 @@ func TestMiddlewareExecution(t *testing.T) {
 	mwStr := []byte("Middleware\n")
 	handlerStr := []byte("Logic\n")
 
-	router := NewRouter()
-	router.HandleFunc("/", func(w http.ResponseWriter, e *http.Request) {
+	handlerFunc := func(w http.ResponseWriter, e *http.Request) {
 		_, err := w.Write(handlerStr)
 		if err != nil {
 			t.Fatalf("Failed writing HTTP response: %v", err)
 		}
-	})
+	}
+
+	router := NewRouter()
+	router.HandleFunc("/", handlerFunc)
 
 	t.Run("responds normally without middleware", func(t *testing.T) {
 		rw := NewRecorder()
@@ -191,6 +223,29 @@ func TestMiddlewareExecution(t *testing.T) {
 
 		router.ServeHTTP(rw, req)
 		if !bytes.Equal(rw.Body.Bytes(), append(mwStr, handlerStr...)) {
+			t.Fatal("Middleware + handler response is not what it should be")
+		}
+	})
+
+	t.Run("responds with handler, middleware and route middleware response", func(t *testing.T) {
+		routeMwStr := []byte("Route Middleware\n")
+		rw := NewRecorder()
+		req := newRequest("GET", "/route")
+
+		router.HandleFunc("/route", handlerFunc).Use(func(h http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, err := w.Write(routeMwStr)
+				if err != nil {
+					t.Fatalf("Failed writing HTTP response: %v", err)
+				}
+				h.ServeHTTP(w, r)
+			})
+		})
+
+		router.ServeHTTP(rw, req)
+		expectedString := append(append(mwStr, routeMwStr...), handlerStr...)
+		if !bytes.Equal(rw.Body.Bytes(), expectedString) {
+			fmt.Println(rw.Body.String())
 			t.Fatal("Middleware + handler response is not what it should be")
 		}
 	})

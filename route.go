@@ -24,8 +24,14 @@ type Route struct {
 	// Error resulted from building a route.
 	err error
 
+	// The meta data associated with this route
+	metadata map[any]any
+
 	// "global" reference to all named routes
 	namedRoutes map[string]*Route
+
+	// route specific middleware
+	middlewares []middleware
 
 	// config possibly passed in from `Router`
 	routeConf
@@ -102,7 +108,7 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 		match.Route = r
 	}
 	if match.Handler == nil {
-		match.Handler = r.handler
+		match.Handler = r.GetHandlerWithMiddlewares()
 	}
 
 	// Set variables.
@@ -125,6 +131,49 @@ func (r *Route) BuildOnly() *Route {
 	return r
 }
 
+// MetaData -------------------------------------------------------------------
+
+// Metadata is used to set metadata on a route
+func (r *Route) Metadata(key any, value any) *Route {
+	if r.metadata == nil {
+		r.metadata = make(map[any]any)
+	}
+
+	r.metadata[key] = value
+	return r
+}
+
+// GetMetadata returns the metadata map for route
+func (r *Route) GetMetadata() map[any]any {
+	return r.metadata
+}
+
+// MetadataContains returns whether or not the key is present in the metadata map
+func (r *Route) MetadataContains(key any) bool {
+	_, ok := r.metadata[key]
+	return ok
+}
+
+// GetMetadataValue returns the value of a specific key in the metadata map. If the key is not present in the map mux.ErrMetadataKeyNotFound is returned
+func (r *Route) GetMetadataValue(key any) (any, error) {
+	value, ok := r.metadata[key]
+	if !ok {
+		return nil, ErrMetadataKeyNotFound
+	}
+
+	return value, nil
+}
+
+// GetMetadataValueOr returns the value of a specific key in the metadata map. If the key is not present in the metadata the fallback value is returned
+func (r *Route) GetMetadataValueOr(key any, fallbackValue any) any {
+	value, ok := r.metadata[key]
+	if !ok {
+		return fallbackValue
+	}
+
+	return value
+}
+
 // Handler --------------------------------------------------------------------
 
 // Handler sets a handler for the route.
@@ -143,6 +192,20 @@ func (r *Route) HandlerFunc(f func(http.ResponseWriter, *http.Request)) *Route {
 // GetHandler returns the handler for the route, if any.
 func (r *Route) GetHandler() http.Handler {
 	return r.handler
+}
+
+// GetHandlerWithMiddleware returns the route handler wrapped in the assigned middlewares.
+// If no middlewares are specified, just the handler, if any, is returned.
+func (r *Route) GetHandlerWithMiddlewares() http.Handler {
+	handler := r.handler
+
+	if handler != nil && len(r.middlewares) > 0 {
+		for i := len(r.middlewares) - 1; i >= 0; i-- {
+			handler = r.middlewares[i].Middleware(handler)
+		}
+	}
+
+	return handler
 }
 
 // Name -----------------------------------------------------------------------

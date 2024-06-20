@@ -25,6 +25,8 @@ var (
 	// Do not run this function from `init()` in importable packages.
 	// Changing this value is not safe for concurrent use.
 	RegexpCompileFunc = regexp.Compile
+	// ErrMetadataKeyNotFound is returned when the specified metadata key is not present in the map
+	ErrMetadataKeyNotFound = errors.New("key not found in metadata")
 )
 
 // NewRouter returns a new router instance.
@@ -92,6 +94,9 @@ type routeConf struct {
 
 	// If true, the http.Request context will not contain the Route.
 	omitRouteFromContext bool
+
+	// if true, the the http.Request context will not contain the router
+	omitRouterFromContext bool
 
 	// Manager for the variables from host and path.
 	regexp routeRegexpGroup
@@ -210,6 +215,10 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			} else {
 				req = requestWithRouteAndVars(req, match.Route, match.Vars)
 			}
+
+			if !r.omitRouterFromContext {
+				req = requestWithRouter(req, r)
+			}
 		}
 	}
 
@@ -282,10 +291,19 @@ func (r *Router) OmitRouteFromContext(value bool) *Router {
 	return r
 }
 
+// OmitRouterFromContext defines the behavior of omitting the Router from the
+// http.Request context.
+//
+// RouterFromRequest will yield nil with this option.
+func (r *Router) OmitRouterFromContext(value bool) *Router {
+	r.omitRouterFromContext = value
+	return r
+}
+
 // MatchMethodCaseInsensitive defines the behaviour of ignoring casing for request methods.
 func (r *Router) MatchMethodCaseInsensitive(value bool) *Router {
 	r.matchMethodCaseInsensitive = value
-	return r
+  return r
 }
 
 // UseEncodedPath tells the router to match the encoded original path
@@ -452,6 +470,7 @@ type contextKey int
 const (
 	varsKey contextKey = iota
 	routeKey
+	routerKey
 )
 
 // Vars returns the route variables for the current request, if any.
@@ -469,6 +488,13 @@ func Vars(r *http.Request) map[string]string {
 func CurrentRoute(r *http.Request) *Route {
 	if rv := r.Context().Value(routeKey); rv != nil {
 		return rv.(*Route)
+	}
+	return nil
+}
+
+func CurrentRouter(r *http.Request) *Router {
+	if rv := r.Context().Value(routerKey); rv != nil {
+		return rv.(*Router)
 	}
 	return nil
 }
@@ -492,6 +518,11 @@ func requestWithRouteAndVars(r *http.Request, route *Route, vars map[string]stri
 	if len(vars) > 0 {
 		ctx = context.WithValue(ctx, varsKey, vars)
 	}
+	return r.WithContext(ctx)
+}
+
+func requestWithRouter(r *http.Request, router *Router) *http.Request {
+	ctx := context.WithValue(r.Context(), routerKey, router)
 	return r.WithContext(ctx)
 }
 
