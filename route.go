@@ -37,6 +37,14 @@ type Route struct {
 	routeConf
 }
 
+func (r *Route) RegisterPattern(alias string, pattern string) *Route {
+	if r.registeredPatterns == nil {
+		r.registeredPatterns = map[string]string{}
+	}
+	r.registeredPatterns[alias] = pattern
+	return r
+}
+
 // SkipClean reports whether path cleaning is enabled for this route via
 // Router.SkipClean.
 func (r *Route) SkipClean() bool {
@@ -257,8 +265,9 @@ func (r *Route) addRegexpMatcher(tpl string, typ regexpType) error {
 		}
 	}
 	rr, err := newRouteRegexp(tpl, typ, routeRegexpOptions{
-		strictSlash:    r.strictSlash,
-		useEncodedPath: r.useEncodedPath,
+		strictSlash:        r.strictSlash,
+		useEncodedPath:     r.useEncodedPath,
+		registeredPatterns: r.registeredPatterns,
 	})
 	if err != nil {
 		return err

@@ -107,6 +107,9 @@ type routeConf struct {
 	buildScheme string
 
 	buildVarsFunc BuildVarsFunc
+
+	// Map of registered pattern aliases
+	registeredPatterns map[string]string
 }
 
 // returns an effective deep copy of `routeConf`
@@ -135,6 +138,17 @@ func copyRouteConf(r routeConf) routeConf {
 func copyRouteRegexp(r *routeRegexp) *routeRegexp {
 	c := *r
 	return &c
+}
+
+// RegisterPattern registers an alias for a frequently repeated regular expression.
+//
+// It can be used for some popular regular expressions, e.g. uuid, number and etc.
+func (r *Router) RegisterPattern(alias string, pattern string) *Router {
+	if r.registeredPatterns == nil {
+		r.registeredPatterns = map[string]string{}
+	}
+	r.registeredPatterns[alias] = pattern
+	return r
 }
 
 // Match attempts to match the given request against the router's registered routes.

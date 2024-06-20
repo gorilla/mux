@@ -217,6 +217,26 @@ func TestHost(t *testing.T) {
 			hostTemplate: `{v-1:[a-z]{3}}.{v-2:[a-z]{3}}.{v-3:[a-z]{3}}`,
 			shouldMatch:  true,
 		},
+		{
+			title:        "Host route with alias patterns",
+			route:        new(Route).RegisterPattern("version", "[a-z]{3}").Host("{v-1:version}.{v-2:version}.{v-3:version}"),
+			request:      newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
+			vars:         map[string]string{"v-1": "aaa", "v-2": "bbb", "v-3": "ccc"},
+			host:         "aaa.bbb.ccc",
+			path:         "",
+			hostTemplate: `{v-1:version}.{v-2:version}.{v-3:version}`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Host route with not matched alias patterns",
+			route:        new(Route).RegisterPattern("pin", "[1-9]{4}").Host("{v-1:pin}.{v-2:pin}.{v-3:pin}"),
+			request:      newRequest("GET", "http://aaa.bbb.ccc/111/222/333"),
+			vars:         map[string]string{"v-1": "aaa", "v-2": "bbb", "v-3": "ccc"},
+			host:         "aaa.bbb.ccc",
+			path:         "",
+			hostTemplate: `{v-1:pin}.{v-2:pin}.{v-3:pin}`,
+			shouldMatch:  false,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
@@ -449,6 +469,36 @@ func TestPath(t *testing.T) {
 			path:         "/b/c/product_name/1",
 			pathTemplate: `/{category:a|b/c}/{product}/{id:[0-9]+}`,
 			shouldMatch:  true,
+		},
+		{
+			title:        "Path route with regexp alias patterns",
+			route:        new(Route).RegisterPattern("digits", "[0-9]+").Path("/{id:digits}"),
+			request:      newRequest("GET", "http://localhost/1"),
+			vars:         map[string]string{"id": "1"},
+			host:         "",
+			path:         "/1",
+			pathTemplate: `/{id:digits}`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Path route with regexp alias patterns",
+			route:        new(Route).RegisterPattern("uuid", "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}").Path("/{category:uuid}/{product:uuid}"),
+			request:      newRequest("GET", "http://localhost/dce51145-5cc3-4b54-bfb0-7bdb64a67e4d/a385ddcb-278e-4234-93dd-4d7b0fcb95c1"),
+			vars:         map[string]string{"category": "dce51145-5cc3-4b54-bfb0-7bdb64a67e4d", "product": "a385ddcb-278e-4234-93dd-4d7b0fcb95c1"},
+			host:         "",
+			path:         "/dce51145-5cc3-4b54-bfb0-7bdb64a67e4d/a385ddcb-278e-4234-93dd-4d7b0fcb95c1",
+			pathTemplate: `/{category:uuid}/{product:uuid}`,
+			shouldMatch:  true,
+		},
+		{
+			title:        "Path route with not matched regexp alias patterns",
+			route:        new(Route).RegisterPattern("digits", "[0-9]+").Path("/{id:digits}"),
+			request:      newRequest("GET", "http://localhost/letters"),
+			vars:         map[string]string{"id": "1"},
+			host:         "",
+			path:         "/letters",
+			pathTemplate: `/{id:digits}`,
+			shouldMatch:  false,
 		},
 	}
 
