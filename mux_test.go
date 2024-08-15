@@ -2970,15 +2970,26 @@ func TestContextMiddleware(t *testing.T) {
 
 	r := NewRouter()
 	r.Handle("/path/{foo}", withTimeout(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		vars := Vars(r)
-		if vars["foo"] != "bar" {
-			t.Fatal("Expected foo var to be set")
-		}
+		checkRouteVar(t, r, "foo", "bar")
 	})))
 
 	rec := NewRecorder()
 	req := newRequest("GET", "/path/bar")
 	r.ServeHTTP(rec, req)
+}
+
+func checkRouteVar(t *testing.T, r *http.Request, name string, want string) {
+	t.Helper()
+	vars := Vars(r)
+	if vars[name] != want {
+		t.Fatalf("Expected var %s = %q, but got %q", name, want, vars[name])
+	}
+	var ro any = r
+	if rr, ok := ro.(interface{ PathValue(string) string }); ok {
+		if val := rr.PathValue(name); val != want {
+			t.Fatalf("Expected r.PathValue(%s) = %q, but got %q", name, want, val)
+		}
+	}
 }
 
 func TestGetVarNames(t *testing.T) {

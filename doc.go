@@ -62,6 +62,11 @@ this, convert any capturing groups to non-capturing, e.g. change "/{sort:(asc|de
 "/{sort:(?:asc|desc)}". This is a change from prior versions which behaved unpredictably
 when capturing groups were present.
 
+When using Go 1.22 and above, you also can use the `http.Request.PathValue` method to
+read route variables:
+
+	r.PathValue("category")
+
 And this is all you need to know about the basic usage. More advanced options
 are explained below.
 

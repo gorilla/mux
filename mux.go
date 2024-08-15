@@ -494,8 +494,21 @@ func requestWithVars(r *http.Request, vars map[string]string) *http.Request {
 	if len(vars) == 0 {
 		return r
 	}
+	var ro any = r
+	if rr, ok := ro.(canSetPathValue); ok {
+		for k, v := range vars {
+			rr.SetPathValue(k, v)
+		}
+	}
 	ctx := context.WithValue(r.Context(), varsKey, vars)
 	return r.WithContext(ctx)
+}
+
+// canSetPathValue is an interface introduced in Go 1.22.0.
+// The http.Request type added methods PathValue and SetPathValue,
+// which are used to handle named path wildcards in URL routes.
+type canSetPathValue interface {
+	SetPathValue(name, value string)
 }
 
 // requestWithRouteAndVars adds the matched route and vars to the request ctx.
@@ -505,6 +518,12 @@ func requestWithVars(r *http.Request, vars map[string]string) *http.Request {
 func requestWithRouteAndVars(r *http.Request, route *Route, vars map[string]string) *http.Request {
 	ctx := context.WithValue(r.Context(), routeKey, route)
 	if len(vars) > 0 {
+		var ro any = r
+		if rr, ok := ro.(canSetPathValue); ok {
+			for k, v := range vars {
+				rr.SetPathValue(k, v)
+			}
+		}
 		ctx = context.WithValue(ctx, varsKey, vars)
 	}
 	return r.WithContext(ctx)

@@ -79,6 +79,14 @@ func ArticlesCategoryHandler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
+When using Go 1.22 and above, you also can use the `http.Request.PathValue` method to read route variables:
+```go
+func ArticlesCategoryHandler(w http.ResponseWriter, r *http.Request) {
+    w.WriteHeader(http.StatusOK)
+    fmt.Fprintf(w, "Category: %v\n", r.PathValue("category"))
+}
+```
+
 And this is all you need to know about the basic usage. More advanced options are explained below.
 
 ### Matching Routes
