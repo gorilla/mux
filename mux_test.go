@@ -2853,7 +2853,177 @@ func Test_copyRouteConf(t *testing.T) {
 	}
 }
 
-func TestMethodNotAllowed(t *testing.T) {
+func TestMethodNotAllowed_diffMethods_bothHandleFuncs(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+
+	router.HandleFunc("/thing", handler).Methods(http.MethodPost)
+	router.HandleFunc("/something", handler).Methods(http.MethodGet)
+
+	w := NewRecorder()
+	req := newRequest(http.MethodGet, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
+func TestMethodNotAllowed_diffMethods_handleFuncMethods(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+
+	router.HandleFunc("/thing", handler).Methods(http.MethodPost)
+	router.Methods(http.MethodGet).Path("/something").Handler(http.HandlerFunc(handler))
+
+	w := NewRecorder()
+	req := newRequest(http.MethodGet, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
+func TestMethodNotAllowed_diffMethods_handleFuncPath(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+
+	router.HandleFunc("/thing", handler).Methods(http.MethodPost)
+	router.Path("/something").Methods(http.MethodGet).Handler(http.HandlerFunc(handler))
+
+	w := NewRecorder()
+	req := newRequest(http.MethodGet, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
+func TestMethodNotAllowed_diffMethods_methodsHandleFunc(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+
+	router.Methods(http.MethodPost).Path("/thing").Handler(http.HandlerFunc(handler))
+	router.HandleFunc("/something", handler).Methods(http.MethodGet)
+
+	w := NewRecorder()
+	req := newRequest(http.MethodGet, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
+func TestMethodNotAllowed_diffMethods_bothMethods(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+
+	router.Methods(http.MethodPost).Path("/thing").Handler(http.HandlerFunc(handler))
+	router.Methods(http.MethodGet).Path("/something").Handler(http.HandlerFunc(handler))
+
+	w := NewRecorder()
+	req := newRequest(http.MethodGet, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
+func TestMethodNotAllowed_diffMethods_methodsPath(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+
+	router.Methods(http.MethodPost).Path("/thing").Handler(http.HandlerFunc(handler))
+	router.Path("/something").Methods(http.MethodGet).Handler(http.HandlerFunc(handler))
+
+	w := NewRecorder()
+	req := newRequest(http.MethodGet, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
+func TestMethodNotAllowed_diffMethods_pathHandleFunc(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+
+	router.Path("/thing").Methods(http.MethodPost).Handler(http.HandlerFunc(handler))
+	router.HandleFunc("/something", handler).Methods(http.MethodGet).Handler(http.HandlerFunc(handler))
+
+	w := NewRecorder()
+	req := newRequest(http.MethodGet, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
+func TestMethodNotAllowed_diffMethods_pathMethods(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+
+	router.Path("/thing").Methods(http.MethodPost).Handler(http.HandlerFunc(handler))
+	router.Methods(http.MethodGet).Path("/something").Handler(http.HandlerFunc(handler))
+
+	w := NewRecorder()
+	req := newRequest(http.MethodGet, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
+func TestMethodNotAllowed_diffMethods_bothPath(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+
+	router.Path("/thing").Methods(http.MethodPost).Handler(http.HandlerFunc(handler))
+	router.Path("/something").Methods(http.MethodGet).Handler(http.HandlerFunc(handler))
+
+	w := NewRecorder()
+	req := newRequest(http.MethodGet, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
+func TestMethodNotAllowed_diffMethods_diffReqMethod(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
+	router := NewRouter()
+
+	router.Path("/thing").Methods(http.MethodPost).Handler(http.HandlerFunc(handler))
+	router.Path("/something").Methods(http.MethodGet).Handler(http.HandlerFunc(handler))
+
+	w := NewRecorder()
+	req := newRequest(http.MethodDelete, "/thing")
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("Expected status code 405 (got %d)", w.Code)
+	}
+}
+
+func TestMethodNotAllowed_sameMethods(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }
 	router := NewRouter()
 	router.HandleFunc("/thing", handler).Methods(http.MethodGet)
