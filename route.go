@@ -50,12 +50,15 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	}
 
 	var matchErr error
+	methodMismatch := false // Track method mismatch
 
 	// Match everything.
 	for _, m := range r.matchers {
 		if matched := m.Match(req, match); !matched {
+			// Detect mismatch due to HTTP method
 			if _, ok := m.(methodMatcher); ok {
 				matchErr = ErrMethodMismatch
+				methodMismatch = true // Flag method mismatch
 				continue
 			}
 
@@ -88,6 +91,13 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 		}
 	}
 
+	// If flagged method mismatch, return 405
+	if methodMismatch {
+		match.MatchErr = ErrMethodMismatch
+		return false
+	}
+
+	// No match errors, but handle method matches
 	if matchErr != nil {
 		match.MatchErr = matchErr
 		return false
