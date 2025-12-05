@@ -2546,13 +2546,13 @@ func TestMethodsSubrouterPathVariable(t *testing.T) {
 	}
 }
 
-func ExampleSetURLVars() {
+func TestExampleSetURLVars(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/foo", nil)
-	req = SetURLVars(req, map[string]string{"foo": "bar"})
+	req = SetURLVars(t, req, map[string]string{"foo": "bar"})
 
-	fmt.Println(Vars(req)["foo"])
-
-	// Output: bar
+	if val := Vars(req)["foo"]; val != "bar" {
+		t.Errorf("Expected URL var 'foo' to be 'bar', but got %q", val)
+	}
 }
 
 // testMethodsSubrouter runs an individual methodsSubrouterTest.

@@ -4,7 +4,10 @@
 
 package mux
 
-import "net/http"
+import (
+	"net/http"
+	"testing"
+)
 
 // SetURLVars sets the URL variables for the given request, to be accessed via
 // mux.Vars for testing route behaviour. Arguments are not modified, a shallow
@@ -14,6 +17,7 @@ import "net/http"
 // inject variables into the request context. Alternatively, URL variables
 // can be set by making a route that captures the required variables,
 // starting a server and sending the request to that server.
-func SetURLVars(r *http.Request, val map[string]string) *http.Request {
+func SetURLVars(t *testing.T, r *http.Request, val map[string]string) *http.Request {
+	t.Helper()
 	return requestWithVars(r, val)
 }
