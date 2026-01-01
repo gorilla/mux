@@ -1,12 +1,25 @@
 package mux
 
 import (
+	"net/http"
 	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 )
+
+func Test_routeRegexp_Match_NilReceiver(t *testing.T) {
+	var r *routeRegexp
+	req, _ := http.NewRequest("GET", "http://example.com/test", nil)
+	match := &RouteMatch{}
+
+	// Calling Match on a nil routeRegexp should not panic and return false
+	result := r.Match(req, match)
+	if result {
+		t.Error("Expected Match to return false for nil receiver, got true")
+	}
+}
 
 func Test_newRouteRegexp_Errors(t *testing.T) {
 	tests := []struct {
