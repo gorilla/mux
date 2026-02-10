@@ -253,12 +253,15 @@ func (r *routeRegexp) getURLQuery(req *http.Request) string {
 }
 
 // findFirstQueryKey returns the same result as (*url.URL).Query()[key][0].
+// Only ampersands are recognized as query-parameter separators, in compliance
+// with the URL Living Standard (https://url.spec.whatwg.org/#urlencoded-parsing)
+// and Go's net/url since Go 1.17.
 // If key was not found, empty string and false is returned.
 func findFirstQueryKey(rawQuery, key string) (value string, ok bool) {
 	query := []byte(rawQuery)
 	for len(query) > 0 {
 		foundKey := query
-		if i := bytes.IndexAny(foundKey, "&;"); i >= 0 {
+		if i := bytes.IndexByte(foundKey, '&'); i >= 0 {
 			foundKey, query = foundKey[:i], foundKey[i+1:]
 		} else {
 			query = query[:0]
