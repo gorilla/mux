@@ -203,6 +203,11 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	if r.Match(req, &match) {
 		handler = match.Handler
 		if handler != nil {
+			// req is a shallow copy; sync MultipartForm back to the original request on exit.
+			defer func(originReq *http.Request) {
+				originReq.MultipartForm = req.MultipartForm
+			}(req)
+
 			// Populate context for custom handlers
 			if r.omitRouteFromContext {
 				// Only populate the match vars (if any) into the context.
