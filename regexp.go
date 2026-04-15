@@ -258,7 +258,7 @@ func findFirstQueryKey(rawQuery, key string) (value string, ok bool) {
 	query := []byte(rawQuery)
 	for len(query) > 0 {
 		foundKey := query
-		if i := bytes.IndexAny(foundKey, "&;"); i >= 0 {
+		if i := bytes.IndexByte(foundKey, '&'); i >= 0 {
 			foundKey, query = foundKey[:i], foundKey[i+1:]
 		} else {
 			query = query[:0]
