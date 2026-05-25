@@ -152,3 +152,41 @@ func TestRouteMetadata(t *testing.T) {
 		router.ServeHTTP(rw, req)
 	})
 }
+
+func TestRouteMethodsRepeatedCalls(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	route := NewRouter().NewRoute()
+	route.Path("/test").Handler(handler).Methods("PUT").Methods("PATCH")
+	route.Methods("OPTIONS")
+
+	methods, err := route.GetMethods()
+	if err != nil {
+		t.Fatalf("GetMethods failed: %v", err)
+	}
+	if len(methods) != 3 {
+		t.Fatalf("expected 3 methods, got %v", methods)
+	}
+
+	for _, method := range []string{"PUT", "PATCH", "OPTIONS"} {
+		req := newRequest(method, "/test")
+		match := &RouteMatch{}
+		if !route.Match(req, match) {
+			t.Fatalf("%s should match route", method)
+		}
+		if match.MatchErr != nil {
+			t.Fatalf("%s match returned error: %v", method, match.MatchErr)
+		}
+	}
+
+	req := newRequest("GET", "/test")
+	match := &RouteMatch{}
+	if route.Match(req, match) {
+		t.Fatal("GET should not match route")
+	}
+	if match.MatchErr != ErrMethodMismatch {
+		t.Fatalf("expected ErrMethodMismatch, got %v", match.MatchErr)
+	}
+}
