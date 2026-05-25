@@ -15,8 +15,9 @@ import (
 )
 
 type routeRegexpOptions struct {
-	strictSlash    bool
-	useEncodedPath bool
+	strictSlash         bool
+	useEncodedPath      bool
+	strictQueryParamSep bool
 }
 
 type regexpType int
@@ -245,7 +246,7 @@ func (r *routeRegexp) getURLQuery(req *http.Request) string {
 		return ""
 	}
 	templateKey := strings.SplitN(r.template, "=", 2)[0]
-	val, ok := findFirstQueryKey(req.URL.RawQuery, templateKey)
+	val, ok := findFirstQueryKey(req.URL.RawQuery, templateKey, r.options.strictQueryParamSep)
 	if ok {
 		return templateKey + "=" + val
 	}
@@ -254,11 +255,20 @@ func (r *routeRegexp) getURLQuery(req *http.Request) string {
 
 // findFirstQueryKey returns the same result as (*url.URL).Query()[key][0].
 // If key was not found, empty string and false is returned.
-func findFirstQueryKey(rawQuery, key string) (value string, ok bool) {
+//
+// When strictSep is false, pairs are split on '&' and ';' (legacy behavior).
+// When strictSep is true, pairs are split on '&' only, matching net/url since Go 1.17.
+func findFirstQueryKey(rawQuery, key string, strictSep bool) (value string, ok bool) {
 	query := []byte(rawQuery)
 	for len(query) > 0 {
 		foundKey := query
-		if i := bytes.IndexAny(foundKey, "&;"); i >= 0 {
+		if strictSep {
+			if i := bytes.IndexByte(foundKey, '&'); i >= 0 {
+				foundKey, query = foundKey[:i], foundKey[i+1:]
+			} else {
+				query = query[:0]
+			}
+		} else if i := bytes.IndexAny(foundKey, "&;"); i >= 0 {
 			foundKey, query = foundKey[:i], foundKey[i+1:]
 		} else {
 			query = query[:0]

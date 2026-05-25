@@ -1074,6 +1074,44 @@ func TestQueries(t *testing.T) {
 	}
 }
 
+func TestStrictQueryParamSep(t *testing.T) {
+	tests := []routeTest{
+		{
+			title:       "Legacy semicolon splits query pairs",
+			route:       new(Route).Queries("foo", "{foo}", "bar", "{bar}"),
+			request:     newRequest("GET", "http://localhost/?foo=foo;bar=bar"),
+			vars:        map[string]string{"foo": "foo", "bar": "bar"},
+			shouldMatch: true,
+		},
+		{
+			title:       "StrictQueryParamSep rejects semicolon-separated pairs",
+			route:       NewRouter().StrictQueryParamSep(true).NewRoute().Queries("foo", "{foo}", "bar", "{bar}"),
+			request:     newRequest("GET", "http://localhost/?foo=foo;bar=bar"),
+			shouldMatch: false,
+		},
+		{
+			title:       "StrictQueryParamSep matches ampersand-separated pairs",
+			route:       NewRouter().StrictQueryParamSep(true).NewRoute().Queries("foo", "{foo}", "bar", "{bar}"),
+			request:     newRequest("GET", "http://localhost/?foo=foo&bar=bar"),
+			vars:        map[string]string{"foo": "foo", "bar": "bar"},
+			shouldMatch: true,
+		},
+		{
+			title:       "StrictQueryParamSep aligns id with net/url",
+			route:       NewRouter().StrictQueryParamSep(true).NewRoute().Queries("id", "{id:[0-9]+}"),
+			request:     newRequest("DELETE", "http://localhost/delete?a;id=42&id=1"),
+			vars:        map[string]string{"id": "1"},
+			shouldMatch: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.title, func(t *testing.T) {
+			testRoute(t, test)
+		})
+	}
+}
+
 func TestSchemes(t *testing.T) {
 	tests := []routeTest{
 		// Schemes

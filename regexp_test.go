@@ -52,7 +52,7 @@ func Test_findFirstQueryKey(t *testing.T) {
 			all, _ := url.ParseQuery(query)
 			for key, want := range all {
 				t.Run(key, func(t *testing.T) {
-					got, ok := findFirstQueryKey(query, key)
+					got, ok := findFirstQueryKey(query, key, false)
 					if !ok {
 						t.Error("Did not get expected key", key)
 					}
@@ -63,6 +63,41 @@ func Test_findFirstQueryKey(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_findFirstQueryKeyStrictSep(t *testing.T) {
+	tests := []string{
+		"a=1&b=2",
+		"a=1&a=2&a=banana",
+		"a=20&%20%3F&=%23+%25%21%3C%3E%23%22%7B%7D%7C%5C%5E%5B%5D%60%E2%98%BA%09:%2F@$%27%28%29%2A%2C%3B&a=30",
+	}
+	for _, query := range tests {
+		t.Run(query, func(t *testing.T) {
+			all, _ := url.ParseQuery(query)
+			for key, want := range all {
+				t.Run(key, func(t *testing.T) {
+					got, ok := findFirstQueryKey(query, key, true)
+					if !ok {
+						t.Error("Did not get expected key", key)
+					}
+					if !reflect.DeepEqual(got, want[0]) {
+						t.Errorf("findFirstQueryKey(%s,%s) = %v, want %v", query, key, got, want[0])
+					}
+				})
+			}
+		})
+	}
+
+	t.Run("semicolon is not a pair separator", func(t *testing.T) {
+		got, ok := findFirstQueryKey("foo=foo;bar=bar", "bar", true)
+		if ok {
+			t.Fatalf("expected bar to be absent, got %q", got)
+		}
+		got, ok = findFirstQueryKey("a;id=42&id=1", "id", true)
+		if !ok || got != "1" {
+			t.Fatalf("expected id=1, got ok=%v val=%q", ok, got)
+		}
+	})
 }
 
 func Benchmark_findQueryKey(b *testing.B) {
@@ -81,7 +116,7 @@ func Benchmark_findQueryKey(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				for key := range all {
-					_, _ = findFirstQueryKey(query, key)
+					_, _ = findFirstQueryKey(query, key, false)
 				}
 			}
 		})

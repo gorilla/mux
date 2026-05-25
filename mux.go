@@ -94,8 +94,13 @@ type routeConf struct {
 	// If true, the http.Request context will not contain the Route.
 	omitRouteFromContext bool
 
-	// if true, the the http.Request context will not contain the router
+	// if true, the http.Request context will not contain the router
 	omitRouterFromContext bool
+
+	// If true, query parameter pairs are split on '&' only when matching
+	// Queries routes, aligning with net/url since Go 1.17. The default
+	// false preserves legacy splitting on both '&' and ';'.
+	strictQueryParamSep bool
 
 	// Manager for the variables from host and path.
 	regexp routeRegexpGroup
@@ -292,6 +297,15 @@ func (r *Router) OmitRouteFromContext(value bool) *Router {
 // RouterFromRequest will yield nil with this option.
 func (r *Router) OmitRouterFromContext(value bool) *Router {
 	r.omitRouterFromContext = value
+	return r
+}
+
+// StrictQueryParamSep configures query parsing for Queries routes. When true,
+// parameter pairs are separated by '&' only, matching net/url and reducing
+// parser differentials with code that uses (*url.URL).Query. When false (the
+// default), ';' is also treated as a separator for backward compatibility.
+func (r *Router) StrictQueryParamSep(value bool) *Router {
+	r.strictQueryParamSep = value
 	return r
 }
 
