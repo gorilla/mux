@@ -395,11 +395,29 @@ func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
 // Methods adds a matcher for HTTP methods.
 // It accepts a sequence of one or more methods to be matched, e.g.:
 // "GET", "POST", "PUT".
+//
+// Repeated calls merge into the same matcher instead of requiring every method
+// to match independently.
 func (r *Route) Methods(methods ...string) *Route {
 	for k, v := range methods {
 		methods[k] = strings.ToUpper(v)
 	}
+	for i, m := range r.matchers {
+		if existing, ok := m.(methodMatcher); ok {
+			r.matchers[i] = mergeMethodMatcher(existing, methods...)
+			return r
+		}
+	}
 	return r.addMatcher(methodMatcher(methods))
+}
+
+func mergeMethodMatcher(existing methodMatcher, methods ...string) methodMatcher {
+	for _, method := range methods {
+		if !matchInArray(existing, method) {
+			existing = append(existing, method)
+		}
+	}
+	return existing
 }
 
 // Path -----------------------------------------------------------------------
@@ -768,12 +786,20 @@ func (r *Route) GetMethods() ([]string, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
+	var methods []string
 	for _, m := range r.matchers {
-		if methods, ok := m.(methodMatcher); ok {
-			return []string(methods), nil
+		if mm, ok := m.(methodMatcher); ok {
+			for _, method := range mm {
+				if !matchInArray(methods, method) {
+					methods = append(methods, method)
+				}
+			}
 		}
 	}
-	return nil, errors.New("mux: route doesn't have methods")
+	if len(methods) == 0 {
+		return nil, errors.New("mux: route doesn't have methods")
+	}
+	return methods, nil
 }
 
 // GetHostTemplate returns the template used to build the

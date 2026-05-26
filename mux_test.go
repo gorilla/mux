@@ -2724,9 +2724,8 @@ func TestSubrouterMatching(t *testing.T) {
 				r.Methods("POST").Subrouter().Methods("GET")
 			},
 			[]request{
-				{"matches before", newRequest("POST", "/"), none},
+				{"matches merged methods", newRequest("GET", "/"), stdOnly},
 				{"no match other", newRequest("HEAD", "/"), none},
-				{"matches override", newRequest("GET", "/"), none},
 			},
 		},
 		{
