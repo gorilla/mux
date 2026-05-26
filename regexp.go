@@ -187,6 +187,10 @@ type routeRegexp struct {
 
 // Match matches the regexp against the URL host or path.
 func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
+	if r == nil || r.regexp == nil {
+		return false
+	}
+
 	if r.regexpType == regexpTypeHost {
 		host := getHost(req)
 		if r.wildcardHostPort {
@@ -291,6 +295,9 @@ func findFirstQueryKey(rawQuery, key string) (value string, ok bool) {
 }
 
 func (r *routeRegexp) matchQueryString(req *http.Request) bool {
+	if r == nil || r.regexp == nil {
+		return false
+	}
 	return r.regexp.MatchString(r.getURLQuery(req))
 }
 
@@ -338,7 +345,7 @@ type routeRegexpGroup struct {
 // setMatch extracts the variables from the URL once a route matches.
 func (v routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
 	// Store host variables.
-	if v.host != nil {
+	if v.host != nil && v.host.regexp != nil {
 		if len(v.host.varsN) > 0 {
 			host := getHost(req)
 			if v.host.wildcardHostPort {
@@ -358,7 +365,7 @@ func (v routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
 		path = req.URL.EscapedPath()
 	}
 	// Store path variables.
-	if v.path != nil {
+	if v.path != nil && v.path.regexp != nil {
 		if len(v.path.varsN) > 0 {
 			matches := v.path.regexp.FindStringSubmatchIndex(path)
 			if len(matches) > 0 {
@@ -383,12 +390,13 @@ func (v routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
 	}
 	// Store query string variables.
 	for _, q := range v.queries {
-		if len(q.varsN) > 0 {
-			queryURL := q.getURLQuery(req)
-			matches := q.regexp.FindStringSubmatchIndex(queryURL)
-			if len(matches) > 0 {
-				m.Vars = extractVars(queryURL, matches, q.varsN, m.Vars)
-			}
+		if q == nil || q.regexp == nil || len(q.varsN) == 0 {
+			continue
+		}
+		queryURL := q.getURLQuery(req)
+		matches := q.regexp.FindStringSubmatchIndex(queryURL)
+		if len(matches) > 0 {
+			m.Vars = extractVars(queryURL, matches, q.varsN, m.Vars)
 		}
 	}
 }

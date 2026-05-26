@@ -1,12 +1,27 @@
 package mux
 
 import (
+	"net/http"
 	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 )
+
+func TestRouteRegexpMatchNilReceiver(t *testing.T) {
+	var r *routeRegexp
+	if r.Match(&http.Request{URL: &url.URL{Path: "/"}}, &RouteMatch{}) {
+		t.Fatal("nil receiver should not match")
+	}
+}
+
+func TestRouteRegexpMatchNilRegexp(t *testing.T) {
+	r := &routeRegexp{regexpType: regexpTypePath}
+	if r.Match(&http.Request{URL: &url.URL{Path: "/"}}, &RouteMatch{}) {
+		t.Fatal("routeRegexp with nil compiled regexp should not match")
+	}
+}
 
 func Test_newRouteRegexp_Errors(t *testing.T) {
 	tests := []struct {
