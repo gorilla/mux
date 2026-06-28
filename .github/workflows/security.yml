@@ -17,21 +17,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
 
       - name: Setup Go ${{ matrix.go }}
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4
         with:
           go-version: ${{ matrix.go }}
           cache: false
 
       - name: Run GoSec
-        uses: securego/gosec@master
+        uses: securego/gosec@f88a0781159d73052ba792962e624749904783d6 # master
         with:
           args: -exclude-dir examples ./...
 
       - name: Run GoVulnCheck
-        uses: golang/govulncheck-action@v1
+        uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee # v1
         with:
           go-version-input: ${{ matrix.go }}
           go-package: ./...
