@@ -2167,7 +2167,7 @@ func TestMultipleDefinitionOfSamePathWithDifferentMethods(t *testing.T) {
 		}
 	})
 
-	t.Run("A mismach method of a valid path should return ErrMethodMismatch", func(t *testing.T) {
+	t.Run("A mismatch method of a valid path should return ErrMethodMismatch", func(t *testing.T) {
 		r := NewRouter()
 		r.HandleFunc("/api2", emptyHandler).Methods("POST")
 		req, _ := http.NewRequest("GET", "http://localhost/api2", nil)
@@ -3084,7 +3084,7 @@ func TestPopulateContext(t *testing.T) {
 				case tc.wantDynamicRoute:
 					r2 := CurrentRoute(r)
 					if r2 != dynamic || r2.GetName() != "dynamic" {
-						t.Fatalf("expected dynmic route in ctx, got %v", r2)
+						t.Fatalf("expected dynamic route in ctx, got %v", r2)
 					}
 				case tc.wantStaticRoute:
 					r2 := CurrentRoute(r)
