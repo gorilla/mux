@@ -65,6 +65,30 @@ func Test_findFirstQueryKey(t *testing.T) {
 	}
 }
 
+func Test_findFirstQueryKey_NotFound(t *testing.T) {
+	tests := []struct {
+		query, key string
+	}{
+		{"", "a"},
+		{"a=1&b=2", "c"},
+		{"a=1&b=2", "aa"},
+		{"a=1&b=2", "b2"},
+		{"key=value", "key2"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.query+"_"+tc.key, func(t *testing.T) {
+			got, ok := findFirstQueryKey(tc.query, tc.key)
+			if ok {
+				t.Errorf("findFirstQueryKey(%q, %q) returned ok=true, value=%q; want ok=false", tc.query, tc.key, got)
+			}
+			if got != "" {
+				t.Errorf("findFirstQueryKey(%q, %q) returned value=%q; want empty string", tc.query, tc.key, got)
+			}
+		})
+	}
+}
+
 func Benchmark_findQueryKey(b *testing.B) {
 	tests := []string{
 		"a=1&b=2",
