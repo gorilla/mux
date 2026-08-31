@@ -3239,3 +3239,15 @@ func newRequestHost(method, url, host string) *http.Request {
 	req.Host = host
 	return req
 }
+
+func TestRouteRegexpMatchNilRegexp(t *testing.T) {
+	req := newRequest("GET", "http://example.com/foo")
+	var r *routeRegexp
+	if r.Match(req, &RouteMatch{}) {
+		t.Fatal("nil routeRegexp should not match")
+	}
+	r = &routeRegexp{regexpType: regexpTypePath}
+	if r.Match(req, &RouteMatch{}) {
+		t.Fatal("nil compiled regexp should not match")
+	}
+}

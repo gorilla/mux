@@ -187,6 +187,9 @@ type routeRegexp struct {
 
 // Match matches the regexp against the URL host or path.
 func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
+	if r == nil || r.regexp == nil {
+		return false
+	}
 	if r.regexpType == regexpTypeHost {
 		host := getHost(req)
 		if r.wildcardHostPort {
