@@ -87,6 +87,11 @@ type routeConf struct {
 	// redirect to the former and vice versa.
 	strictSlash bool
 
+	// If true, Queries matching splits query parameter pairs on '&' only,
+	// aligning with net/url since Go 1.17. Default false preserves the
+	// legacy behavior of also treating ';' as a separator.
+	strictQueryParamSep bool
+
 	// If true, when the path pattern is "/path//to", accessing "/path//to"
 	// will not redirect
 	skipClean bool
@@ -260,6 +265,20 @@ func (r *Router) GetRoute(name string) *Route {
 // route inherit the original StrictSlash setting.
 func (r *Router) StrictSlash(value bool) *Router {
 	r.strictSlash = value
+	return r
+}
+
+// StrictQueryParamSep controls whether Queries matching treats ';' as a
+// query-parameter separator.
+//
+// The initial value is false for backward compatibility: both '&' and ';'
+// split pairs (legacy gorilla/mux behavior).
+//
+// When true, pairs are split on '&' only, matching net/url since Go 1.17 and
+// the URL Living Standard. Prefer enabling this to avoid parser differentials
+// between mux.Vars and r.URL.Query().
+func (r *Router) StrictQueryParamSep(value bool) *Router {
+	r.strictQueryParamSep = value
 	return r
 }
 
