@@ -1,6 +1,7 @@
 package mux
 
 import (
+	"net/http"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -52,7 +53,7 @@ func Test_findFirstQueryKey(t *testing.T) {
 			all, _ := url.ParseQuery(query)
 			for key, want := range all {
 				t.Run(key, func(t *testing.T) {
-					got, ok := findFirstQueryKey(query, key)
+					got, ok := findFirstQueryKey(query, key, true)
 					if !ok {
 						t.Error("Did not get expected key", key)
 					}
@@ -81,7 +82,7 @@ func Benchmark_findQueryKey(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				for key := range all {
-					_, _ = findFirstQueryKey(query, key)
+					_, _ = findFirstQueryKey(query, key, true)
 				}
 			}
 		})
@@ -113,5 +114,59 @@ func Benchmark_findQueryKeyGoLib(b *testing.B) {
 				}
 			}
 		})
+	}
+}
+
+func TestStrictQueryParamSep(t *testing.T) {
+	// Legacy (default): semicolon is a separator.
+	got, ok := findFirstQueryKey("foo=foo;bar=bar", "foo", false)
+	if !ok || got != "foo" {
+		t.Fatalf("legacy foo: got %q ok=%v", got, ok)
+	}
+	got, ok = findFirstQueryKey("foo=foo;bar=bar", "bar", false)
+	if !ok || got != "bar" {
+		t.Fatalf("legacy bar: got %q ok=%v", got, ok)
+	}
+
+	// Strict: semicolon is part of the value, not a separator.
+	got, ok = findFirstQueryKey("foo=foo;bar=bar", "foo", true)
+	if !ok || got != "foo;bar=bar" {
+		t.Fatalf("strict foo: got %q ok=%v want foo;bar=bar", got, ok)
+	}
+	_, ok = findFirstQueryKey("foo=foo;bar=bar", "bar", true)
+	if ok {
+		t.Fatal("strict: bar should not be a separate key")
+	}
+
+	// Ampersand still separates in both modes.
+	got, ok = findFirstQueryKey("foo=1&bar=2", "bar", true)
+	if !ok || got != "2" {
+		t.Fatalf("strict ampersand: got %q ok=%v", got, ok)
+	}
+}
+
+func TestRouterStrictQueryParamSep(t *testing.T) {
+	handler := func(w http.ResponseWriter, r *http.Request) {}
+
+	// Default: semicolon-separated query matches.
+	r := NewRouter()
+	r.HandleFunc("/", handler).Queries("foo", "{foo}", "bar", "{bar}")
+	req, _ := http.NewRequest("GET", "http://localhost/?foo=foo;bar=bar", nil)
+	var match RouteMatch
+	if !r.Match(req, &match) {
+		t.Fatal("default router should match semicolon-separated query")
+	}
+
+	// Strict: same URL should not match (single foo value contains semicolon).
+	r2 := NewRouter().StrictQueryParamSep(true)
+	r2.HandleFunc("/", handler).Queries("foo", "{foo}", "bar", "{bar}")
+	if r2.Match(req, &match) {
+		t.Fatal("strict router should not match semicolon-separated query as two params")
+	}
+
+	// Strict still matches ampersand form.
+	req2, _ := http.NewRequest("GET", "http://localhost/?foo=foo&bar=bar", nil)
+	if !r2.Match(req2, &match) {
+		t.Fatal("strict router should match ampersand-separated query")
 	}
 }

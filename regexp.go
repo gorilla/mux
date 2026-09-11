@@ -15,8 +15,9 @@ import (
 )
 
 type routeRegexpOptions struct {
-	strictSlash    bool
-	useEncodedPath bool
+	strictSlash         bool
+	useEncodedPath      bool
+	strictQueryParamSep bool
 }
 
 type regexpType int
@@ -245,20 +246,28 @@ func (r *routeRegexp) getURLQuery(req *http.Request) string {
 		return ""
 	}
 	templateKey := strings.SplitN(r.template, "=", 2)[0]
-	val, ok := findFirstQueryKey(req.URL.RawQuery, templateKey)
+	val, ok := findFirstQueryKey(req.URL.RawQuery, templateKey, r.options.strictQueryParamSep)
 	if ok {
 		return templateKey + "=" + val
 	}
 	return ""
 }
 
-// findFirstQueryKey returns the same result as (*url.URL).Query()[key][0].
+// findFirstQueryKey returns the first value for key in rawQuery.
+// When strict is false (default), pairs are split on '&' and ';' (legacy).
+// When strict is true, pairs are split on '&' only (net/url / WHATWG).
 // If key was not found, empty string and false is returned.
-func findFirstQueryKey(rawQuery, key string) (value string, ok bool) {
+func findFirstQueryKey(rawQuery, key string, strict bool) (value string, ok bool) {
 	query := []byte(rawQuery)
 	for len(query) > 0 {
 		foundKey := query
-		if i := bytes.IndexAny(foundKey, "&;"); i >= 0 {
+		var i int
+		if strict {
+			i = bytes.IndexByte(foundKey, '&')
+		} else {
+			i = bytes.IndexAny(foundKey, "&;")
+		}
+		if i >= 0 {
 			foundKey, query = foundKey[:i], foundKey[i+1:]
 		} else {
 			query = query[:0]
