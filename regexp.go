@@ -239,22 +239,39 @@ func (r *routeRegexp) url(values map[string]string) (string, error) {
 
 // getURLQuery returns a single query parameter from a request URL.
 // For a URL with foo=bar&baz=ding, we return only the relevant key
-// value pair for the routeRegexp.
+// value pair for the routeRegexp. If the key is repeated, the first
+// value that matches the route regexp is used (issue #754).
 func (r *routeRegexp) getURLQuery(req *http.Request) string {
 	if r.regexpType != regexpTypeQuery {
 		return ""
 	}
 	templateKey := strings.SplitN(r.template, "=", 2)[0]
-	val, ok := findFirstQueryKey(req.URL.RawQuery, templateKey)
-	if ok {
-		return templateKey + "=" + val
-	}
-	return ""
+	var found string
+	walkQueryKey(req.URL.RawQuery, templateKey, func(val string) bool {
+		pair := templateKey + "=" + val
+		if r.regexp.MatchString(pair) {
+			found = pair
+			return true
+		}
+		return false
+	})
+	return found
 }
 
 // findFirstQueryKey returns the same result as (*url.URL).Query()[key][0].
 // If key was not found, empty string and false is returned.
 func findFirstQueryKey(rawQuery, key string) (value string, ok bool) {
+	walkQueryKey(rawQuery, key, func(v string) bool {
+		value = v
+		ok = true
+		return true
+	})
+	return
+}
+
+// walkQueryKey calls fn for each unescaped value of key in rawQuery, in order.
+// fn returning true stops the walk.
+func walkQueryKey(rawQuery, key string, fn func(value string) bool) {
 	query := []byte(rawQuery)
 	for len(query) > 0 {
 		foundKey := query
@@ -285,9 +302,10 @@ func findFirstQueryKey(rawQuery, key string) (value string, ok bool) {
 		if err != nil {
 			continue
 		}
-		return valueString, true
+		if fn(valueString) {
+			return
+		}
 	}
-	return "", false
 }
 
 func (r *routeRegexp) matchQueryString(req *http.Request) bool {
