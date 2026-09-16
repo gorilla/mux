@@ -16,6 +16,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -2006,6 +2007,66 @@ func testQueriesTemplates(t *testing.T, test routeTest) {
 	gotQueries := strings.Join(queries, ",")
 	if test.queriesTemplate != "" && queriesErr == nil && gotQueries != test.queriesTemplate {
 		t.Errorf("(%v) GetQueriesTemplates not equal: expected %v, got %v", test.title, test.queriesTemplate, gotQueries)
+	}
+}
+
+func TestGetHeaders(t *testing.T) {
+	r := NewRouter()
+	route := r.NewRoute().Path("/v1/conversations").Headers(
+		"Content-Type", "application/json",
+		"X-Requested-With", "XMLHttpRequest",
+	)
+	got, err := route.GetHeaders()
+	if err != nil {
+		t.Fatalf("GetHeaders: %v", err)
+	}
+	want := map[string]string{
+		"Content-Type":     "application/json",
+		"X-Requested-With": "XMLHttpRequest",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("GetHeaders = %#v, want %#v", got, want)
+	}
+
+	if _, err := r.NewRoute().Path("/no-headers").GetHeaders(); err == nil {
+		t.Fatal("GetHeaders: expected error for route without headers")
+	}
+
+	if _, err := r.NewRoute().Path("/regexp-only").HeadersRegexp("Accept", "html").GetHeaders(); err == nil {
+		t.Fatal("GetHeaders: expected error for HeadersRegexp-only route")
+	}
+}
+
+func TestGetHeadersRegexp(t *testing.T) {
+	r := NewRouter()
+	route := r.NewRoute().Path("/v1").HeadersRegexp(
+		"Content-Type", "application/(text|json)",
+		"X-Requested-With", "XMLHttpRequest",
+	)
+	got, err := route.GetHeadersRegexp()
+	if err != nil {
+		t.Fatalf("GetHeadersRegexp: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("GetHeadersRegexp len = %d, want 2: %#v", len(got), got)
+	}
+	re, err := regexp.Compile(got["Content-Type"])
+	if err != nil {
+		t.Fatalf("GetHeadersRegexp Content-Type: %v", err)
+	}
+	if !re.MatchString("application/json") || re.MatchString("application/xml") {
+		t.Fatalf("GetHeadersRegexp Content-Type %q did not match as registered", got["Content-Type"])
+	}
+	if got["X-Requested-With"] == "" {
+		t.Fatalf("GetHeadersRegexp missing X-Requested-With: %#v", got)
+	}
+
+	if _, err := r.NewRoute().Path("/no-headers").GetHeadersRegexp(); err == nil {
+		t.Fatal("GetHeadersRegexp: expected error for route without header regexps")
+	}
+
+	if _, err := r.NewRoute().Path("/exact-only").Headers("Accept", "text/html").GetHeadersRegexp(); err == nil {
+		t.Fatal("GetHeadersRegexp: expected error for Headers-only route")
 	}
 }
 
