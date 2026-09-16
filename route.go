@@ -776,6 +776,54 @@ func (r *Route) GetMethods() ([]string, error) {
 	return nil, errors.New("mux: route doesn't have methods")
 }
 
+// GetHeaders returns the exact header name/value pairs the route matches against.
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An error will be returned if the route does not have headers.
+func (r *Route) GetHeaders() (map[string]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	out := make(map[string]string)
+	found := false
+	for _, m := range r.matchers {
+		if headers, ok := m.(headerMatcher); ok {
+			found = true
+			for k, v := range headers {
+				out[k] = v
+			}
+		}
+	}
+	if !found {
+		return nil, errors.New("mux: route doesn't have headers")
+	}
+	return out, nil
+}
+
+// GetHeadersRegexp returns the header name/regexp pairs the route matches against.
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An error will be returned if the route does not have header regular expressions.
+func (r *Route) GetHeadersRegexp() (map[string]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	out := make(map[string]string)
+	found := false
+	for _, m := range r.matchers {
+		if headers, ok := m.(headerRegexMatcher); ok {
+			found = true
+			for k, v := range headers {
+				out[k] = v.String()
+			}
+		}
+	}
+	if !found {
+		return nil, errors.New("mux: route doesn't have header regexps")
+	}
+	return out, nil
+}
+
 // GetHostTemplate returns the template used to build the
 // route match.
 // This is useful for building simple REST API documentation and for instrumentation
