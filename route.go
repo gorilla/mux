@@ -33,6 +33,10 @@ type Route struct {
 	// route specific middleware
 	middlewares []middleware
 
+	// ownMethodMatcher is set when this route added a method matcher via
+	// Methods. Inherited matchers from a parent/subrouter are not owned.
+	ownMethodMatcher bool
+
 	// config possibly passed in from `Router`
 	routeConf
 }
@@ -395,11 +399,41 @@ func (m methodMatcher) Match(r *http.Request, match *RouteMatch) bool {
 // Methods adds a matcher for HTTP methods.
 // It accepts a sequence of one or more methods to be matched, e.g.:
 // "GET", "POST", "PUT".
+//
+// Repeated calls merge into a single matcher so a route can accept any of
+// the listed methods (e.g. .Methods("PUT").Methods("PATCH")).
 func (r *Route) Methods(methods ...string) *Route {
-	for k, v := range methods {
-		methods[k] = strings.ToUpper(v)
+	if r.err != nil {
+		return r
 	}
-	return r.addMatcher(methodMatcher(methods))
+	normalized := make([]string, 0, len(methods))
+	for _, v := range methods {
+		v = strings.ToUpper(v)
+		if v == "" {
+			continue
+		}
+		if !matchInArray(normalized, v) {
+			normalized = append(normalized, v)
+		}
+	}
+	if r.ownMethodMatcher {
+		for i := len(r.matchers) - 1; i >= 0; i-- {
+			existing, ok := r.matchers[i].(methodMatcher)
+			if !ok {
+				continue
+			}
+			merged := append([]string(nil), existing...)
+			for _, method := range normalized {
+				if !matchInArray(merged, method) {
+					merged = append(merged, method)
+				}
+			}
+			r.matchers[i] = methodMatcher(merged)
+			return r
+		}
+	}
+	r.ownMethodMatcher = true
+	return r.addMatcher(methodMatcher(normalized))
 }
 
 // Path -----------------------------------------------------------------------

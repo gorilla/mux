@@ -753,6 +753,36 @@ func TestMethods(t *testing.T) {
 			methods:     []string{},
 			shouldMatch: true,
 		},
+		{
+			title:       "Repeated Methods calls merge, match PUT",
+			route:       new(Route).Methods("PUT").Methods("PATCH"),
+			request:     newRequest("PUT", "http://localhost"),
+			vars:        nil,
+			host:        "",
+			path:        "",
+			methods:     []string{"PUT", "PATCH"},
+			shouldMatch: true,
+		},
+		{
+			title:       "Repeated Methods calls merge, match PATCH",
+			route:       new(Route).Methods("PUT").Methods("PATCH"),
+			request:     newRequest("PATCH", "http://localhost"),
+			vars:        nil,
+			host:        "",
+			path:        "",
+			methods:     []string{"PUT", "PATCH"},
+			shouldMatch: true,
+		},
+		{
+			title:       "Repeated Methods calls merge, bad method",
+			route:       new(Route).Methods("PUT").Methods("PATCH"),
+			request:     newRequest("GET", "http://localhost"),
+			vars:        nil,
+			host:        "",
+			path:        "",
+			methods:     []string{"PUT", "PATCH"},
+			shouldMatch: false,
+		},
 	}
 
 	for _, test := range tests {
@@ -761,6 +791,37 @@ func TestMethods(t *testing.T) {
 			testTemplate(t, test)
 			testMethods(t, test)
 		})
+	}
+}
+
+func TestRouteMethodsRepeatedCalls(t *testing.T) {
+	r := NewRouter()
+	route := r.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}).Methods("PUT").Methods("PATCH")
+
+	for _, method := range []string{"PUT", "PATCH"} {
+		req, _ := http.NewRequest(method, "http://localhost/test", nil)
+		resp := NewRecorder()
+		r.ServeHTTP(resp, req)
+		if resp.Code != http.StatusOK {
+			t.Errorf("%s: got %d, want 200", method, resp.Code)
+		}
+	}
+
+	req, _ := http.NewRequest("GET", "http://localhost/test", nil)
+	resp := NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != http.StatusMethodNotAllowed {
+		t.Errorf("GET: got %d, want 405", resp.Code)
+	}
+
+	got, err := route.GetMethods()
+	if err != nil {
+		t.Fatalf("GetMethods: %v", err)
+	}
+	if len(got) != 2 || got[0] != "PUT" || got[1] != "PATCH" {
+		t.Errorf("GetMethods = %v, want [PUT PATCH]", got)
 	}
 }
 
@@ -2724,9 +2785,9 @@ func TestSubrouterMatching(t *testing.T) {
 				r.Methods("POST").Subrouter().Methods("GET")
 			},
 			[]request{
-				{"matches before", newRequest("POST", "/"), none},
+				{"matches first method", newRequest("POST", "/"), stdOnly},
 				{"no match other", newRequest("HEAD", "/"), none},
-				{"matches override", newRequest("GET", "/"), none},
+				{"matches second method", newRequest("GET", "/"), stdOnly},
 			},
 		},
 		{
