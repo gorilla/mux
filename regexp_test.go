@@ -65,6 +65,14 @@ func Test_findFirstQueryKey(t *testing.T) {
 	}
 }
 
+func Test_routeRegexp_NilRegexp(t *testing.T) {
+	req := newRequest("GET", "/")
+	r := &routeRegexp{regexpType: regexpTypePath}
+	if r.Match(req, &RouteMatch{}) {
+		t.Fatal("nil routeRegexp should not match")
+	}
+}
+
 func Benchmark_findQueryKey(b *testing.B) {
 	tests := []string{
 		"a=1&b=2",
