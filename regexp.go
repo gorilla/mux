@@ -186,6 +186,10 @@ type routeRegexp struct {
 }
 
 // Match matches the regexp against the URL host or path.
+// Returns false (no match) if the receiver or compiled regexp is nil.
+// This guard prevents panics from a nil *regexp.Regexp, which has been
+// observed in production (gorilla#749). A no-match response is preferable
+// to crashing the server on an unexpected nil state.
 func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
 	if r == nil || r.regexp == nil {
 		return false

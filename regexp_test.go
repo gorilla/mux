@@ -65,11 +65,23 @@ func Test_findFirstQueryKey(t *testing.T) {
 	}
 }
 
+// Test_routeRegexp_NilRegexp verifies that Match returns false without
+// panicking when called on a nil receiver or one with a nil compiled regexp.
+// This guards against gorilla#749 where a nil *regexp.Regexp panicked
+// during Router.ServeHTTP in production.
 func Test_routeRegexp_NilRegexp(t *testing.T) {
 	req := newRequest("GET", "/")
+
+	// Nil receiver
+	var nilR *routeRegexp
+	if nilR.Match(req, &RouteMatch{}) {
+		t.Fatal("nil routeRegexp should not match")
+	}
+
+	// Non-nil receiver with nil regexp (manually constructed, bypassing constructor)
 	r := &routeRegexp{regexpType: regexpTypePath}
 	if r.Match(req, &RouteMatch{}) {
-		t.Fatal("nil routeRegexp should not match")
+		t.Fatal("routeRegexp with nil regexp should not match")
 	}
 }
 
