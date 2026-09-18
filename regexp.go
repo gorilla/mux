@@ -133,6 +133,9 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 	if errCompile != nil {
 		return nil, errCompile
 	}
+	if reg == nil {
+		return nil, fmt.Errorf("mux: regexp compilation returned nil for pattern %q", patternStr)
+	}
 
 	// Check for capturing groups which used to work in older versions
 	if reg.NumSubexp() != len(idxs)/2 {

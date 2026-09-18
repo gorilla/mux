@@ -3,6 +3,7 @@ package mux
 import (
 	"net/url"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -69,6 +70,25 @@ func Test_findFirstQueryKey(t *testing.T) {
 // panicking when called on a nil receiver or one with a nil compiled regexp.
 // This guards against gorilla#749 where a nil *regexp.Regexp panicked
 // during Router.ServeHTTP in production.
+// Test_newRouteRegexp_NilRegexp verifies that newRouteRegexp returns
+// an error when RegexpCompileFunc returns nil without error.
+// This prevents a nil regexp from being created.
+func Test_newRouteRegexp_NilRegexp(t *testing.T) {
+	original := RegexpCompileFunc
+	RegexpCompileFunc = func(string) (*regexp.Regexp, error) {
+		return nil, nil
+	}
+	defer func() { RegexpCompileFunc = original }()
+
+	_, err := newRouteRegexp("/{id}", regexpTypePath, routeRegexpOptions{})
+	if err == nil {
+		t.Fatal("expected error when RegexpCompileFunc returns nil, got nil")
+	}
+	if !strings.Contains(err.Error(), "returned nil") {
+		t.Errorf("expected 'returned nil' in error, got: %s", err)
+	}
+}
+
 func Test_routeRegexp_NilRegexp(t *testing.T) {
 	req := newRequest("GET", "/")
 
