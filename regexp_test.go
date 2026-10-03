@@ -1,6 +1,8 @@
 package mux
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -113,5 +115,65 @@ func Benchmark_findQueryKeyGoLib(b *testing.B) {
 				}
 			}
 		})
+	}
+}
+
+// TestHostVarWithIPv6 checks that the optional port is stripped from a host
+// before it is matched against a host template, and that the host variable then
+// captures the whole host. IPv6 literals are bracketed (RFC 3986, 3.2.2), so the
+// port is separated by the colon following the closing bracket, not by the first
+// colon of the host.
+func TestHostVarWithIPv6(t *testing.T) {
+	tests := []struct {
+		hostHeader string
+		wantVar    string
+	}{
+		{"[::1]", "[::1]"},
+		{"[::1]:8080", "[::1]"},
+		{"[2001:db8::1]:80", "[2001:db8::1]"},
+		// Not bracketed: the first colon is the port separator. The default
+		// host pattern is "[^.]+", so the host must not contain a dot.
+		{"example:8080", "example"},
+		{"example", "example"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.hostHeader, func(t *testing.T) {
+			var matched bool
+			var got string
+			r := NewRouter()
+			r.NewRoute().Host("{host}").HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
+				matched = true
+				got = Vars(req)["host"]
+			})
+
+			req := httptest.NewRequest("GET", "http://"+tc.hostHeader+"/", nil)
+			r.ServeHTTP(httptest.NewRecorder(), req)
+
+			if !matched {
+				t.Fatalf("Host(%q) did not match the request", "{host}")
+			}
+			if got != tc.wantVar {
+				t.Errorf("Vars(req)[%q] = %q, want %q", "host", got, tc.wantVar)
+			}
+		})
+	}
+}
+
+// TestHostMatchIPv6Literal checks that a host template containing an IPv6
+// literal is matched against the full literal, and not against the "[" that is
+// left over when the host is split on its first colon.
+func TestHostMatchIPv6Literal(t *testing.T) {
+	var matched bool
+	r := NewRouter()
+	r.NewRoute().Host("[{host}]").HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		matched = true
+	})
+
+	req := httptest.NewRequest("GET", "http://[::1]/", nil)
+	r.ServeHTTP(httptest.NewRecorder(), req)
+
+	if !matched {
+		t.Errorf(`Host("[{host}]") did not match the request host "[::1]"`)
 	}
 }

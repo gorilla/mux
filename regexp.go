@@ -191,9 +191,7 @@ func (r *routeRegexp) Match(req *http.Request, match *RouteMatch) bool {
 		host := getHost(req)
 		if r.wildcardHostPort {
 			// Don't be strict on the port match
-			if i := strings.Index(host, ":"); i != -1 {
-				host = host[:i]
-			}
+			host = stripHostPort(host)
 		}
 		return r.regexp.MatchString(host)
 	}
@@ -343,9 +341,7 @@ func (v routeRegexpGroup) setMatch(req *http.Request, m *RouteMatch, r *Route) {
 			host := getHost(req)
 			if v.host.wildcardHostPort {
 				// Don't be strict on the port match
-				if i := strings.Index(host, ":"); i != -1 {
-					host = host[:i]
-				}
+				host = stripHostPort(host)
 			}
 			matches := v.host.regexp.FindStringSubmatchIndex(host)
 			if len(matches) > 0 {
@@ -401,6 +397,22 @@ func getHost(r *http.Request) string {
 		return r.URL.Host
 	}
 	return r.Host
+}
+
+// stripHostPort returns host without its optional ":port" suffix.
+// An IPv6 literal is enclosed in square brackets (RFC 3986, 3.2.2), so its port
+// is separated by the colon following the closing bracket, not by the first
+// colon of the host.
+func stripHostPort(host string) string {
+	if strings.HasPrefix(host, "[") {
+		if i := strings.LastIndex(host, "]"); i != -1 {
+			return host[:i+1]
+		}
+	}
+	if i := strings.Index(host, ":"); i != -1 {
+		return host[:i]
+	}
+	return host
 }
 
 func extractVars(input string, matches []int, names []string, output map[string]string) map[string]string {
