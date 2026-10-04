@@ -106,7 +106,7 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 
 		// Append variable name and compiled pattern.
 		varsN[groupIdx] = name
-		varsR[groupIdx], err = RegexpCompileFunc("^" + patt + "$")
+		varsR[groupIdx], err = RegexpCompileFunc("^(?:" + patt + ")$")
 		if err != nil {
 			return nil, fmt.Errorf("mux: error compiling regex for %q: %w", tag, err)
 		}
