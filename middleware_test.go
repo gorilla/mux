@@ -2,7 +2,6 @@ package mux
 
 import (
 	"bytes"
-	"fmt"
 	"net/http"
 	"testing"
 )
@@ -245,8 +244,7 @@ func TestMiddlewareExecution(t *testing.T) {
 		router.ServeHTTP(rw, req)
 		expectedString := append(append(mwStr, routeMwStr...), handlerStr...)
 		if !bytes.Equal(rw.Body.Bytes(), expectedString) {
-			fmt.Println(rw.Body.String())
-			t.Fatal("Middleware + handler response is not what it should be")
+			t.Fatalf("Middleware + handler response is not what it should be: got %q, want %q", rw.Body.String(), expectedString)
 		}
 	})
 }
