@@ -152,3 +152,49 @@ func TestRouteMetadata(t *testing.T) {
 		router.ServeHTTP(rw, req)
 	})
 }
+
+func TestQueriesOddParameters(t *testing.T) {
+	r := NewRouter()
+	route := r.NewRoute().Queries("odd")
+	if route == nil {
+		t.Fatal("Expected route to not be nil")
+	}
+	err := route.GetError()
+	if err == nil {
+		t.Fatal("Expected an error for odd number of query parameters")
+	}
+	expected := "mux: number of parameters must be multiple of 2, got [odd]"
+	if err.Error() != expected {
+		t.Errorf("Expected error %q, got %q", expected, err.Error())
+	}
+
+	// Verify method chaining does not panic
+	chained := r.NewRoute().Queries("odd").Path("/test").Methods("GET")
+	if chained == nil {
+		t.Fatal("Expected chained route to not be nil")
+	}
+	if chained.GetError() == nil {
+		t.Fatal("Expected chained route to retain error")
+	}
+
+	// Verify route does not match
+	req := newRequest("GET", "/test?odd=1")
+	match := new(RouteMatch)
+	if chained.Match(req, match) {
+		t.Error("Expected route with error to not match")
+	}
+}
+
+func TestQueriesExistingError(t *testing.T) {
+	r := NewRouter()
+	route := r.NewRoute().Path("][invalid regexp")
+	initialErr := route.GetError()
+	if initialErr == nil {
+		t.Fatal("Expected path regexp error")
+	}
+
+	route.Queries("k1", "v1")
+	if route.GetError() != initialErr {
+		t.Errorf("Expected initial error to be preserved, got %v", route.GetError())
+	}
+}

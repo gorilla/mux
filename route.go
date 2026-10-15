@@ -464,15 +464,17 @@ func (r *Route) PathPrefix(tpl string) *Route {
 //
 // - {name:pattern} matches the given regexp pattern.
 func (r *Route) Queries(pairs ...string) *Route {
-	length := len(pairs)
-	if length%2 != 0 {
-		r.err = fmt.Errorf(
-			"mux: number of parameters must be multiple of 2, got %v", pairs)
-		return nil
-	}
-	for i := 0; i < length; i += 2 {
-		if r.err = r.addRegexpMatcher(pairs[i]+"="+pairs[i+1], regexpTypeQuery); r.err != nil {
+	if r.err == nil {
+		length := len(pairs)
+		if length%2 != 0 {
+			r.err = fmt.Errorf(
+				"mux: number of parameters must be multiple of 2, got %v", pairs)
 			return r
+		}
+		for i := 0; i < length; i += 2 {
+			if r.err = r.addRegexpMatcher(pairs[i]+"="+pairs[i+1], regexpTypeQuery); r.err != nil {
+				return r
+			}
 		}
 	}
 
