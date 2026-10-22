@@ -152,3 +152,21 @@ func TestRouteMetadata(t *testing.T) {
 		router.ServeHTTP(rw, req)
 	})
 }
+
+func TestRouteMetadataNilValueIsPresent(t *testing.T) {
+	route := NewRouter().NewRoute().Metadata("present", nil)
+
+	if !route.MetadataContains("present") {
+		t.Fatal("expected a key with a nil value to be present")
+	}
+	value, err := route.GetMetadataValue("present")
+	if err != nil || value != nil {
+		t.Fatalf("expected a nil value without error, got value %v and error %v", value, err)
+	}
+	if value := route.GetMetadataValueOr("present", "fallback"); value != nil {
+		t.Fatalf("expected the present nil value, got %v", value)
+	}
+	if value := route.GetMetadataValueOr("missing", "fallback"); value != "fallback" {
+		t.Fatalf("expected fallback for a missing key, got %v", value)
+	}
+}
