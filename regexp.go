@@ -101,8 +101,9 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 
 		pattern.WriteString(regexp.QuoteMeta(raw) + "(?P<" + groupName + ">" + patt + ")")
 
+		// Escape literal percent signs for fmt.Sprintf; only variables use verbs.
 		// Build the reverse template.
-		reverse.WriteString(raw + "%s")
+		reverse.WriteString(strings.ReplaceAll(raw, "%", "%%") + "%s")
 
 		// Append variable name and compiled pattern.
 		varsN[groupIdx] = name
@@ -146,7 +147,7 @@ func newRouteRegexp(tpl string, typ regexpType, options routeRegexpOptions) (*ro
 			wildcardHostPort = true
 		}
 	}
-	reverse.WriteString(raw)
+	reverse.WriteString(strings.ReplaceAll(raw, "%", "%%"))
 	if endSlash {
 		reverse.WriteByte('/')
 	}
